@@ -21,14 +21,14 @@ const CONFIG = {
   // --- Round lock times (ISO 8601 UTC) ---
   // Set these to just before each round's first kickoff
   ROUND_LOCKS: {
-    round1: '2026-06-11T14:00:00Z', // Pre-tournament — locks when tournament starts
-    round2: '2026-06-11T14:00:00Z', // Group stage predictions lock at same time
-    round3: '2026-06-11T14:00:00Z', // Score predictions lock at tournament start
-    round4: '2026-06-29T14:00:00Z', // Round of 32 — locks before first R32 game
-    round5: '2026-07-04T14:00:00Z', // Round of 16
-    round6: '2026-07-11T14:00:00Z', // Quarter finals
-    round7: '2026-07-14T14:00:00Z', // Semi finals
-    round8: '2026-07-18T14:00:00Z', // Final
+    round1: '2026-06-11T21:00:00Z', // Pre-tournament — locks at first kickoff
+    round2: '2026-06-11T21:00:00Z', // Group winners — locks at first kickoff
+    round3: '2026-06-11T21:00:00Z', // Score predictions — locks at first kickoff
+    round4: '2026-06-28T22:00:00Z', // Round of 32 — locks before first R32 game
+    round5: '2026-07-04T18:00:00Z', // Round of 16
+    round6: '2026-07-09T20:00:00Z', // Quarter-finals
+    round7: '2026-07-14T20:00:00Z', // Semi-finals
+    round8: '2026-07-19T19:00:00Z', // Final
   }
 };
 

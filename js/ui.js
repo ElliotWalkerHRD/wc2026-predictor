@@ -96,7 +96,7 @@ const Nav = {
     if (signOutBtn) {
       signOutBtn.addEventListener('click', async () => {
         await DB.signOut();
-        window.location.href = '/pages/auth.html';
+        window.location.href = inPages ? 'auth.html' : 'pages/auth.html';
       });
     }
   }

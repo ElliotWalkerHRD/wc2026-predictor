@@ -37,13 +37,18 @@ const Nav = {
     const navEl = document.getElementById('main-nav');
     if (!navEl) return;
 
+    // Detect location: pages/ siblings use '' prefix, root uses 'pages/' prefix
+    const inPages = window.location.pathname.replace(/\\/g, '/').includes('/pages/');
+    const p = inPages ? '' : 'pages/';
+    const homeHref = inPages ? '../index.html' : 'index.html';
+
     let profile = null;
     let adminLink = '';
 
     if (session) {
       profile = await DB.getProfile(session.user.id);
       if (profile?.is_admin) {
-        adminLink = `<li><a href="pages/admin.html" ${activePage === 'admin' ? 'class="active"' : ''}><i class="ti ti-settings"></i> Admin</a></li>`;
+        adminLink = `<li><a href="${p}admin.html" ${activePage === 'admin' ? 'class="active"' : ''}><i class="ti ti-settings"></i> Admin</a></li>`;
       }
     }
 
@@ -53,14 +58,14 @@ const Nav = {
     const avatarColor = profile?.avatar_color || '#c8f135';
 
     navEl.innerHTML = `
-      <a class="nav-brand" href="index.html"><span class="lime">WC</span> 2026</a>
+      <a class="nav-brand" href="${homeHref}"><span class="lime">WC</span> 2026</a>
 
       <ul class="nav-links" id="navLinks">
-        <li><a href="index.html" ${activePage === 'home' ? 'class="active"' : ''}><i class="ti ti-home"></i> Home</a></li>
-        <li><a href="pages/leaderboard.html" ${activePage === 'leaderboard' ? 'class="active"' : ''}><i class="ti ti-trophy"></i> Leaderboard</a></li>
-        <li><a href="pages/predictions.html" ${activePage === 'predictions' ? 'class="active"' : ''}><i class="ti ti-pencil"></i> Predictions</a></li>
-        <li><a href="pages/matches.html" ${activePage === 'matches' ? 'class="active"' : ''}><i class="ti ti-ball-football"></i> Matches</a></li>
-        <li><a href="pages/my-predictions.html" ${activePage === 'mypreds' ? 'class="active"' : ''}><i class="ti ti-list-check"></i> My Picks</a></li>
+        <li><a href="${homeHref}" ${activePage === 'home' ? 'class="active"' : ''}><i class="ti ti-home"></i> Home</a></li>
+        <li><a href="${p}leaderboard.html" ${activePage === 'leaderboard' ? 'class="active"' : ''}><i class="ti ti-trophy"></i> Leaderboard</a></li>
+        <li><a href="${p}predictions.html" ${activePage === 'predictions' ? 'class="active"' : ''}><i class="ti ti-pencil"></i> Predictions</a></li>
+        <li><a href="${p}matches.html" ${activePage === 'matches' ? 'class="active"' : ''}><i class="ti ti-ball-football"></i> Matches</a></li>
+        <li><a href="${p}my-predictions.html" ${activePage === 'mypreds' ? 'class="active"' : ''}><i class="ti ti-list-check"></i> My Picks</a></li>
         ${adminLink}
       </ul>
 
@@ -74,7 +79,7 @@ const Nav = {
           <span class="nav-username">${profile?.display_name || session.user.email}</span>
           <button class="btn btn-ghost btn-sm" id="signOutBtn">Sign out</button>
         ` : `
-          <a href="pages/auth.html" class="btn btn-lime btn-sm">Sign In</a>
+          <a href="${p}auth.html" class="btn btn-lime btn-sm">Sign In</a>
         `}
       </div>
     `;

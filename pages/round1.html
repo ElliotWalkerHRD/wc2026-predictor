@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WC2026 — Round 1: Pre-Tournament</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .question-card {
+      background: var(--navy-card);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      transition: border-color 0.2s;
+    }
+    .question-card:focus-within { border-color: rgba(240,180,41,0.3); }
+
+    .question-num {
+      font-family: var(--font-condensed);
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--crimson);
+      margin-bottom: 0.4rem;
+    }
+
+    .question-text {
+      font-family: var(--font-condensed);
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      color: var(--white);
+      margin-bottom: 0.5rem;
+    }
+
+    .question-pts {
+      font-family: var(--font-condensed);
+      font-size: 0.75rem;
+      color: var(--gold);
+      margin-bottom: 1rem;
+    }
+
+    .sticky-save {
+      position: sticky;
+      bottom: 1.5rem;
+      background: rgba(10,14,26,0.95);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid rgba(240,180,41,0.2);
+      padding: 1rem 0;
+      margin-top: 1.5rem;
+      border-radius: var(--radius-md);
+    }
+
+    .save-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .save-status {
+      font-family: var(--font-condensed);
+      font-size: 0.82rem;
+      color: var(--grey-500);
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav" id="main-nav"></nav>
+
+  <main class="main-content">
+    <div class="container">
+      <div class="page-header">
+        <div class="breadcrumb">WC2026 &gt; <a href="predictions.html" style="color:inherit">Predictions</a> &gt; <span>Round 1</span></div>
+        <h1 class="display-title">Pre-Tournament</h1>
+        <p class="text-muted" style="font-family:var(--font-condensed)">Up to 150 points · Locks when tournament starts</p>
+      </div>
+
+      <div id="lockedBanner" class="alert alert-info hidden">
+        🔒 This round is locked. Your predictions are saved and can no longer be edited.
+      </div>
+
+      <div id="questionsWrap" style="padding-bottom:6rem">
+        <div class="loading-overlay"><div class="spinner"></div></div>
+      </div>
+
+      <div class="sticky-save" id="stickySave" style="display:none">
+        <div class="save-bar">
+          <div class="save-status" id="saveStatus">Unsaved changes</div>
+          <div style="display:flex;gap:0.75rem">
+            <a href="predictions.html" class="btn btn-ghost">← Back</a>
+            <button class="btn btn-primary" id="saveBtn">Save Predictions ✓</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/data.js"></script>
+  <script src="../js/supabase-client.js"></script>
+  <script src="../js/scoring.js"></script>
+  <script src="../js/ui.js"></script>
+  <script>
+    DB.initSupabase();
+    Nav.render('predictions');
+
+    const QUESTIONS = [
+      {
+        key: '1.1', num: 'Q1.1',
+        text: 'Who will WIN the World Cup 2026?',
+        pts: '20 pts correct · 10 pts if team reaches final',
+        type: 'team-select'
+      },
+      {
+        key: '1.2', num: 'Q1.2',
+        text: 'Who will be RUNNER-UP?',
+        pts: '10 pts correct · 5 pts if team wins tournament',
+        type: 'team-select'
+      },
+      {
+        key: '1.3a', num: 'Q1.3a',
+        text: 'Name a beaten SEMI-FINALIST (1 of 2)',
+        pts: '10 pts correct · 5 pts if team reaches the final',
+        type: 'team-select'
+      },
+      {
+        key: '1.3b', num: 'Q1.3b',
+        text: 'Name a beaten SEMI-FINALIST (2 of 2)',
+        pts: '10 pts correct · 5 pts if team reaches the final',
+        type: 'team-select'
+      },
+      {
+        key: '1.4', num: 'Q1.4',
+        text: "Who will be England's top scorer?",
+        pts: '10 pts for correct player',
+        type: 'text',
+        placeholder: 'e.g. Harry Kane'
+      },
+      {
+        key: '1.5', num: 'Q1.5',
+        text: "How many goals will England's top scorer score?",
+        pts: '10 pts exact',
+        type: 'number',
+        placeholder: '0'
+      },
+      {
+        key: '1.6', num: 'Q1.6',
+        text: 'Who will win the GOLDEN BOOT (tournament top scorer)?',
+        pts: '10 pts for correct player',
+        type: 'text',
+        placeholder: 'e.g. Kylian Mbappé'
+      },
+      {
+        key: '1.7', num: 'Q1.7',
+        text: 'How many goals will the Golden Boot winner score?',
+        pts: '10 pts exact',
+        type: 'number',
+        placeholder: '0'
+      },
+      {
+        key: '1.8', num: 'Q1.8',
+        text: 'How many goals will USA, Canada & Mexico score collectively in the group stage?',
+        pts: '5 pts exact · 3 pts within ±3',
+        type: 'number',
+        placeholder: '0'
+      },
+      {
+        key: '1.9', num: 'Q1.9',
+        text: 'From England, France, Brazil & Argentina — which team will score the MOST goals in the group stage?',
+        pts: '5 pts correct',
+        type: 'team-select-subset',
+        subset: ['ENG','FRA','BRA','ARG']
+      },
+      {
+        key: '1.10', num: 'Q1.10',
+        text: 'How many RED CARDS will be shown in the group stage? (incl. second yellows)',
+        pts: '5 pts exact',
+        type: 'number',
+        placeholder: '0'
+      },
+      {
+        key: '1.11', num: 'Q1.11',
+        text: 'How many TOTAL GOALS will be scored in the group stage?',
+        pts: '10 pts exact · 5 pts within ±3',
+        type: 'number',
+        placeholder: '0'
+      },
+      {
+        key: '1.12', num: 'Q1.12',
+        text: 'Which GROUP will be hardest to qualify from? (your pick for most competitive group)',
+        pts: '5 pts if your group has lowest total points gap between 1st and 4th',
+        type: 'group-select'
+      },
+    ];
+
+    let userId = null;
+    let saved = {};
+    let locked = false;
+
+    async function load() {
+      const session = await requireAuthFromPages();
+      if (!session) return;
+      userId = session.user.id;
+
+      locked = DB.isRoundLocked('round1');
+      if (locked) {
+        document.getElementById('lockedBanner').classList.remove('hidden');
+      } else {
+        document.getElementById('stickySave').style.display = 'block';
+      }
+
+      // Load existing predictions
+      const preds = await DB.getUserPredictions(userId, 'round1').catch(() => []);
+      preds.forEach(p => {
+        try { saved[p.question_key] = JSON.parse(p.value); }
+        catch { saved[p.question_key] = p.value; }
+      });
+
+      renderQuestions();
+    }
+
+    function renderQuestions() {
+      const wrap = document.getElementById('questionsWrap');
+      wrap.innerHTML = QUESTIONS.map(q => {
+        const val = saved[q.key] || '';
+        let input = '';
+
+        if (q.type === 'team-select') {
+          input = buildTeamSelect(`q_${q.key}`, val);
+        } else if (q.type === 'team-select-subset') {
+          const opts = q.subset.map(code => {
+            const t = getTeam(code);
+            return `<option value="${code}" ${code === val ? 'selected' : ''}>${t.flag} ${t.name}</option>`;
+          }).join('');
+          input = `<select id="q_${q.key}" class="form-control"><option value="">Select team…</option>${opts}</select>`;
+        } else if (q.type === 'group-select') {
+          const groupOpts = 'ABCDEFGHIJKL'.split('').map(g =>
+            `<option value="${g}" ${g === val ? 'selected' : ''}>Group ${g}</option>`
+          ).join('');
+          input = `<select id="q_${q.key}" class="form-control"><option value="">Select group…</option>${groupOpts}</select>`;
+        } else if (q.type === 'number') {
+          input = `<input type="number" id="q_${q.key}" class="form-control" style="max-width:120px" min="0" max="999" value="${val || ''}" placeholder="${q.placeholder || 0}" ${locked ? 'disabled' : ''}>`;
+        } else {
+          input = `<input type="text" id="q_${q.key}" class="form-control" value="${val || ''}" placeholder="${q.placeholder || ''}" ${locked ? 'disabled' : ''}>`;
+        }
+
+        if (locked) {
+          input = input.replace('class="form-control"', 'class="form-control" disabled');
+        }
+
+        return `
+          <div class="question-card">
+            <div class="question-num">${q.num}</div>
+            <div class="question-text">${q.text}</div>
+            <div class="question-pts">🏅 ${q.pts}</div>
+            ${input}
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function savePredictions() {
+      const btn = document.getElementById('saveBtn');
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+
+      const updates = [];
+      for (const q of QUESTIONS) {
+        const el = document.getElementById(`q_${q.key}`);
+        if (!el) continue;
+        const val = el.value.trim();
+        if (val !== '') {
+          updates.push(DB.savePrediction(userId, 'round1', q.key, val));
+        }
+      }
+
+      try {
+        await Promise.all(updates);
+        Toast.success('✓ Predictions saved!');
+        document.getElementById('saveStatus').textContent = 'Last saved: ' + new Date().toLocaleTimeString();
+        // Refresh saved
+        const preds = await DB.getUserPredictions(userId, 'round1');
+        preds.forEach(p => {
+          try { saved[p.question_key] = JSON.parse(p.value); }
+          catch { saved[p.question_key] = p.value; }
+        });
+      } catch (err) {
+        Toast.error('Save failed: ' + err.message);
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Save Predictions ✓';
+    }
+
+    document.getElementById('saveBtn')?.addEventListener('click', savePredictions);
+
+    load();
+  </script>
+</body>
+</html>

@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WC2026 — Match Centre</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .match-centre-page { padding: 2rem 0 4rem; }
+
+    .filter-strip {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+      align-items: center;
+    }
+
+    .filter-strip .filter-label {
+      font-family: var(--font-condensed);
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--grey-700);
+      margin-right: 0.25rem;
+    }
+
+    .round-section { margin-bottom: 3rem; }
+
+    .round-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid rgba(240,180,41,0.15);
+      margin-bottom: 1.25rem;
+    }
+
+    .round-section-title {
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      color: var(--gold);
+      letter-spacing: 0.08em;
+    }
+
+    .match-count {
+      font-family: var(--font-condensed);
+      font-size: 0.75rem;
+      color: var(--grey-700);
+      letter-spacing: 0.08em;
+    }
+
+    .match-list { display: flex; flex-direction: column; gap: 0.75rem; }
+
+    .match-row {
+      background: var(--navy-card);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+
+    .match-row.live { border-color: var(--crimson); }
+    .match-row.finished { border-color: rgba(46,196,182,0.15); }
+
+    .match-row-main {
+      display: grid;
+      grid-template-columns: 160px 1fr auto 1fr 120px;
+      align-items: center;
+      padding: 0.875rem 1.25rem;
+      gap: 1rem;
+    }
+
+    @media (max-width: 900px) {
+      .match-row-main {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+      }
+    }
+
+    .match-info {
+      font-family: var(--font-condensed);
+      font-size: 0.78rem;
+      color: var(--grey-500);
+    }
+
+    .match-info .match-num { color: var(--grey-700); margin-bottom: 0.2rem; }
+    .match-info .match-venue { margin-top: 0.2rem; }
+
+    .match-team-block {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .match-team-block.right { flex-direction: row-reverse; }
+
+    .match-team-flag { font-size: 1.5rem; }
+
+    .match-team-name {
+      font-family: var(--font-condensed);
+      font-size: 0.92rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .match-score-centre {
+      text-align: center;
+      min-width: 80px;
+    }
+
+    .match-scoreline {
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      color: var(--gold);
+      line-height: 1;
+    }
+
+    .match-vs-text {
+      font-family: var(--font-condensed);
+      font-size: 0.75rem;
+      color: var(--grey-700);
+      letter-spacing: 0.1em;
+    }
+
+    .match-status-block {
+      text-align: right;
+    }
+
+    .preds-row {
+      border-top: 1px solid rgba(255,255,255,0.04);
+      padding: 0.6rem 1.25rem;
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .preds-label {
+      font-family: var(--font-condensed);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--grey-700);
+      margin-right: 0.25rem;
+    }
+
+    .pred-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 0.2rem 0.65rem;
+      font-family: var(--font-condensed);
+      font-size: 0.75rem;
+      font-weight: 600;
+      transition: all 0.15s;
+    }
+
+    .pred-pill.exact { border-color: var(--gold); color: var(--gold); background: var(--gold-glow); }
+    .pred-pill.result { border-color: var(--green); color: var(--green); background: rgba(46,196,182,0.08); }
+    .pred-pill.wrong  { border-color: rgba(230,57,70,0.3); color: var(--crimson); background: rgba(230,57,70,0.05); }
+
+    .pred-name { color: var(--grey-500); margin-right: 0.15rem; }
+
+    .live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      background: var(--crimson);
+      color: white;
+      padding: 0.2rem 0.55rem;
+      border-radius: 3px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .live-dot-sm {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: white;
+      animation: blink 1s ease-in-out infinite;
+    }
+
+    .no-matches {
+      text-align: center;
+      padding: 3rem;
+      color: var(--grey-500);
+      font-family: var(--font-condensed);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav" id="main-nav"></nav>
+
+  <main class="main-content">
+    <div class="container">
+      <div class="page-header">
+        <div class="breadcrumb">WC2026 &gt; <span>Match Centre</span></div>
+        <h1 class="display-title">Match Centre</h1>
+        <p class="text-muted" style="font-family:var(--font-condensed)">All 104 fixtures · Live scores · Everyone's predictions</p>
+      </div>
+
+      <div class="match-centre-page">
+        <!-- Filters -->
+        <div class="filter-strip">
+          <span class="filter-label">Round:</span>
+          <button class="btn btn-primary btn-sm" data-filter="all">All</button>
+          <button class="btn btn-ghost btn-sm" data-filter="group">Group Stage</button>
+          <button class="btn btn-ghost btn-sm" data-filter="r32">R32</button>
+          <button class="btn btn-ghost btn-sm" data-filter="r16">R16</button>
+          <button class="btn btn-ghost btn-sm" data-filter="qf">QF</button>
+          <button class="btn btn-ghost btn-sm" data-filter="sf">SF</button>
+          <button class="btn btn-ghost btn-sm" data-filter="final">Final</button>
+        </div>
+
+        <div id="matchCentreContent">
+          <div class="loading-overlay"><div class="spinner"></div><span>Loading fixtures...</span></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/data.js"></script>
+  <script src="../js/supabase-client.js"></script>
+  <script src="../js/scoring.js"></script>
+  <script src="../js/ui.js"></script>
+  <script>
+    DB.initSupabase();
+    Nav.render('matches');
+
+    let allResults    = {};
+    let allPreds      = [];
+    let currentFilter = 'all';
+    let currentUserId = null;
+
+    async function load() {
+      const session = await DB.getSession();
+      currentUserId = session?.user?.id || null;
+
+      const [matchResults, predictions] = await Promise.all([
+        DB.getMatchResults().catch(() => []),
+        DB.getAllPredictions().catch(() => [])
+      ]);
+
+      matchResults.forEach(r => { allResults[r.match_id] = r; });
+      allPreds = predictions;
+
+      render();
+    }
+
+    // Build per-match prediction map: { matchId: [ { userName, home, away } ] }
+    function buildPredMap() {
+      const map = {};
+      allPreds.forEach(p => {
+        // round3 keys are "m1"…"m72", round4-8 are also "mXX"
+        if (!p.question_key.startsWith('m')) return;
+        const matchId = parseInt(p.question_key.slice(1));
+        if (isNaN(matchId)) return;
+        let val;
+        try { val = JSON.parse(p.value); } catch { return; }
+        if (!map[matchId]) map[matchId] = [];
+        map[matchId].push({
+          name: p.profiles?.display_name || 'Player',
+          home: val.home,
+          away: val.away,
+          userId: p.user_id
+        });
+      });
+      return map;
+    }
+
+    function render() {
+      const predMap = buildPredMap();
+      const content = document.getElementById('matchCentreContent');
+
+      const sections = [];
+
+      // Group stage
+      if (currentFilter === 'all' || currentFilter === 'group') {
+        const groups = 'ABCDEFGHIJKL'.split('');
+        groups.forEach(g => {
+          const matches = GROUP_FIXTURES.filter(m => m[3] === g);
+          sections.push({
+            title: `Group ${g}`,
+            matches: matches.map(m => buildGroupMatchRow(m, predMap, allResults)),
+          });
+        });
+      }
+
+      // Knockout
+      const koFilters = {
+        r32: { title: 'Round of 32', data: KNOCKOUT_ROUNDS.round32 },
+        r16: { title: 'Round of 16', data: KNOCKOUT_ROUNDS.round16 },
+        qf:  { title: 'Quarter Finals', data: KNOCKOUT_ROUNDS.quarterfinals },
+        sf:  { title: 'Semi Finals', data: KNOCKOUT_ROUNDS.semifinals },
+        final: { title: 'The Final', data: KNOCKOUT_ROUNDS.final },
+      };
+
+      if (currentFilter === 'all') {
+        Object.entries(koFilters).forEach(([key, val]) => {
+          sections.push({
+            title: val.title,
+            matches: val.data.matches.map(m => buildKoMatchRow(m, predMap, allResults)),
+          });
+        });
+      } else if (koFilters[currentFilter]) {
+        const { title, data } = koFilters[currentFilter];
+        sections.push({
+          title,
+          matches: data.matches.map(m => buildKoMatchRow(m, predMap, allResults)),
+        });
+      }
+
+      if (!sections.length) {
+        content.innerHTML = '<div class="no-matches">No matches for selected filter.</div>';
+        return;
+      }
+
+      content.innerHTML = sections.map(s => `
+        <div class="round-section">
+          <div class="round-section-header">
+            <span class="round-section-title">⚽ ${s.title}</span>
+            <span class="match-count">${s.matches.length} matches</span>
+          </div>
+          <div class="match-list">${s.matches.join('')}</div>
+        </div>
+      `).join('');
+    }
+
+    function buildGroupMatchRow(m, predMap, results) {
+      const [id, date, time, group, homeCode, awayCode, venue, city] = m;
+      const home = getTeam(homeCode);
+      const away = getTeam(awayCode);
+      const result = results[id];
+      return buildMatchRowHtml(id, date, home, away, result, predMap[id] || [], `Match ${id} · Group ${group}`, venue, city, 7, 5);
+    }
+
+    function buildKoMatchRow(m, predMap, results) {
+      const result = results[m.id];
+      const home = m.home_team ? getTeam(m.home_team) : { flag: '🏳️', name: 'TBD', code: 'TBD' };
+      const away = m.away_team ? getTeam(m.away_team) : { flag: '🏳️', name: 'TBD', code: 'TBD' };
+      const exactPts = m.id === 104 ? 10 : 7;
+      const resultPts = m.id === 104 ? 7 : 5;
+      return buildMatchRowHtml(m.id, m.date, home, away, result, predMap[m.id] || [], m.match_label, '', '', exactPts, resultPts);
+    }
+
+    function buildMatchRowHtml(id, date, home, away, result, preds, label, venue, city, exactPts, resultPts) {
+      const hasResult = result && result.home_score !== null;
+      const isLive = result?.status === 'IN_PLAY' || result?.status === 'PAUSED';
+
+      let statusBadge = `<span class="badge badge-grey">${formatDate(date)}</span>`;
+      let scoreLine = `<span class="match-vs-text">vs</span>`;
+
+      if (isLive) {
+        statusBadge = `<div class="live-badge"><div class="live-dot-sm"></div>LIVE</div>`;
+        scoreLine = `<div class="match-scoreline">${result.home_score} – ${result.away_score}</div>`;
+      } else if (hasResult) {
+        statusBadge = `<span class="finished-badge">Final</span>`;
+        scoreLine = `<div class="match-scoreline">${result.home_score} – ${result.away_score}</div>`;
+      }
+
+      // Predictions pills
+      let predsHtml = '';
+      if (preds.length > 0) {
+        const pills = preds.map(p => {
+          const predText = `${p.home}–${p.away}`;
+          let cls = '';
+          if (hasResult) {
+            const actH = result.home_score, actA = result.away_score;
+            if (p.home === actH && p.away === actA) cls = 'exact';
+            else if (Math.sign(p.home - p.away) === Math.sign(actH - actA)) cls = 'result';
+            else cls = 'wrong';
+          }
+          const isYou = p.userId === currentUserId;
+          return `<span class="pred-pill ${cls}"><span class="pred-name">${isYou ? '<strong>You</strong>' : p.name}:</span>${predText}</span>`;
+        }).join('');
+        predsHtml = `<div class="preds-row"><span class="preds-label">Picks:</span>${pills}</div>`;
+      }
+
+      return `
+        <div class="match-row ${isLive ? 'live' : hasResult ? 'finished' : ''}">
+          <div class="match-row-main">
+            <div class="match-info">
+              <div class="match-num">${label}</div>
+              <div>${formatDate(date)}</div>
+              ${venue ? `<div class="match-venue">${venue}${city ? `, ${city}` : ''}</div>` : ''}
+            </div>
+            <div class="match-team-block">
+              <span class="match-team-flag">${home.flag}</span>
+              <span class="match-team-name">${home.name}</span>
+            </div>
+            <div class="match-score-centre">
+              ${scoreLine}
+              ${statusBadge}
+            </div>
+            <div class="match-team-block right">
+              <span class="match-team-flag">${away.flag}</span>
+              <span class="match-team-name">${away.name}</span>
+            </div>
+            <div class="match-status-block">
+              <!-- reserved -->
+            </div>
+          </div>
+          ${predsHtml}
+        </div>
+      `;
+    }
+
+    // Filter buttons
+    document.querySelector('.filter-strip').addEventListener('click', e => {
+      const btn = e.target.closest('[data-filter]');
+      if (!btn) return;
+      currentFilter = btn.dataset.filter;
+      document.querySelectorAll('.filter-strip [data-filter]').forEach(b => {
+        b.className = b.dataset.filter === currentFilter ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm';
+      });
+      render();
+    });
+
+    // Live updates
+    DB.subscribeToMatchResults(() => {
+      DB.getMatchResults().then(r => {
+        allResults = {};
+        r.forEach(res => { allResults[res.match_id] = res; });
+        render();
+      });
+    });
+
+    load();
+  </script>
+</body>
+</html>

@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WC2026 — Round 3: Group Stage Scores</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .filter-bar {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+    }
+
+    .group-section {
+      margin-bottom: 2.5rem;
+    }
+
+    .group-header {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      color: var(--gold);
+      letter-spacing: 0.1em;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid rgba(240,180,41,0.2);
+      margin-bottom: 1rem;
+    }
+
+    .matches-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 0.875rem;
+    }
+
+    .score-card {
+      background: var(--navy-card);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.25rem;
+      transition: border-color 0.2s;
+    }
+
+    .score-card:focus-within { border-color: rgba(240,180,41,0.3); }
+    .score-card.saved { border-color: rgba(46,196,182,0.25); }
+    .score-card.locked { opacity: 0.65; }
+
+    .score-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+    }
+
+    .match-id {
+      font-family: var(--font-condensed);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      color: var(--grey-700);
+    }
+
+    .match-date-time {
+      font-family: var(--font-condensed);
+      font-size: 0.72rem;
+      color: var(--grey-500);
+    }
+
+    .score-teams {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .score-team {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex: 1;
+    }
+
+    .score-team.away { flex-direction: row-reverse; text-align: right; }
+
+    .score-team-flag { font-size: 1.4rem; }
+
+    .score-team-name {
+      font-family: var(--font-condensed);
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .score-inputs {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+
+    .score-num {
+      width: 48px;
+      text-align: center;
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      padding: 0.35rem;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.04);
+      border-radius: var(--radius-sm);
+      color: var(--white);
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .score-num:focus {
+      border-color: var(--gold);
+      background: rgba(240,180,41,0.06);
+    }
+
+    .score-sep {
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      color: var(--grey-700);
+    }
+
+    .result-actual {
+      text-align: center;
+      font-family: var(--font-condensed);
+      font-size: 0.72rem;
+      color: var(--grey-500);
+      margin-top: 0.5rem;
+    }
+
+    .result-actual .score-result {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      color: var(--white);
+    }
+
+    .pts-earned {
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      color: var(--gold);
+    }
+
+    .sticky-save {
+      position: sticky;
+      bottom: 1.5rem;
+      background: rgba(10,14,26,0.95);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid rgba(240,180,41,0.2);
+      padding: 1rem 0;
+      margin-top: 1.5rem;
+      border-radius: var(--radius-md);
+    }
+
+    .save-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .progress-text {
+      font-family: var(--font-condensed);
+      font-size: 0.82rem;
+      color: var(--grey-500);
+    }
+
+    .progress-text strong { color: var(--gold); }
+  </style>
+</head>
+<body>
+  <nav class="nav" id="main-nav"></nav>
+
+  <main class="main-content">
+    <div class="container">
+      <div class="page-header">
+        <div class="breadcrumb">WC2026 &gt; <a href="predictions.html" style="color:inherit">Predictions</a> &gt; <span>Round 3</span></div>
+        <h1 class="display-title">Group Stage Scores</h1>
+        <p class="text-muted" style="font-family:var(--font-condensed)">Predict exact scores for all 48 matches · 7pts exact · 5pts correct result</p>
+      </div>
+
+      <div id="lockedBanner" class="alert alert-info hidden mb-3">
+        🔒 Round locked. Showing your submitted predictions.
+      </div>
+
+      <!-- Group filter -->
+      <div class="filter-bar" id="filterBar">
+        <button class="btn btn-primary btn-sm" data-group="ALL">All Groups</button>
+        <!-- Letters populated by JS -->
+      </div>
+
+      <div id="matchesContent">
+        <div class="loading-overlay"><div class="spinner"></div></div>
+      </div>
+
+      <div class="sticky-save" id="stickySave" style="display:none">
+        <div class="save-bar">
+          <div class="progress-text" id="progressText">
+            Filled <strong id="filledCount">0</strong> / 48 predictions
+          </div>
+          <div style="display:flex;gap:0.75rem">
+            <a href="predictions.html" class="btn btn-ghost">← Back</a>
+            <button class="btn btn-primary" id="saveBtn">Save All Predictions ✓</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/data.js"></script>
+  <script src="../js/supabase-client.js"></script>
+  <script src="../js/scoring.js"></script>
+  <script src="../js/ui.js"></script>
+  <script>
+    DB.initSupabase();
+    Nav.render('predictions');
+
+    let userId = null;
+    let saved = {};
+    let results = {};
+    let locked = false;
+    let activeGroup = 'ALL';
+
+    function getMatchKey(id) { return `m${id}`; }
+
+    async function load() {
+      const session = await requireAuthFromPages();
+      if (!session) return;
+      userId = session.user.id;
+
+      locked = DB.isRoundLocked('round3');
+      if (locked) document.getElementById('lockedBanner').classList.remove('hidden');
+      else document.getElementById('stickySave').style.display = 'block';
+
+      const [preds, matchResults] = await Promise.all([
+        DB.getUserPredictions(userId, 'round3').catch(() => []),
+        DB.getMatchResults().catch(() => [])
+      ]);
+
+      preds.forEach(p => {
+        try { saved[p.question_key] = JSON.parse(p.value); }
+        catch { saved[p.question_key] = p.value; }
+      });
+
+      matchResults.forEach(r => { results[r.match_id] = r; });
+
+      // Build group filter buttons
+      const filterBar = document.getElementById('filterBar');
+      filterBar.innerHTML = `
+        <button class="btn btn-primary btn-sm" data-group="ALL">All</button>
+        ${'ABCDEFGHIJKL'.split('').map(g =>
+          `<button class="btn btn-ghost btn-sm" data-group="${g}">Group ${g}</button>`
+        ).join('')}
+      `;
+
+      filterBar.addEventListener('click', e => {
+        const btn = e.target.closest('[data-group]');
+        if (!btn) return;
+        activeGroup = btn.dataset.group;
+        filterBar.querySelectorAll('button').forEach(b => {
+          b.className = b.dataset.group === activeGroup
+            ? 'btn btn-primary btn-sm'
+            : 'btn btn-ghost btn-sm';
+        });
+        renderMatches();
+      });
+
+      renderMatches();
+    }
+
+    function renderMatches() {
+      const groups = activeGroup === 'ALL'
+        ? 'ABCDEFGHIJKL'.split('')
+        : [activeGroup];
+
+      const content = document.getElementById('matchesContent');
+      content.innerHTML = groups.map(g => {
+        const matches = GROUP_FIXTURES.filter(m => m[3] === g);
+        const cards = matches.map(m => renderMatchCard(m)).join('');
+        return `
+          <div class="group-section">
+            <div class="group-header">⚽ Group ${g}</div>
+            <div class="matches-grid">${cards}</div>
+          </div>
+        `;
+      }).join('');
+
+      // Attach input listeners
+      GROUP_FIXTURES.forEach(m => {
+        const hEl = document.getElementById(`h_${m[0]}`);
+        const aEl = document.getElementById(`a_${m[0]}`);
+        if (!hEl || !aEl) return;
+        [hEl, aEl].forEach(el => {
+          el.addEventListener('input', () => updateFilledCount());
+          el.addEventListener('change', () => {
+            const key = getMatchKey(m[0]);
+            saved[key] = { home: hEl.value, away: aEl.value };
+          });
+        });
+      });
+
+      updateFilledCount();
+    }
+
+    function renderMatchCard(m) {
+      const [id, date, time, group, homeCode, awayCode, venue, city] = m;
+      const home = getTeam(homeCode);
+      const away = getTeam(awayCode);
+      const key = getMatchKey(id);
+      const pred = saved[key] || {};
+      const result = results[id];
+      const hasResult = result && result.home_score !== null;
+
+      const homeVal = pred.home !== undefined ? pred.home : '';
+      const awayVal = pred.away !== undefined ? pred.away : '';
+
+      let resultHtml = '';
+      if (hasResult) {
+        const actH = result.home_score, actA = result.away_score;
+        let pts = 0, ptsLabel = '';
+        if (homeVal !== '' && awayVal !== '') {
+          const pH = parseInt(homeVal), pA = parseInt(awayVal);
+          if (!isNaN(pH) && !isNaN(pA)) {
+            if (pH === actH && pA === actA) { pts = 7; ptsLabel = '✓ Exact!'; }
+            else if (Math.sign(pH - pA) === Math.sign(actH - actA)) { pts = 5; ptsLabel = '✓ Result'; }
+            else { pts = 0; ptsLabel = '✗'; }
+          }
+        }
+        resultHtml = `
+          <div class="result-actual">
+            Result: <span class="score-result">${actH} – ${actA}</span>
+            ${pts > 0
+              ? `<span class="pts-earned" style="color:var(--green);margin-left:0.5rem">+${pts} pts · ${ptsLabel}</span>`
+              : ptsLabel ? `<span style="color:var(--crimson);margin-left:0.5rem">${ptsLabel}</span>` : ''}
+          </div>
+        `;
+      }
+
+      return `
+        <div class="score-card ${pred.home !== undefined ? 'saved' : ''} ${locked ? 'locked' : ''}">
+          <div class="score-card-header">
+            <span class="match-id">Match ${id}</span>
+            <span class="match-date-time">${formatDate(date)}</span>
+          </div>
+          <div class="score-teams">
+            <div class="score-team">
+              <span class="score-team-flag">${home.flag}</span>
+              <span class="score-team-name">${home.name}</span>
+            </div>
+            <div class="score-inputs">
+              <input type="number" id="h_${id}" class="score-num" min="0" max="20"
+                value="${homeVal}" placeholder="0" ${locked ? 'disabled' : ''}>
+              <span class="score-sep">–</span>
+              <input type="number" id="a_${id}" class="score-num" min="0" max="20"
+                value="${awayVal}" placeholder="0" ${locked ? 'disabled' : ''}>
+            </div>
+            <div class="score-team away">
+              <span class="score-team-flag">${away.flag}</span>
+              <span class="score-team-name">${away.name}</span>
+            </div>
+          </div>
+          ${resultHtml}
+        </div>
+      `;
+    }
+
+    function updateFilledCount() {
+      let count = 0;
+      GROUP_FIXTURES.forEach(m => {
+        const hEl = document.getElementById(`h_${m[0]}`);
+        const aEl = document.getElementById(`a_${m[0]}`);
+        if (hEl && aEl && hEl.value !== '' && aEl.value !== '') count++;
+      });
+      const el = document.getElementById('filledCount');
+      if (el) el.textContent = count;
+    }
+
+    async function savePredictions() {
+      const btn = document.getElementById('saveBtn');
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+
+      const updates = [];
+      GROUP_FIXTURES.forEach(m => {
+        const hEl = document.getElementById(`h_${m[0]}`);
+        const aEl = document.getElementById(`a_${m[0]}`);
+        if (!hEl || !aEl) return;
+        if (hEl.value === '' || aEl.value === '') return;
+        updates.push(DB.savePrediction(userId, 'round3', getMatchKey(m[0]), {
+          home: parseInt(hEl.value),
+          away: parseInt(aEl.value)
+        }));
+      });
+
+      try {
+        await Promise.all(updates);
+        Toast.success(`✓ Saved ${updates.length} score predictions!`);
+        // Mark cards as saved
+        GROUP_FIXTURES.forEach(m => {
+          const card = document.querySelector(`.score-card`);
+          if (card) card.classList.add('saved');
+        });
+      } catch (err) {
+        Toast.error('Save failed: ' + err.message);
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Save All Predictions ✓';
+    }
+
+    document.getElementById('saveBtn')?.addEventListener('click', savePredictions);
+
+    // Real-time match result updates
+    DB.subscribeToMatchResults(() => load());
+
+    load();
+  </script>
+</body>
+</html>

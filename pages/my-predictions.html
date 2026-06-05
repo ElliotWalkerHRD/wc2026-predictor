@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WC2026 — My Predictions</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .mypreds-page { padding: 2rem 0 4rem; }
+
+    .round-tabs {
+      display: flex;
+      gap: 0.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      margin-bottom: 2rem;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .round-tab-btn {
+      padding: 0.6rem 1rem;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--grey-500);
+      font-family: var(--font-condensed);
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+      margin-bottom: -1px;
+      position: relative;
+    }
+
+    .round-tab-btn:hover { color: var(--grey-100); }
+    .round-tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+    .round-tab-btn .tab-pts {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: var(--gold);
+      color: var(--navy);
+      border-radius: 10px;
+      font-size: 0.55rem;
+      padding: 0 4px;
+      font-weight: 700;
+      line-height: 1.4;
+    }
+
+    .round-panel { display: none; }
+    .round-panel.active { display: block; }
+
+    .pred-item {
+      background: var(--navy-card);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.25rem;
+      margin-bottom: 0.75rem;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: start;
+      gap: 1rem;
+    }
+
+    .pred-item.correct { border-color: rgba(46,196,182,0.25); }
+    .pred-item.wrong   { border-color: rgba(230,57,70,0.15); }
+
+    .pred-question {
+      font-family: var(--font-condensed);
+      font-size: 0.78rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--grey-500);
+      margin-bottom: 0.35rem;
+    }
+
+    .pred-answer {
+      font-family: var(--font-condensed);
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
+
+    .pred-actual {
+      font-size: 0.78rem;
+      color: var(--grey-500);
+      margin-top: 0.3rem;
+      font-family: var(--font-condensed);
+    }
+
+    .pred-pts {
+      text-align: right;
+    }
+
+    .pts-number {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      line-height: 1;
+    }
+
+    .pts-number.positive { color: var(--gold); }
+    .pts-number.zero { color: var(--grey-700); }
+
+    .pts-label {
+      font-family: var(--font-condensed);
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--grey-700);
+      margin-top: 0.2rem;
+    }
+
+    .round-total-bar {
+      background: rgba(240,180,41,0.08);
+      border: 1px solid rgba(240,180,41,0.15);
+      border-radius: var(--radius-sm);
+      padding: 0.875rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+    }
+
+    .round-total-label {
+      font-family: var(--font-condensed);
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--grey-300);
+    }
+
+    .round-total-pts {
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      color: var(--gold);
+    }
+
+    .match-pred-row {
+      background: var(--navy-card);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-md);
+      padding: 0.875rem 1.25rem;
+      margin-bottom: 0.625rem;
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .match-pred-teams {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: var(--font-condensed);
+      font-size: 0.85rem;
+    }
+
+    .match-pred-score {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      color: var(--grey-300);
+      text-align: center;
+    }
+
+    .match-pred-score.exact { color: var(--gold); }
+    .match-pred-score.result { color: var(--green); }
+    .match-pred-score.wrong  { color: var(--crimson); }
+
+    .empty-round {
+      text-align: center;
+      padding: 3rem;
+      color: var(--grey-500);
+      font-family: var(--font-condensed);
+    }
+
+    .empty-round a { color: var(--gold); text-decoration: none; }
+    .empty-round a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <nav class="nav" id="main-nav"></nav>
+
+  <main class="main-content">
+    <div class="container">
+      <div class="page-header">
+        <div class="breadcrumb">WC2026 &gt; <span>My Predictions</span></div>
+        <h1 class="display-title">My Picks</h1>
+        <p class="text-muted" style="font-family:var(--font-condensed)">All your predictions · Correct/incorrect indicators · Points earned</p>
+      </div>
+
+      <div class="mypreds-page">
+        <!-- Summary strip -->
+        <div class="stats-strip mb-4" id="summaryStrip">
+          <div class="stat-box">
+            <div class="stat-value" id="sumTotal">—</div>
+            <div class="stat-label">Total Points</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="sumRank">—</div>
+            <div class="stat-label">Rank</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="sumCorrect">—</div>
+            <div class="stat-label">Correct Results</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="sumExact">—</div>
+            <div class="stat-label">Exact Scores</div>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="round-tabs" id="roundTabs"></div>
+
+        <!-- Panels -->
+        <div id="roundPanels">
+          <div class="loading-overlay"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/data.js"></script>
+  <script src="../js/supabase-client.js"></script>
+  <script src="../js/scoring.js"></script>
+  <script src="../js/ui.js"></script>
+  <script>
+    DB.initSupabase();
+    Nav.render('mypreds');
+
+    let activeRound = 'round1';
+    let allPreds = {};
+    let allResults = {};
+    let userScore = null;
+    let scores = [];
+    let userId = null;
+
+    async function load() {
+      const session = await requireAuthFromPages();
+      if (!session) return;
+      userId = session.user.id;
+
+      const [preds, results, uScore, allScores] = await Promise.all([
+        DB.getUserPredictions(userId).catch(() => []),
+        DB.getMatchResults().catch(() => []),
+        DB.getUserScore(userId).catch(() => null),
+        DB.getScores().catch(() => [])
+      ]);
+
+      results.forEach(r => { allResults[r.match_id] = r; });
+      userScore = uScore;
+      scores = allScores;
+
+      // Group by round
+      preds.forEach(p => {
+        if (!allPreds[p.round]) allPreds[p.round] = [];
+        allPreds[p.round].push(p);
+      });
+
+      // Summary stats
+      if (userScore) {
+        document.getElementById('sumTotal').textContent = userScore.total_points || 0;
+        const rank = scores.findIndex(s => s.user_id === userId) + 1;
+        document.getElementById('sumRank').textContent = rank > 0 ? `#${rank}` : '—';
+      }
+
+      // Count correct/exact
+      let totalCorrect = 0, totalExact = 0;
+      preds.forEach(p => {
+        if (!p.question_key.startsWith('m')) return;
+        const matchId = parseInt(p.question_key.slice(1));
+        const result = allResults[matchId];
+        if (!result || result.home_score === null) return;
+        let val;
+        try { val = JSON.parse(p.value); } catch { return; }
+        if (val.home === result.home_score && val.away === result.away_score) {
+          totalExact++; totalCorrect++;
+        } else if (Math.sign(val.home - val.away) === Math.sign(result.home_score - result.away_score)) {
+          totalCorrect++;
+        }
+      });
+      document.getElementById('sumCorrect').textContent = totalCorrect;
+      document.getElementById('sumExact').textContent = totalExact;
+
+      renderTabs();
+      renderActivePanel();
+    }
+
+    const ROUNDS_INFO = [
+      { id: 'round1', label: 'Pre-Tournament', icon: '🔮' },
+      { id: 'round2', label: 'Group Winners',  icon: '🏅' },
+      { id: 'round3', label: 'Group Scores',   icon: '⚽' },
+      { id: 'round4', label: 'Round of 32',    icon: '🔥' },
+      { id: 'round5', label: 'Round of 16',    icon: '⚡' },
+      { id: 'round6', label: 'Quarter Finals', icon: '💥' },
+      { id: 'round7', label: 'Semi Finals',    icon: '🌟' },
+      { id: 'round8', label: 'Final',          icon: '🏆' },
+    ];
+
+    function renderTabs() {
+      const tabsEl = document.getElementById('roundTabs');
+      tabsEl.innerHTML = ROUNDS_INFO.map(r => {
+        const preds = allPreds[r.id] || [];
+        const pts = userScore?.[r.id + '_points'];
+        return `
+          <button class="round-tab-btn ${r.id === activeRound ? 'active' : ''}"
+            data-round="${r.id}">
+            ${r.icon} ${r.label}
+            ${pts ? `<span class="tab-pts">${pts}</span>` : ''}
+          </button>
+        `;
+      }).join('');
+
+      tabsEl.querySelectorAll('.round-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          activeRound = btn.dataset.round;
+          tabsEl.querySelectorAll('.round-tab-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          renderActivePanel();
+        });
+      });
+    }
+
+    function renderActivePanel() {
+      const panel = document.getElementById('roundPanels');
+      const preds = allPreds[activeRound] || [];
+
+      if (!preds.length) {
+        panel.innerHTML = `
+          <div class="empty-round">
+            <div style="font-size:2.5rem;margin-bottom:1rem">📭</div>
+            <p>No predictions submitted for this round yet.</p>
+            <p style="margin-top:0.5rem">
+              <a href="${activeRound}.html">Go make your predictions →</a>
+            </p>
+          </div>
+        `;
+        return;
+      }
+
+      const pts = userScore?.[activeRound + '_points'];
+      const totalBar = `
+        <div class="round-total-bar">
+          <span class="round-total-label">Round Points</span>
+          <span class="round-total-pts">${pts !== undefined && pts !== null ? pts : '—'}</span>
+        </div>
+      `;
+
+      let content = '';
+
+      if (activeRound === 'round1') {
+        content = renderRound1Panel(preds);
+      } else if (activeRound === 'round2') {
+        content = renderRound2Panel(preds);
+      } else {
+        content = renderScorePanel(preds, activeRound);
+      }
+
+      panel.innerHTML = totalBar + content;
+    }
+
+    function renderRound1Panel(preds) {
+      const R1_LABELS = {
+        '1.1':  'Tournament winner',
+        '1.2':  'Runner-up',
+        '1.3a': 'Beaten semi-finalist #1',
+        '1.3b': 'Beaten semi-finalist #2',
+        '1.4':  "England top scorer",
+        '1.5':  "England top scorer goals",
+        '1.6':  'Golden boot winner',
+        '1.7':  'Golden boot goals',
+        '1.8':  'Host nations group goals',
+        '1.9':  'Most goals: ENG/FRA/BRA/ARG',
+        '1.10': 'Group stage red cards',
+        '1.11': 'Group stage total goals',
+        '1.12': 'Hardest group',
+      };
+
+      return preds.map(p => {
+        let val;
+        try { val = JSON.parse(p.value); } catch { val = p.value; }
+
+        // For team codes, look up the team
+        let displayVal = val;
+        if (['1.1','1.2','1.3a','1.3b','1.9'].includes(p.question_key)) {
+          const t = getTeam(val);
+          displayVal = t ? `${t.flag} ${t.name}` : val;
+        }
+
+        return `
+          <div class="pred-item">
+            <div>
+              <div class="pred-question">${R1_LABELS[p.question_key] || p.question_key}</div>
+              <div class="pred-answer">${displayVal}</div>
+            </div>
+            <div class="pred-pts">
+              <div class="pts-number zero">?</div>
+              <div class="pts-label">pts</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderRound2Panel(preds) {
+      const grouped = {};
+      preds.forEach(p => {
+        const match = p.question_key.match(/^2\.(w|r)\.([A-L])$/);
+        if (!match) return;
+        const [, pos, g] = match;
+        if (!grouped[g]) grouped[g] = {};
+        grouped[g][pos] = p.value.replace(/"/g,'');
+      });
+
+      return Object.entries(grouped).map(([g, gPreds]) => {
+        const winner = gPreds.w ? getTeam(gPreds.w) : null;
+        const runner = gPreds.r ? getTeam(gPreds.r) : null;
+        return `
+          <div class="pred-item">
+            <div>
+              <div class="pred-question">Group ${g}</div>
+              <div class="pred-answer">
+                ${winner ? `🥇 ${winner.flag} ${winner.name}` : '—'}
+                &nbsp;|&nbsp;
+                ${runner ? `🥈 ${runner.flag} ${runner.name}` : '—'}
+              </div>
+            </div>
+            <div class="pred-pts">
+              <div class="pts-number zero">?</div>
+              <div class="pts-label">pts</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderScorePanel(preds, round) {
+      const isFinale = round === 'round8';
+      const exactPts = isFinale ? 10 : 7;
+      const resultPts = isFinale ? 7 : 5;
+
+      return preds.map(p => {
+        if (!p.question_key.startsWith('m')) return '';
+        const matchId = parseInt(p.question_key.slice(1));
+        let val;
+        try { val = JSON.parse(p.value); } catch { return ''; }
+
+        const result = allResults[matchId];
+        const hasResult = result && result.home_score !== null;
+
+        // Find match details
+        const fixture = GROUP_FIXTURES.find(f => f[0] === matchId);
+        let homeTeam, awayTeam;
+        if (fixture) {
+          homeTeam = getTeam(fixture[4]);
+          awayTeam = getTeam(fixture[5]);
+        } else {
+          homeTeam = { flag: '🏳️', name: 'TBD' };
+          awayTeam = { flag: '🏳️', name: 'TBD' };
+        }
+
+        let pts = 0, scoreClass = '', indicator = '';
+        if (hasResult) {
+          const actH = result.home_score, actA = result.away_score;
+          if (val.home === actH && val.away === actA) {
+            pts = exactPts; scoreClass = 'exact'; indicator = '✓ Exact';
+          } else if (Math.sign(val.home - val.away) === Math.sign(actH - actA)) {
+            pts = resultPts; scoreClass = 'result'; indicator = '✓ Result';
+          } else {
+            pts = 0; scoreClass = 'wrong'; indicator = '✗';
+          }
+        }
+
+        return `
+          <div class="match-pred-row ${scoreClass}">
+            <div class="match-pred-teams">
+              <span>${homeTeam.flag} ${homeTeam.name}</span>
+              <span style="color:var(--grey-700)">vs</span>
+              <span>${awayTeam.flag} ${awayTeam.name}</span>
+            </div>
+            <div class="match-pred-score ${scoreClass}">
+              ${val.home} – ${val.away}
+              ${hasResult ? `<div style="font-family:var(--font-condensed);font-size:0.65rem;color:inherit;margin-top:0.2rem">${indicator}</div>` : ''}
+              ${hasResult ? `<div style="font-family:var(--font-condensed);font-size:0.65rem;color:var(--grey-500)">Actual: ${result.home_score}–${result.away_score}</div>` : ''}
+            </div>
+            <div class="pred-pts" style="min-width:40px">
+              <div class="pts-number ${pts > 0 ? 'positive' : 'zero'}">${hasResult ? pts : '?'}</div>
+              <div class="pts-label">pts</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    DB.subscribeToMatchResults(() => {
+      DB.getMatchResults().then(r => {
+        allResults = {};
+        r.forEach(res => { allResults[res.match_id] = res; });
+        renderActivePanel();
+      });
+    });
+
+    load();
+  </script>
+</body>
+</html>

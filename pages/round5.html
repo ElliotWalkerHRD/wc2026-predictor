@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WC2026 — Knockout Predictions</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .knockout-matches {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .ko-card {
+      background: var(--navy-card);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: var(--radius-md);
+      padding: 1.25rem;
+      transition: border-color 0.2s;
+    }
+
+    .ko-card:focus-within { border-color: rgba(240,180,41,0.3); }
+    .ko-card.tbd { opacity: 0.5; }
+
+    .ko-card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+    }
+
+    .ko-match-label {
+      font-family: var(--font-condensed);
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      color: var(--grey-700);
+    }
+
+    .ko-teams-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .ko-team {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-family: var(--font-condensed);
+      font-size: 0.88rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .ko-team.away { flex-direction: row-reverse; text-align: right; }
+
+    .ko-team-flag { font-size: 1.4rem; }
+
+    .ko-score-inputs {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      justify-content: center;
+    }
+
+    .score-num {
+      width: 48px;
+      text-align: center;
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      padding: 0.35rem;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.04);
+      border-radius: var(--radius-sm);
+      color: var(--white);
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .score-num:focus {
+      border-color: var(--gold);
+      background: rgba(240,180,41,0.06);
+    }
+
+    .score-sep { font-family: var(--font-display); font-size: 1.3rem; color: var(--grey-700); }
+
+    .ko-result {
+      text-align: center;
+      font-family: var(--font-condensed);
+      font-size: 0.72rem;
+      color: var(--grey-500);
+      margin-top: 0.5rem;
+    }
+
+    .tbd-notice {
+      text-align: center;
+      padding: 1rem;
+      font-family: var(--font-condensed);
+      font-size: 0.82rem;
+      color: var(--grey-700);
+      letter-spacing: 0.05em;
+    }
+
+    .sticky-save {
+      position: sticky;
+      bottom: 1.5rem;
+      background: rgba(10,14,26,0.95);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid rgba(240,180,41,0.2);
+      padding: 1rem 0;
+      margin-top: 1.5rem;
+      border-radius: var(--radius-md);
+    }
+
+    .save-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .scoring-note {
+      background: rgba(240,180,41,0.07);
+      border: 1px solid rgba(240,180,41,0.15);
+      border-radius: var(--radius-sm);
+      padding: 0.75rem 1rem;
+      font-family: var(--font-condensed);
+      font-size: 0.82rem;
+      color: var(--grey-300);
+      margin-bottom: 1.5rem;
+    }
+
+    .scoring-note strong { color: var(--gold); }
+  </style>
+</head>
+<body>
+  <nav class="nav" id="main-nav"></nav>
+
+  <main class="main-content">
+    <div class="container">
+      <div class="page-header">
+        <div class="breadcrumb">WC2026 &gt; <a href="predictions.html" style="color:inherit">Predictions</a> &gt; <span id="breadcrumbRound">Knockout</span></div>
+        <h1 class="display-title" id="pageTitle">Knockout Stage</h1>
+        <p class="text-muted" id="pageSubtitle" style="font-family:var(--font-condensed)">Loading…</p>
+      </div>
+
+      <div id="lockedBanner" class="alert alert-info hidden mb-3">
+        🔒 This round is locked. Your predictions are saved and can no longer be edited.
+      </div>
+
+      <div class="scoring-note" id="scoringNote">
+        <strong>Scoring:</strong> 7 pts for exact score · 5 pts for correct result
+      </div>
+
+      <div class="knockout-matches" id="matchesContent">
+        <div class="loading-overlay"><div class="spinner"></div></div>
+      </div>
+
+      <div class="sticky-save" id="stickySave" style="display:none">
+        <div class="save-bar">
+          <div style="font-family:var(--font-condensed);font-size:0.82rem;color:var(--grey-500)" id="saveStatus">
+            Make your predictions
+          </div>
+          <div style="display:flex;gap:0.75rem">
+            <a href="predictions.html" class="btn btn-ghost">← Back</a>
+            <button class="btn btn-primary" id="saveBtn">Save Predictions ✓</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/data.js"></script>
+  <script src="../js/supabase-client.js"></script>
+  <script src="../js/scoring.js"></script>
+  <script src="../js/ui.js"></script>
+  <script>
+    DB.initSupabase();
+    Nav.render('predictions');
+
+    // Determine which round from filename
+    const filename = window.location.pathname.split('/').pop().replace('.html','');
+    const ROUND_MAP = {
+      round4: { id: 'round4', name: 'Round of 32',  roundKey: 'round32',    exactPts: 7, resultPts: 5 },
+      round5: { id: 'round5', name: 'Round of 16',  roundKey: 'round16',    exactPts: 7, resultPts: 5 },
+      round6: { id: 'round6', name: 'Quarter Finals', roundKey: 'quarterfinals', exactPts: 7, resultPts: 5 },
+      round7: { id: 'round7', name: 'Semi Finals',  roundKey: 'semifinals', exactPts: 7, resultPts: 5 },
+      round8: { id: 'round8', name: 'The Final',    roundKey: 'final',      exactPts: 10, resultPts: 7 },
+    };
+
+    const roundMeta = ROUND_MAP[filename] || ROUND_MAP.round4;
+    const { id: roundId, name: roundName, roundKey, exactPts, resultPts } = roundMeta;
+
+    document.getElementById('breadcrumbRound').textContent = roundName;
+    document.getElementById('pageTitle').textContent = roundName;
+    document.getElementById('scoringNote').innerHTML =
+      `<strong>Scoring:</strong> <strong style="color:var(--gold)">${exactPts} pts</strong> for exact score · <strong style="color:var(--gold)">${resultPts} pts</strong> for correct result`;
+
+    const roundData = KNOCKOUT_ROUNDS[roundKey];
+    if (!roundData) {
+      document.getElementById('pageSubtitle').textContent = 'Round not found.';
+    } else {
+      document.getElementById('pageSubtitle').textContent =
+        `${roundData.matches.length} matches · Up to ${roundData.matches.length * exactPts} pts`;
+    }
+
+    let userId = null;
+    let saved = {};
+    let results = {};
+    let locked = false;
+
+    function getMatchKey(id) { return `m${id}`; }
+
+    async function load() {
+      const session = await requireAuthFromPages();
+      if (!session) return;
+      userId = session.user.id;
+
+      locked = DB.isRoundLocked(roundId);
+      if (locked) document.getElementById('lockedBanner').classList.remove('hidden');
+      else document.getElementById('stickySave').style.display = 'block';
+
+      const [preds, matchResults] = await Promise.all([
+        DB.getUserPredictions(userId, roundId).catch(() => []),
+        DB.getMatchResults().catch(() => [])
+      ]);
+
+      preds.forEach(p => {
+        try { saved[p.question_key] = JSON.parse(p.value); }
+        catch { saved[p.question_key] = p.value; }
+      });
+
+      matchResults.forEach(r => { results[r.match_id] = r; });
+
+      renderMatches();
+    }
+
+    function renderMatches() {
+      const container = document.getElementById('matchesContent');
+      if (!roundData) { container.innerHTML = '<p class="text-muted">No matches found.</p>'; return; }
+
+      container.innerHTML = roundData.matches.map(m => {
+        const result = results[m.id];
+        const pred   = saved[getMatchKey(m.id)] || {};
+        const homeVal = pred.home !== undefined ? pred.home : '';
+        const awayVal = pred.away !== undefined ? pred.away : '';
+
+        // Check if teams are known from match results table
+        const homeTeam = m.home_team ? getTeam(m.home_team) : null;
+        const awayTeam = m.away_team ? getTeam(m.away_team) : null;
+        const hasTeams = homeTeam && awayTeam;
+        const hasResult = result && result.home_score !== null;
+
+        let teamRowHtml = '';
+        if (hasTeams) {
+          teamRowHtml = `
+            <div class="ko-teams-row">
+              <div class="ko-team">
+                <span class="ko-team-flag">${homeTeam.flag}</span>
+                <span>${homeTeam.name}</span>
+              </div>
+              <div class="ko-score-inputs">
+                <input type="number" id="h_${m.id}" class="score-num" min="0" max="20"
+                  value="${homeVal}" placeholder="0" ${locked ? 'disabled' : ''}>
+                <span class="score-sep">–</span>
+                <input type="number" id="a_${m.id}" class="score-num" min="0" max="20"
+                  value="${awayVal}" placeholder="0" ${locked ? 'disabled' : ''}>
+              </div>
+              <div class="ko-team away">
+                <span class="ko-team-flag">${awayTeam.flag}</span>
+                <span>${awayTeam.name}</span>
+              </div>
+            </div>
+          `;
+        } else {
+          teamRowHtml = `
+            <div class="tbd-notice">
+              ⏳ Teams TBD — ${m.note || 'Drawn once qualified'}
+              ${!locked ? `
+                <br><br>
+                <div class="ko-score-inputs" style="justify-content:center;margin-top:0.5rem">
+                  <input type="number" id="h_${m.id}" class="score-num" min="0" max="20"
+                    value="${homeVal}" placeholder="–" style="opacity:0.5">
+                  <span class="score-sep">–</span>
+                  <input type="number" id="a_${m.id}" class="score-num" min="0" max="20"
+                    value="${awayVal}" placeholder="–" style="opacity:0.5">
+                </div>
+                <small style="color:var(--grey-700);font-size:0.7rem">You can enter score now or wait</small>
+              ` : ''}
+            </div>
+          `;
+        }
+
+        let resultHtml = '';
+        if (hasResult && homeVal !== '' && awayVal !== '') {
+          const actH = result.home_score, actA = result.away_score;
+          const pH = parseInt(homeVal), pA = parseInt(awayVal);
+          let pts = 0, label = '✗';
+          if (!isNaN(pH) && !isNaN(pA)) {
+            if (pH === actH && pA === actA) { pts = exactPts; label = '✓ Exact!'; }
+            else if (Math.sign(pH - pA) === Math.sign(actH - actA)) { pts = resultPts; label = '✓ Result'; }
+          }
+          resultHtml = `
+            <div class="ko-result">
+              Result: <strong>${actH} – ${actA}</strong>
+              ${pts > 0
+                ? `<span style="color:var(--green);margin-left:0.4rem">+${pts} pts · ${label}</span>`
+                : `<span style="color:var(--crimson);margin-left:0.4rem">${label}</span>`}
+            </div>
+          `;
+        } else if (hasResult) {
+          const actH = result.home_score, actA = result.away_score;
+          resultHtml = `<div class="ko-result">Result: <strong>${actH} – ${actA}</strong></div>`;
+        }
+
+        return `
+          <div class="ko-card ${!hasTeams && !locked ? 'tbd' : ''}">
+            <div class="ko-card-top">
+              <span class="ko-match-label">${m.match_label} · ${formatDate(m.date || '2026-07-01')}</span>
+              ${hasResult ? '<span class="finished-badge">Final</span>' : '<span class="badge badge-grey">Upcoming</span>'}
+            </div>
+            ${teamRowHtml}
+            ${resultHtml}
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function savePredictions() {
+      const btn = document.getElementById('saveBtn');
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+
+      const updates = [];
+      if (roundData) {
+        roundData.matches.forEach(m => {
+          const hEl = document.getElementById(`h_${m.id}`);
+          const aEl = document.getElementById(`a_${m.id}`);
+          if (!hEl || !aEl || hEl.value === '' || aEl.value === '') return;
+          updates.push(DB.savePrediction(userId, roundId, getMatchKey(m.id), {
+            home: parseInt(hEl.value),
+            away: parseInt(aEl.value)
+          }));
+        });
+      }
+
+      try {
+        await Promise.all(updates);
+        Toast.success(`✓ Saved ${updates.length} predictions!`);
+        document.getElementById('saveStatus').textContent = 'Saved at ' + new Date().toLocaleTimeString();
+      } catch (err) {
+        Toast.error('Save failed: ' + err.message);
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Save Predictions ✓';
+    }
+
+    document.getElementById('saveBtn')?.addEventListener('click', savePredictions);
+    DB.subscribeToMatchResults(() => load());
+
+    load();
+  </script>
+</body>
+</html>

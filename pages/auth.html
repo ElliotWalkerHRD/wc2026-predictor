@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WC2026 — Sign In</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .auth-page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+      position: relative;
+    }
+
+    .auth-page::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 30% 40%, rgba(240,180,41,0.07) 0%, transparent 60%),
+        radial-gradient(ellipse at 70% 70%, rgba(230,57,70,0.05) 0%, transparent 50%);
+      pointer-events: none;
+    }
+
+    .auth-container {
+      width: 100%;
+      max-width: 420px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .auth-logo {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .auth-logo a {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      color: var(--gold);
+      text-decoration: none;
+      letter-spacing: 0.1em;
+    }
+
+    .auth-logo a span { color: var(--crimson); }
+
+    .auth-logo p {
+      font-family: var(--font-condensed);
+      font-size: 0.8rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--grey-500);
+      margin-top: 0.25rem;
+    }
+
+    .auth-card {
+      background: var(--navy-card);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+    }
+
+    .auth-tabs {
+      display: flex;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      margin-bottom: 1.75rem;
+    }
+
+    .auth-tab {
+      flex: 1;
+      padding: 0.6rem;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      font-family: var(--font-condensed);
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--grey-500);
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: -1px;
+    }
+
+    .auth-tab.active {
+      color: var(--gold);
+      border-bottom-color: var(--gold);
+    }
+
+    .auth-panel { display: none; }
+    .auth-panel.active { display: block; }
+
+    .form-footer {
+      margin-top: 1.5rem;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--grey-500);
+      font-family: var(--font-condensed);
+    }
+
+    .form-footer a {
+      color: var(--gold);
+      text-decoration: none;
+    }
+
+    .divider-text {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin: 1.25rem 0;
+      color: var(--grey-700);
+      font-size: 0.75rem;
+      font-family: var(--font-condensed);
+      letter-spacing: 0.1em;
+    }
+
+    .divider-text::before, .divider-text::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(255,255,255,0.07);
+    }
+
+    .invite-notice {
+      background: rgba(240,180,41,0.08);
+      border: 1px solid rgba(240,180,41,0.2);
+      border-radius: var(--radius-sm);
+      padding: 0.875rem;
+      font-size: 0.82rem;
+      color: var(--grey-300);
+      margin-bottom: 1.25rem;
+      line-height: 1.5;
+    }
+
+    .invite-notice strong { color: var(--gold); }
+
+    .color-picker-label {
+      font-family: var(--font-condensed);
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--grey-500);
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+
+    .color-swatches {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .color-swatch {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.15s;
+    }
+
+    .color-swatch.selected {
+      border-color: var(--white);
+      transform: scale(1.15);
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-container">
+      <div class="auth-logo">
+        <a href="../index.html">WC<span>2026</span> ⚽</a>
+        <p>World Cup Prediction Game</p>
+      </div>
+
+      <div class="auth-card">
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-tab="signin">Sign In</button>
+          <button class="auth-tab" data-tab="signup">Create Account</button>
+        </div>
+
+        <!-- Sign In -->
+        <div class="auth-panel active" id="panel-signin">
+          <div id="signinAlert"></div>
+          <div class="form-group">
+            <label class="form-label" for="siEmail">Email</label>
+            <input class="form-control" type="email" id="siEmail" placeholder="you@example.com" autocomplete="email">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="siPassword">Password</label>
+            <input class="form-control" type="password" id="siPassword" placeholder="••••••••" autocomplete="current-password">
+          </div>
+          <button class="btn btn-primary btn-block btn-lg" id="signinBtn">
+            Sign In →
+          </button>
+        </div>
+
+        <!-- Sign Up -->
+        <div class="auth-panel" id="panel-signup">
+          <div class="invite-notice">
+            <strong>🔒 Invite only.</strong> You need an invite code from the group admin to join. Ask them to send you a link or code.
+          </div>
+          <div id="signupAlert"></div>
+          <div class="form-group">
+            <label class="form-label" for="suInvite">Invite Code</label>
+            <input class="form-control" type="text" id="suInvite" placeholder="e.g. AB12CD" autocomplete="off" style="text-transform:uppercase;letter-spacing:0.1em">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="suName">Display Name</label>
+            <input class="form-control" type="text" id="suName" placeholder="Your name (shown to all players)" maxlength="24">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="suEmail">Email</label>
+            <input class="form-control" type="email" id="suEmail" placeholder="you@example.com" autocomplete="email">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="suPassword">Password</label>
+            <input class="form-control" type="password" id="suPassword" placeholder="Min. 8 characters" autocomplete="new-password">
+          </div>
+          <div class="form-group">
+            <span class="color-picker-label">Choose avatar colour</span>
+            <div class="color-swatches" id="colorSwatches"></div>
+            <input type="hidden" id="suColor" value="#f0b429">
+          </div>
+          <button class="btn btn-primary btn-block btn-lg" id="signupBtn">
+            Create Account →
+          </button>
+          <div class="form-footer mt-2">
+            By signing up you agree to have fun and accept all controversial referee decisions.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/data.js"></script>
+  <script src="../js/supabase-client.js"></script>
+  <script src="../js/scoring.js"></script>
+  <script src="../js/ui.js"></script>
+  <script>
+    DB.initSupabase();
+
+    // Redirect if already logged in
+    (async () => {
+      const session = await DB.getSession();
+      if (session) window.location.href = '../index.html';
+    })();
+
+    // Tab switching
+    document.querySelectorAll('.auth-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.auth-panel').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+      });
+    });
+
+    // Colour swatches
+    const swatchContainer = document.getElementById('colorSwatches');
+    const colorInput = document.getElementById('suColor');
+    AVATAR_COLORS.forEach(color => {
+      const s = document.createElement('div');
+      s.className = 'color-swatch' + (color === '#f0b429' ? ' selected' : '');
+      s.style.background = color;
+      s.title = color;
+      s.addEventListener('click', () => {
+        document.querySelectorAll('.color-swatch').forEach(x => x.classList.remove('selected'));
+        s.classList.add('selected');
+        colorInput.value = color;
+      });
+      swatchContainer.appendChild(s);
+    });
+
+    // Check invite in URL param
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('invite')) {
+      document.getElementById('suInvite').value = params.get('invite').toUpperCase();
+      // Switch to signup tab
+      document.querySelector('[data-tab="signup"]').click();
+    }
+
+    // Alert helpers
+    function showAlert(id, message, type = 'error') {
+      document.getElementById(id).innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+    }
+    function clearAlert(id) {
+      document.getElementById(id).innerHTML = '';
+    }
+
+    // Sign In
+    document.getElementById('signinBtn').addEventListener('click', async () => {
+      clearAlert('signinAlert');
+      const email    = document.getElementById('siEmail').value.trim();
+      const password = document.getElementById('siPassword').value;
+      if (!email || !password) {
+        return showAlert('signinAlert', 'Please fill in all fields.');
+      }
+      const btn = document.getElementById('signinBtn');
+      btn.disabled = true;
+      btn.textContent = 'Signing in…';
+      try {
+        await DB.signIn(email, password);
+        window.location.href = '../index.html';
+      } catch (err) {
+        showAlert('signinAlert', err.message || 'Sign-in failed. Check your credentials.');
+        btn.disabled = false;
+        btn.textContent = 'Sign In →';
+      }
+    });
+
+    // Sign Up
+    document.getElementById('signupBtn').addEventListener('click', async () => {
+      clearAlert('signupAlert');
+      const invite   = document.getElementById('suInvite').value.trim().toUpperCase();
+      const name     = document.getElementById('suName').value.trim();
+      const email    = document.getElementById('suEmail').value.trim();
+      const password = document.getElementById('suPassword').value;
+      const color    = document.getElementById('suColor').value;
+
+      if (!invite)  return showAlert('signupAlert', 'Please enter your invite code.');
+      if (!name)    return showAlert('signupAlert', 'Please enter a display name.');
+      if (!email)   return showAlert('signupAlert', 'Please enter your email.');
+      if (password.length < 8) return showAlert('signupAlert', 'Password must be at least 8 characters.');
+
+      const btn = document.getElementById('signupBtn');
+      btn.disabled = true;
+      btn.textContent = 'Creating account…';
+
+      try {
+        // Validate invite code
+        const valid = await DB.validateInviteCode(invite);
+        if (!valid) {
+          showAlert('signupAlert', 'Invalid or expired invite code. Ask the admin for a fresh one.');
+          btn.disabled = false;
+          btn.textContent = 'Create Account →';
+          return;
+        }
+
+        // Create auth user
+        await DB.signUp(email, password, name);
+
+        // Sign them in immediately (Supabase may auto-confirm or need email verify)
+        try {
+          const { data } = await DB.signIn(email, password);
+          if (data?.user) {
+            await DB.upsertProfile(data.user.id, {
+              display_name: name,
+              avatar_color: color,
+              invite_code_used: invite
+            });
+          }
+        } catch (_) {}
+
+        showAlert('signupAlert',
+          '✓ Account created! Check your email to confirm, then sign in.',
+          'success'
+        );
+        btn.textContent = 'Account Created!';
+      } catch (err) {
+        showAlert('signupAlert', err.message || 'Sign-up failed. Please try again.');
+        btn.disabled = false;
+        btn.textContent = 'Create Account →';
+      }
+    });
+
+    // Allow enter key
+    ['siEmail','siPassword'].forEach(id => {
+      document.getElementById(id)?.addEventListener('keydown', e => {
+        if (e.key === 'Enter') document.getElementById('signinBtn').click();
+      });
+    });
+  </script>
+</body>
+</html>

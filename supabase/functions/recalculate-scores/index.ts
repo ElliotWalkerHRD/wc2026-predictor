@@ -1,0 +1,176 @@
+// ============================================================
+//  WC2026 — Supabase Edge Function: recalculate-scores
+//  Deploy: supabase functions deploy recalculate-scores
+//
+//  This function runs with the service_role key so it can
+//  bypass RLS and write to the scores table.
+// ============================================================
+
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+// Scoring constants (mirror of client-side scoring.js)
+const EXACT_PTS   = { round3: 7, round4: 7, round5: 7, round6: 7, round7: 7, round8: 10 };
+const RESULT_PTS  = { round3: 5, round4: 5, round5: 5, round6: 5, round7: 5, round8: 7  };
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  // Check auth — must be called by an authenticated admin
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  }
+
+  // Create admin client with service_role key
+  const supabaseAdmin = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    { auth: { persistSession: false } }
+  );
+
+  // Verify the requesting user is an admin
+  const supabaseUser = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_ANON_KEY")!,
+    { global: { headers: { Authorization: authHeader } } }
+  );
+
+  const { data: { user } } = await supabaseUser.auth.getUser();
+  if (!user) {
+    return new Response(JSON.stringify({ error: "Invalid token" }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  }
+
+  const { data: profile } = await supabaseAdmin
+    .from("profiles").select("is_admin").eq("id", user.id).single();
+
+  if (!profile?.is_admin) {
+    return new Response(JSON.stringify({ error: "Admin only" }), {
+      status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  }
+
+  // Get optional userId filter from body
+  let targetUserId: string | null = null;
+  try {
+    const body = await req.json();
+    targetUserId = body?.userId || null;
+  } catch (_) {}
+
+  try {
+    // 1. Fetch all match results
+    const { data: matchResults } = await supabaseAdmin
+      .from("match_results").select("*");
+
+    const resultMap: Record<number, any> = {};
+    (matchResults || []).forEach((r: any) => { resultMap[r.match_id] = r; });
+
+    // 2. Fetch all predictions
+    let predsQuery = supabaseAdmin.from("predictions").select("*");
+    if (targetUserId) predsQuery = predsQuery.eq("user_id", targetUserId);
+    const { data: allPredictions } = await predsQuery;
+
+    // 3. Group predictions by user
+    const userPreds: Record<string, Record<string, any[]>> = {};
+    (allPredictions || []).forEach((p: any) => {
+      if (!userPreds[p.user_id]) userPreds[p.user_id] = {};
+      if (!userPreds[p.user_id][p.round]) userPreds[p.user_id][p.round] = [];
+      userPreds[p.user_id][p.round].push(p);
+    });
+
+    // 4. Calculate scores per user
+    const scoreUpdates: any[] = [];
+
+    for (const [userId, roundPreds] of Object.entries(userPreds)) {
+      const scores: Record<string, number> = {
+        round1: 0, round2: 0, round3: 0, round4: 0,
+        round5: 0, round6: 0, round7: 0, round8: 0
+      };
+
+      // Score rounds 3-8 (match score predictions)
+      for (const round of ["round3", "round4", "round5", "round6", "round7", "round8"]) {
+        const preds = roundPreds[round] || [];
+        let pts = 0;
+        const exactP  = EXACT_PTS[round as keyof typeof EXACT_PTS];
+        const resultP = RESULT_PTS[round as keyof typeof RESULT_PTS];
+
+        for (const pred of preds) {
+          if (!pred.question_key.startsWith("m")) continue;
+          const matchId = parseInt(pred.question_key.slice(1));
+          const result  = resultMap[matchId];
+          if (!result || result.home_score === null) continue;
+
+          let val: any;
+          try { val = JSON.parse(pred.value); } catch { continue; }
+
+          const predH = parseInt(val.home), predA = parseInt(val.away);
+          const actH  = result.home_score,  actA  = result.away_score;
+          if (isNaN(predH) || isNaN(predA)) continue;
+
+          if (predH === actH && predA === actA) {
+            pts += exactP;
+          } else if (Math.sign(predH - predA) === Math.sign(actH - actA)) {
+            pts += resultP;
+          }
+        }
+        scores[round] = pts;
+      }
+
+      // Rounds 1 & 2 need the answer sheet — skip auto-scoring
+      // They're scored manually by admin or via separate logic
+      // Preserve existing r1/r2 scores if they exist
+      const { data: existingScore } = await supabaseAdmin
+        .from("scores").select("round1_points,round2_points").eq("user_id", userId).single();
+
+      scores.round1 = existingScore?.round1_points || 0;
+      scores.round2 = existingScore?.round2_points || 0;
+
+      const total = Object.values(scores).reduce((a, b) => a + b, 0);
+
+      scoreUpdates.push({
+        user_id:       userId,
+        round1_points: scores.round1,
+        round2_points: scores.round2,
+        round3_points: scores.round3,
+        round4_points: scores.round4,
+        round5_points: scores.round5,
+        round6_points: scores.round6,
+        round7_points: scores.round7,
+        round8_points: scores.round8,
+        total_points:  total,
+        updated_at:    new Date().toISOString()
+      });
+    }
+
+    // 5. Upsert all score rows
+    if (scoreUpdates.length > 0) {
+      const { error } = await supabaseAdmin
+        .from("scores")
+        .upsert(scoreUpdates, { onConflict: "user_id" });
+
+      if (error) throw error;
+    }
+
+    return new Response(
+      JSON.stringify({ success: true, usersUpdated: scoreUpdates.length }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (err: any) {
+    return new Response(
+      JSON.stringify({ error: err.message }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});

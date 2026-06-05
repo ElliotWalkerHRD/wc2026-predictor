@@ -1,0 +1,229 @@
+// ============================================================
+//  WC2026 — Shared UI Utilities
+// ============================================================
+
+// ---- Toast notifications ----
+const Toast = {
+  container: null,
+
+  init() {
+    if (this.container) return;
+    this.container = document.createElement('div');
+    this.container.className = 'toast-container';
+    document.body.appendChild(this.container);
+  },
+
+  show(message, type = 'info', duration = 3500) {
+    this.init();
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+    this.container.appendChild(toast);
+    setTimeout(() => {
+      toast.style.animation = 'slideInRight 0.3s ease reverse';
+      setTimeout(() => toast.remove(), 300);
+    }, duration);
+  },
+
+  success(msg) { this.show(msg, 'success'); },
+  error(msg)   { this.show(msg, 'error', 5000); },
+  info(msg)    { this.show(msg, 'info'); }
+};
+
+// ---- Navigation ----
+const Nav = {
+  async render(activePage = '') {
+    const session = await DB.getSession();
+    const navEl = document.getElementById('main-nav');
+    if (!navEl) return;
+
+    let profile = null;
+    let adminLink = '';
+
+    if (session) {
+      profile = await DB.getProfile(session.user.id);
+      if (profile?.is_admin) {
+        adminLink = `<li><a href="pages/admin.html" ${activePage === 'admin' ? 'class="active"' : ''}>⚙ Admin</a></li>`;
+      }
+    }
+
+    const initials = profile?.display_name
+      ? profile.display_name.charAt(0).toUpperCase()
+      : '?';
+    const avatarColor = profile?.avatar_color || '#f0b429';
+
+    navEl.innerHTML = `
+      <a class="nav-brand" href="index.html">WC<span>2026</span> ⚽</a>
+
+      <button class="mobile-nav-toggle" id="navToggle" aria-label="Menu">☰</button>
+
+      <ul class="nav-links" id="navLinks">
+        <li><a href="index.html" ${activePage === 'home' ? 'class="active"' : ''}>🏠 Home</a></li>
+        <li><a href="pages/leaderboard.html" ${activePage === 'leaderboard' ? 'class="active"' : ''}>🏆 Leaderboard</a></li>
+        <li><a href="pages/predictions.html" ${activePage === 'predictions' ? 'class="active"' : ''}>✏️ Predictions</a></li>
+        <li><a href="pages/matches.html" ${activePage === 'matches' ? 'class="active"' : ''}>⚽ Matches</a></li>
+        <li><a href="pages/my-predictions.html" ${activePage === 'mypreds' ? 'class="active"' : ''}>📋 My Picks</a></li>
+        ${adminLink}
+      </ul>
+
+      <div class="nav-user">
+        ${session ? `
+          <div class="avatar" style="background:${avatarColor}" title="${profile?.display_name || ''}">
+            ${initials}
+          </div>
+          <span class="nav-username">${profile?.display_name || session.user.email}</span>
+          <button class="btn btn-ghost btn-sm" id="signOutBtn">Sign out</button>
+        ` : `
+          <a href="pages/auth.html" class="btn btn-primary btn-sm">Sign In</a>
+        `}
+      </div>
+    `;
+
+    // Mobile toggle
+    const toggle = document.getElementById('navToggle');
+    const links = document.getElementById('navLinks');
+    if (toggle && links) {
+      toggle.addEventListener('click', () => links.classList.toggle('open'));
+    }
+
+    // Sign out
+    const signOutBtn = document.getElementById('signOutBtn');
+    if (signOutBtn) {
+      signOutBtn.addEventListener('click', async () => {
+        await DB.signOut();
+        window.location.href = '/pages/auth.html';
+      });
+    }
+  }
+};
+
+// ---- Auth guard ----
+async function requireAuth() {
+  const session = await DB.getSession();
+  if (!session) {
+    window.location.href = 'auth.html';
+    return null;
+  }
+  return session;
+}
+
+async function requireAuthFromPages() {
+  const session = await DB.getSession();
+  if (!session) {
+    window.location.href = '/pages/auth.html';
+    return null;
+  }
+  return session;
+}
+
+// ---- Avatar colors ----
+const AVATAR_COLORS = [
+  '#f0b429', '#e63946', '#2ec4b6', '#457b9d', '#a8dadc',
+  '#e76f51', '#2a9d8f', '#264653', '#e9c46a', '#f4a261'
+];
+
+function getRandomAvatarColor() {
+  return AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
+}
+
+// ---- Date/time formatters ----
+function formatDate(dateStr) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+function formatTime(timeStr) {
+  // timeStr is UTC HH:MM
+  const [h, m] = timeStr.split(':');
+  const d = new Date();
+  d.setUTCHours(parseInt(h), parseInt(m), 0, 0);
+  return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
+}
+
+function formatCountdown(isoDate) {
+  const diff = new Date(isoDate) - new Date();
+  if (diff <= 0) return 'Locked';
+  const d = Math.floor(diff / 86400000);
+  const h = Math.floor((diff % 86400000) / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
+// ---- Loading helpers ----
+function showLoading(containerId, message = 'Loading...') {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = `
+    <div class="loading-overlay">
+      <div class="spinner"></div>
+      <span>${message}</span>
+    </div>
+  `;
+}
+
+function showError(containerId, message) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = `<div class="alert alert-error">⚠ ${message}</div>`;
+}
+
+// ---- Score display helpers ----
+function renderMatchScore(actual, prediction) {
+  if (!actual || actual.home_score === null) {
+    return prediction
+      ? `<span class="text-muted">${prediction.home} – ${prediction.away}</span>`
+      : '<span class="text-muted">– : –</span>';
+  }
+
+  const actH = actual.home_score, actA = actual.away_score;
+  if (!prediction) return `<strong>${actH} – ${actA}</strong>`;
+
+  const predH = parseInt(prediction.home), predA = parseInt(prediction.away);
+  let cls = 'pred-wrong', label = '✗';
+  if (predH === actH && predA === actA) { cls = 'pred-correct'; label = '✓ Exact!'; }
+  else if (Math.sign(predH - predA) === Math.sign(actH - actA)) { cls = 'pred-correct'; label = '✓ Result'; }
+
+  return `
+    <div>
+      <div class="match-score" style="font-size:1.2rem">${actH} – ${actA}</div>
+      <div class="${cls}">${label} (${predH}–${predA})</div>
+    </div>
+  `;
+}
+
+// ---- Team select dropdown ----
+function buildTeamSelect(id, value = '', placeholder = 'Select team...') {
+  const opts = TEAMS_LIST
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map(t => `<option value="${t.code}" ${t.code === value ? 'selected' : ''}>${t.flag} ${t.name}</option>`)
+    .join('');
+  return `
+    <select id="${id}" name="${id}" class="form-control">
+      <option value="">${placeholder}</option>
+      ${opts}
+    </select>
+  `;
+}
+
+// ---- Points badge ----
+function ptsBadge(pts) {
+  if (!pts && pts !== 0) return '<span class="text-muted">—</span>';
+  return `<span class="points-badge">${pts}</span>`;
+}
+
+window.Toast = Toast;
+window.Nav = Nav;
+window.requireAuth = requireAuth;
+window.requireAuthFromPages = requireAuthFromPages;
+window.getRandomAvatarColor = getRandomAvatarColor;
+window.formatDate = formatDate;
+window.formatTime = formatTime;
+window.formatCountdown = formatCountdown;
+window.showLoading = showLoading;
+window.showError = showError;
+window.renderMatchScore = renderMatchScore;
+window.buildTeamSelect = buildTeamSelect;
+window.ptsBadge = ptsBadge;
+window.AVATAR_COLORS = AVATAR_COLORS;

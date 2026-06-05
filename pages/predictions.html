@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WC2026 — Predictions</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .predictions-page { padding: 2rem 0 4rem; }
+
+    .rounds-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .round-entry-card {
+      background: var(--navy-card);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      text-decoration: none;
+      display: block;
+      transition: all 0.2s;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .round-entry-card::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--gold);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.3s;
+    }
+
+    .round-entry-card:hover::after { transform: scaleX(1); }
+    .round-entry-card:hover {
+      border-color: rgba(240,180,41,0.3);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+
+    .round-entry-card.locked {
+      opacity: 0.55;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    .round-entry-card.complete { border-color: rgba(46,196,182,0.25); }
+    .round-entry-card.complete::after { background: var(--green); }
+
+    .round-number {
+      font-family: var(--font-display);
+      font-size: 3rem;
+      line-height: 1;
+      color: rgba(255,255,255,0.06);
+      position: absolute;
+      top: 0.75rem;
+      right: 1rem;
+    }
+
+    .round-icon { font-size: 1.75rem; margin-bottom: 0.75rem; }
+
+    .round-title {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      color: var(--gold);
+      letter-spacing: 0.05em;
+      margin-bottom: 0.3rem;
+    }
+
+    .round-desc {
+      font-size: 0.82rem;
+      color: var(--grey-500);
+      font-family: var(--font-condensed);
+      letter-spacing: 0.03em;
+      margin-bottom: 1rem;
+      line-height: 1.4;
+    }
+
+    .round-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: var(--font-condensed);
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+
+    .lock-time {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      color: var(--grey-500);
+    }
+
+    .lock-time.soon { color: var(--crimson); }
+
+    .progress-bar {
+      height: 4px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 2px;
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: var(--gold);
+      transition: width 0.5s ease;
+    }
+
+    .progress-fill.complete { background: var(--green); }
+
+    .points-avail {
+      font-family: var(--font-condensed);
+      font-size: 0.72rem;
+      color: var(--grey-700);
+      letter-spacing: 0.05em;
+    }
+
+    .your-pts {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      color: var(--gold);
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav" id="main-nav"></nav>
+
+  <main class="main-content">
+    <div class="container">
+      <div class="page-header">
+        <div class="breadcrumb">WC2026 &gt; <span>Predictions</span></div>
+        <h1 class="display-title">Your Predictions</h1>
+        <p class="text-muted" style="font-family:var(--font-condensed)">Select a round to submit or edit your predictions</p>
+      </div>
+
+      <div class="predictions-page">
+        <!-- Stats -->
+        <div class="stats-strip mb-4" id="statsStrip">
+          <div class="stat-box">
+            <div class="stat-value" id="totalPts">—</div>
+            <div class="stat-label">Total Points</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="yourRank">—</div>
+            <div class="stat-label">Your Rank</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="roundsDone">0</div>
+            <div class="stat-label">Rounds Submitted</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="roundsOpen">—</div>
+            <div class="stat-label">Rounds Open</div>
+          </div>
+        </div>
+
+        <!-- Rounds grid -->
+        <div class="rounds-grid" id="roundsGrid">
+          <div class="loading-overlay"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/data.js"></script>
+  <script src="../js/supabase-client.js"></script>
+  <script src="../js/scoring.js"></script>
+  <script src="../js/ui.js"></script>
+  <script>
+    DB.initSupabase();
+    Nav.render('predictions');
+
+    const ROUNDS_META = [
+      {
+        id: 'round1',
+        icon: '🔮',
+        title: 'Pre-Tournament',
+        desc: 'Winner, runner-up, beaten semi-finalists, golden boot, top scorer & more.',
+        points: 150,
+        questions: 13,
+        page: 'round1.html'
+      },
+      {
+        id: 'round2',
+        icon: '🏅',
+        title: 'Group Winners',
+        desc: 'Predict the winner and runner-up of all 12 groups (A–L). Bonus points for perfection.',
+        points: 240,
+        questions: 24,
+        page: 'round2.html'
+      },
+      {
+        id: 'round3',
+        icon: '⚽',
+        title: 'Group Stage Scores',
+        desc: 'Exact score predictions for all 48 group stage matches. 7pts exact, 5pts result.',
+        points: 336,
+        questions: 48,
+        page: 'round3.html'
+      },
+      {
+        id: 'round4',
+        icon: '🔥',
+        title: 'Round of 32',
+        desc: 'Predict scores for the 16 knockout matches. Teams revealed once drawn.',
+        points: 112,
+        questions: 16,
+        page: 'round4.html'
+      },
+      {
+        id: 'round5',
+        icon: '⚡',
+        title: 'Round of 16',
+        desc: '8 matches. Exact score = 7pts, correct result = 5pts.',
+        points: 56,
+        questions: 8,
+        page: 'round5.html'
+      },
+      {
+        id: 'round6',
+        icon: '💥',
+        title: 'Quarter Finals',
+        desc: '4 matches. 7pts exact, 5pts correct result.',
+        points: 28,
+        questions: 4,
+        page: 'round6.html'
+      },
+      {
+        id: 'round7',
+        icon: '🌟',
+        title: 'Semi Finals',
+        desc: '2 matches. 7pts exact, 5pts correct result.',
+        points: 14,
+        questions: 2,
+        page: 'round7.html'
+      },
+      {
+        id: 'round8',
+        icon: '🏆',
+        title: 'The Final',
+        desc: 'One match to rule them all. 10pts exact score, 7pts correct result.',
+        points: 10,
+        questions: 1,
+        page: 'round8.html'
+      }
+    ];
+
+    async function load() {
+      const session = await requireAuthFromPages();
+      if (!session) return;
+
+      const userId = session.user.id;
+
+      // Load user score and predictions
+      const [userScore, allPreds] = await Promise.all([
+        DB.getUserScore(userId).catch(() => null),
+        DB.getUserPredictions(userId).catch(() => [])
+      ]);
+
+      // Stats
+      if (userScore) {
+        document.getElementById('totalPts').textContent = userScore.total_points || 0;
+      }
+
+      // Count submitted rounds
+      const submittedRounds = new Set(allPreds.map(p => p.round));
+      document.getElementById('roundsDone').textContent = submittedRounds.size;
+
+      // Load all scores for rank
+      try {
+        const scores = await DB.getScores();
+        const rank = scores.findIndex(s => s.user_id === userId) + 1;
+        document.getElementById('yourRank').textContent = rank > 0 ? `#${rank}` : '—';
+      } catch (_) {}
+
+      // Count open rounds
+      const openRounds = ROUNDS_META.filter(r => !DB.isRoundLocked(r.id)).length;
+      document.getElementById('roundsOpen').textContent = openRounds;
+
+      // Render round cards
+      const grid = document.getElementById('roundsGrid');
+      grid.innerHTML = ROUNDS_META.map(round => {
+        const locked = DB.isRoundLocked(round.id);
+        const lockDate = DB.getRoundLockDate(round.id);
+        const submitted = submittedRounds.has(round.id);
+        const preds = allPreds.filter(p => p.round === round.id);
+        const progress = Math.min(100, Math.round((preds.length / round.questions) * 100));
+
+        let statusBadge = '';
+        let lockInfo = '';
+
+        if (locked) {
+          statusBadge = '<span class="badge badge-grey">🔒 Locked</span>';
+          lockInfo = '<span class="lock-time">Predictions closed</span>';
+        } else if (lockDate) {
+          const countdown = formatCountdown(lockDate.toISOString());
+          const soon = (lockDate - new Date()) < 86400000;
+          statusBadge = '<span class="badge badge-gold">🟢 Open</span>';
+          lockInfo = `<span class="lock-time ${soon ? 'soon' : ''}">⏱ Locks in ${countdown}</span>`;
+        }
+
+        let completedClass = '';
+        if (submitted && progress >= 100) completedClass = 'complete';
+        if (locked) completedClass = 'locked';
+
+        return `
+          <a class="round-entry-card ${completedClass}" href="${round.page}">
+            <span class="round-number">${ROUNDS_META.indexOf(round) + 1}</span>
+            <div class="round-icon">${round.icon}</div>
+            <div class="round-title">${round.title}</div>
+            <p class="round-desc">${round.desc}</p>
+            <div class="progress-bar">
+              <div class="progress-fill ${progress >= 100 ? 'complete' : ''}" style="width:${locked ? 100 : progress}%"></div>
+            </div>
+            <div class="round-meta">
+              <div>
+                ${statusBadge}
+                ${submitted ? ' <span class="badge badge-green">✓ Submitted</span>' : ''}
+              </div>
+              ${lockInfo}
+            </div>
+            <div class="round-meta mt-1">
+              <span class="points-avail">Up to ${round.points} pts</span>
+            </div>
+          </a>
+        `;
+      }).join('');
+    }
+
+    load();
+  </script>
+</body>
+</html>

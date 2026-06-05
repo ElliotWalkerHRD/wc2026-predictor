@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WC2026 — Admin</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .admin-page { padding: 2rem 0 4rem; }
+
+    .admin-tabs {
+      display: flex;
+      gap: 0.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      margin-bottom: 2rem;
+    }
+
+    .admin-panel { display: none; }
+    .admin-panel.active { display: block; }
+
+    /* Invite codes */
+    .invite-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 0.875rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .invite-card {
+      background: var(--navy-card);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: var(--radius-md);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .invite-code {
+      font-family: var(--font-display);
+      font-size: 1.8rem;
+      color: var(--gold);
+      letter-spacing: 0.15em;
+    }
+
+    .invite-label {
+      font-family: var(--font-condensed);
+      font-size: 0.8rem;
+      color: var(--grey-500);
+      letter-spacing: 0.05em;
+    }
+
+    .invite-link {
+      font-family: var(--font-condensed);
+      font-size: 0.72rem;
+      color: var(--grey-700);
+      word-break: break-all;
+    }
+
+    .invite-card-actions { display: flex; gap: 0.5rem; }
+
+    /* Users table */
+    .users-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    .users-table th {
+      font-family: var(--font-condensed);
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--grey-500);
+      padding: 0.6rem 0.75rem;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      text-align: left;
+    }
+
+    .users-table td {
+      padding: 0.75rem;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    /* Match result entry */
+    .result-entry-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 1rem;
+    }
+
+    .result-card {
+      background: var(--navy-card);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: var(--radius-md);
+      padding: 1.25rem;
+    }
+
+    .result-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.875rem;
+    }
+
+    .result-teams {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.875rem;
+      font-family: var(--font-condensed);
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+
+    .result-inputs {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .result-num {
+      width: 56px;
+      text-align: center;
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      padding: 0.4rem;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.04);
+      border-radius: var(--radius-sm);
+      color: var(--white);
+      outline: none;
+    }
+
+    .result-num:focus { border-color: var(--gold); }
+
+    .status-select {
+      max-width: 140px;
+      font-size: 0.8rem;
+      padding: 0.35rem 0.6rem;
+    }
+
+    /* Scoring panel */
+    .recalc-section {
+      max-width: 560px;
+    }
+
+    .recalc-card {
+      background: var(--navy-card);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: var(--radius-md);
+      padding: 2rem;
+      text-align: center;
+    }
+
+    .recalc-icon { font-size: 3rem; margin-bottom: 1rem; }
+
+    .group-filter-row {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav" id="main-nav"></nav>
+
+  <main class="main-content">
+    <div class="container">
+      <div class="page-header">
+        <div class="breadcrumb">WC2026 &gt; <span>Admin Panel</span></div>
+        <h1 class="display-title">Admin Panel</h1>
+        <p class="text-muted" style="font-family:var(--font-condensed)">Manage invites · Enter results · Recalculate scores</p>
+      </div>
+
+      <div id="adminAccessDenied" class="alert alert-error hidden">
+        🚫 Access denied — admin only.
+      </div>
+
+      <div id="adminContent" class="admin-page hidden">
+        <div class="admin-tabs" id="adminTabs">
+          <button class="tab-btn active" data-tab="invites">🔗 Invite Codes</button>
+          <button class="tab-btn" data-tab="results">⚽ Match Results</button>
+          <button class="tab-btn" data-tab="users">👥 Users</button>
+          <button class="tab-btn" data-tab="scoring">🏆 Scoring</button>
+        </div>
+
+        <!-- Invites Panel -->
+        <div class="admin-panel active" id="panel-invites">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem">
+            <h2 class="section-title" style="margin:0">Invite Codes</h2>
+            <div style="display:flex;gap:0.75rem;align-items:center">
+              <input type="text" id="inviteLabelInput" class="form-control" placeholder="Label (e.g. John)" style="width:180px">
+              <button class="btn btn-primary" id="createInviteBtn">Generate Code</button>
+            </div>
+          </div>
+          <div id="inviteGrid" class="invite-grid">
+            <div class="loading-overlay"><div class="spinner"></div></div>
+          </div>
+        </div>
+
+        <!-- Results Panel -->
+        <div class="admin-panel" id="panel-results">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:1rem">
+            <h2 class="section-title" style="margin:0">Enter Match Results</h2>
+            <button class="btn btn-ghost btn-sm" id="fetchLiveBtn">🔄 Fetch from API</button>
+          </div>
+
+          <div id="apiStatus" style="margin-bottom:1rem"></div>
+
+          <div class="group-filter-row" id="resultGroupFilter">
+            <button class="btn btn-primary btn-sm" data-group="all">All</button>
+            ${'ABCDEFGHIJKL'.split('').map(g =>
+              `<button class="btn btn-ghost btn-sm" data-group="${g}">Group ${g}</button>`
+            ).join('')}
+          </div>
+
+          <div id="resultsGrid" class="result-entry-grid">
+            <div class="loading-overlay"><div class="spinner"></div></div>
+          </div>
+
+          <div style="margin-top:1.5rem">
+            <button class="btn btn-crimson" id="saveResultsBtn">💾 Save All Results</button>
+          </div>
+        </div>
+
+        <!-- Users Panel -->
+        <div class="admin-panel" id="panel-users">
+          <h2 class="section-title">Players</h2>
+          <div style="overflow-x:auto">
+            <table class="users-table" id="usersTable">
+              <thead>
+                <tr>
+                  <th>Player</th>
+                  <th>Email</th>
+                  <th>Joined</th>
+                  <th>Total Pts</th>
+                  <th>Admin</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="usersBody">
+                <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--grey-500)">
+                  <div class="spinner" style="margin:0 auto"></div>
+                </td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Scoring Panel -->
+        <div class="admin-panel" id="panel-scoring">
+          <div class="recalc-section">
+            <h2 class="section-title">Score Recalculation</h2>
+
+            <div class="recalc-card">
+              <div class="recalc-icon">🔄</div>
+              <h3 style="font-family:var(--font-condensed);color:var(--white);margin-bottom:0.5rem">Recalculate All Scores</h3>
+              <p style="color:var(--grey-500);font-size:0.875rem;margin-bottom:1.5rem;max-width:360px;margin-left:auto;margin-right:auto">
+                Triggers the server-side Edge Function to recalculate every player's points based on current match results and predictions.
+              </p>
+              <button class="btn btn-primary btn-lg" id="recalcAllBtn">Recalculate All Scores →</button>
+              <div id="recalcStatus" style="margin-top:1rem;font-family:var(--font-condensed);font-size:0.82rem;color:var(--grey-500)"></div>
+            </div>
+
+            <div class="card mt-4">
+              <h4 style="margin-bottom:0.75rem;color:var(--gold)">Manual Score Override</h4>
+              <p style="font-size:0.82rem;color:var(--grey-500);margin-bottom:1rem">
+                Override a specific player's round points directly.
+              </p>
+              <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:0.75rem;align-items:end">
+                <div class="form-group" style="margin:0">
+                  <label class="form-label">Player</label>
+                  <select id="overrideUser" class="form-control">
+                    <option value="">Select player…</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin:0">
+                  <label class="form-label">Round</label>
+                  <select id="overrideRound" class="form-control">
+                    <option value="round1">R1 - Pre-tournament</option>
+                    <option value="round2">R2 - Group winners</option>
+                    <option value="round3">R3 - Group scores</option>
+                    <option value="round4">R4 - Round of 32</option>
+                    <option value="round5">R5 - Round of 16</option>
+                    <option value="round6">R6 - Quarter Finals</option>
+                    <option value="round7">R7 - Semi Finals</option>
+                    <option value="round8">R8 - Final</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin:0">
+                  <label class="form-label">Points</label>
+                  <input type="number" id="overridePts" class="form-control" min="0" style="width:90px" placeholder="0">
+                </div>
+              </div>
+              <button class="btn btn-ghost mt-2" id="overrideBtn">Apply Override</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/data.js"></script>
+  <script src="../js/supabase-client.js"></script>
+  <script src="../js/scoring.js"></script>
+  <script src="../js/ui.js"></script>
+  <script>
+    DB.initSupabase();
+    Nav.render('admin');
+
+    let allUsersData = [];
+    let resultFilter = 'all';
+
+    async function init() {
+      const session = await requireAuthFromPages();
+      if (!session) return;
+
+      const admin = await DB.isAdmin(session.user.id);
+      if (!admin) {
+        document.getElementById('adminAccessDenied').classList.remove('hidden');
+        return;
+      }
+
+      document.getElementById('adminContent').classList.remove('hidden');
+
+      // Tab switching
+      document.getElementById('adminTabs').addEventListener('click', e => {
+        const btn = e.target.closest('[data-tab]');
+        if (!btn) return;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+      });
+
+      // Load each tab
+      await Promise.all([
+        loadInviteCodes(),
+        loadResultsPanel(),
+        loadUsers(),
+      ]);
+    }
+
+    // ---- INVITE CODES ----
+
+    async function loadInviteCodes() {
+      try {
+        const codes = await DB.getInviteCodes();
+        renderInviteCodes(codes);
+      } catch (err) {
+        document.getElementById('inviteGrid').innerHTML =
+          `<div class="alert alert-error">⚠ ${err.message}</div>`;
+      }
+    }
+
+    function renderInviteCodes(codes) {
+      const grid = document.getElementById('inviteGrid');
+      if (!codes.length) {
+        grid.innerHTML = '<p class="text-muted" style="font-family:var(--font-condensed)">No invite codes yet. Generate the first one!</p>';
+        return;
+      }
+
+      grid.innerHTML = codes.map(c => {
+        const inviteUrl = `${CONFIG.APP_URL}/pages/auth.html?invite=${c.code}`;
+        return `
+          <div class="invite-card">
+            <div>
+              <div class="invite-code">${c.code}</div>
+              ${c.label ? `<div class="invite-label">${c.label}</div>` : ''}
+            </div>
+            <div class="invite-link">${inviteUrl}</div>
+            <div class="invite-card-actions">
+              <button class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText('${inviteUrl}').then(() => Toast.success('Link copied!'))">
+                📋 Copy Link
+              </button>
+              ${c.active
+                ? `<button class="btn btn-ghost btn-sm" style="color:var(--crimson)" data-revoke="${c.id}">Revoke</button>`
+                : `<span class="badge badge-grey">Revoked</span>`}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      grid.querySelectorAll('[data-revoke]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const sb = DB.initSupabase();
+          await sb.from('invite_codes').update({ active: false }).eq('id', btn.dataset.revoke);
+          Toast.info('Invite code revoked');
+          loadInviteCodes();
+        });
+      });
+    }
+
+    document.getElementById('createInviteBtn').addEventListener('click', async () => {
+      const label = document.getElementById('inviteLabelInput').value.trim();
+      try {
+        const code = await DB.createInviteCode(label || 'Unnamed');
+        Toast.success(`Code ${code.code} created!`);
+        document.getElementById('inviteLabelInput').value = '';
+        loadInviteCodes();
+      } catch (err) {
+        Toast.error('Failed: ' + err.message);
+      }
+    });
+
+    // ---- RESULTS ----
+
+    async function loadResultsPanel() {
+      const results = await DB.getMatchResults().catch(() => []);
+      const resultMap = {};
+      results.forEach(r => { resultMap[r.match_id] = r; });
+      renderResultsGrid(resultMap);
+    }
+
+    function renderResultsGrid(resultMap) {
+      const grid = document.getElementById('resultsGrid');
+      const fixtures = resultFilter === 'all'
+        ? GROUP_FIXTURES
+        : GROUP_FIXTURES.filter(m => m[3] === resultFilter);
+
+      grid.innerHTML = fixtures.map(m => {
+        const [id, date, time, group, homeCode, awayCode, venue, city] = m;
+        const home = getTeam(homeCode);
+        const away = getTeam(awayCode);
+        const existing = resultMap[id];
+        const hScore = existing?.home_score !== undefined ? existing.home_score : '';
+        const aScore = existing?.away_score !== undefined ? existing.away_score : '';
+        const status = existing?.status || 'TIMED';
+
+        return `
+          <div class="result-card">
+            <div class="result-card-header">
+              <span class="text-xs text-muted" style="font-family:var(--font-condensed)">Match ${id} · Group ${group}</span>
+              <select id="status_${id}" class="form-control status-select">
+                <option value="TIMED" ${status==='TIMED'?'selected':''}>Upcoming</option>
+                <option value="IN_PLAY" ${status==='IN_PLAY'?'selected':''}>Live</option>
+                <option value="FINISHED" ${status==='FINISHED'?'selected':''}>Finished</option>
+                <option value="PAUSED" ${status==='PAUSED'?'selected':''}>Paused</option>
+              </select>
+            </div>
+            <div class="result-teams">
+              <span>${home.flag} ${home.name}</span>
+              <span style="color:var(--grey-700)">vs</span>
+              <span>${away.flag} ${away.name}</span>
+            </div>
+            <div class="result-inputs">
+              <input type="number" id="rh_${id}" class="result-num" min="0" max="20" value="${hScore}" placeholder="–">
+              <span style="font-family:var(--font-display);color:var(--grey-700);font-size:1.3rem">–</span>
+              <input type="number" id="ra_${id}" class="result-num" min="0" max="20" value="${aScore}" placeholder="–">
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Group filter for results
+    document.getElementById('resultGroupFilter').addEventListener('click', e => {
+      const btn = e.target.closest('[data-group]');
+      if (!btn) return;
+      resultFilter = btn.dataset.group;
+      document.querySelectorAll('#resultGroupFilter [data-group]').forEach(b => {
+        b.className = b.dataset.group === resultFilter ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm';
+      });
+      loadResultsPanel();
+    });
+
+    document.getElementById('saveResultsBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('saveResultsBtn');
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+
+      const saves = [];
+      const fixtures = resultFilter === 'all' ? GROUP_FIXTURES : GROUP_FIXTURES.filter(m => m[3] === resultFilter);
+      fixtures.forEach(m => {
+        const hEl = document.getElementById(`rh_${m[0]}`);
+        const aEl = document.getElementById(`ra_${m[0]}`);
+        const stEl = document.getElementById(`status_${m[0]}`);
+        if (!hEl || !aEl || hEl.value === '' || aEl.value === '') return;
+        saves.push(DB.upsertMatchResult(m[0], parseInt(hEl.value), parseInt(aEl.value), stEl?.value || 'FINISHED'));
+      });
+
+      try {
+        await Promise.all(saves);
+        Toast.success(`✓ Saved ${saves.length} results`);
+      } catch (err) {
+        Toast.error('Save failed: ' + err.message);
+      }
+
+      btn.disabled = false;
+      btn.textContent = '💾 Save All Results';
+    });
+
+    // Fetch from API
+    document.getElementById('fetchLiveBtn').addEventListener('click', async () => {
+      const statusEl = document.getElementById('apiStatus');
+      statusEl.innerHTML = '<div class="alert alert-info">🔄 Fetching from football-data.org…</div>';
+
+      try {
+        const res = await fetch(
+          `${CONFIG.FOOTBALL_API_BASE}/competitions/${CONFIG.WC2026_COMPETITION_ID}/matches`,
+          { headers: { 'X-Auth-Token': CONFIG.FOOTBALL_API_KEY } }
+        );
+        if (!res.ok) throw new Error(`API returned ${res.status}`);
+        const data = await res.json();
+        const saves = [];
+
+        (data.matches || []).forEach(match => {
+          if (match.score?.fullTime?.home === null) return;
+          saves.push(DB.upsertMatchResult(
+            match.id,
+            match.score.fullTime.home,
+            match.score.fullTime.away,
+            match.status
+          ));
+        });
+
+        await Promise.all(saves);
+        statusEl.innerHTML = `<div class="alert alert-success">✓ Synced ${saves.length} results from API</div>`;
+        loadResultsPanel();
+      } catch (err) {
+        statusEl.innerHTML = `<div class="alert alert-error">⚠ API error: ${err.message}. Check your API key in config.js</div>`;
+      }
+    });
+
+    // ---- USERS ----
+
+    async function loadUsers() {
+      const sb = DB.initSupabase();
+      try {
+        const [{ data: profiles }, scores] = await Promise.all([
+          sb.from('profiles').select('*').order('created_at', { ascending: false }),
+          DB.getScores()
+        ]);
+
+        allUsersData = profiles || [];
+        const scoreMap = {};
+        scores.forEach(s => { scoreMap[s.user_id] = s.total_points; });
+
+        // Populate override dropdown
+        const sel = document.getElementById('overrideUser');
+        sel.innerHTML = '<option value="">Select player…</option>' +
+          allUsersData.map(p =>
+            `<option value="${p.id}">${p.display_name || p.id}</option>`
+          ).join('');
+
+        const tbody = document.getElementById('usersBody');
+        tbody.innerHTML = allUsersData.map(p => `
+          <tr>
+            <td>
+              <div style="display:flex;align-items:center;gap:0.6rem">
+                <div class="avatar" style="background:${p.avatar_color || '#f0b429'};width:28px;height:28px;font-size:0.75rem;flex-shrink:0">
+                  ${(p.display_name || '?').charAt(0).toUpperCase()}
+                </div>
+                ${p.display_name || '—'}
+              </div>
+            </td>
+            <td class="text-muted text-sm">${p.email || '—'}</td>
+            <td class="text-muted text-sm">${p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}</td>
+            <td style="font-family:var(--font-display);color:var(--gold)">${scoreMap[p.id] || 0}</td>
+            <td>${p.is_admin ? '<span class="badge badge-gold">Admin</span>' : '<span class="badge badge-grey">Player</span>'}</td>
+            <td>
+              <button class="btn btn-ghost btn-sm" onclick="toggleAdmin('${p.id}', ${!p.is_admin})">
+                ${p.is_admin ? 'Remove Admin' : 'Make Admin'}
+              </button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        document.getElementById('usersBody').innerHTML =
+          `<tr><td colspan="6"><div class="alert alert-error">⚠ ${err.message}</div></td></tr>`;
+      }
+    }
+
+    async function toggleAdmin(userId, makeAdmin) {
+      const sb = DB.initSupabase();
+      await sb.from('profiles').update({ is_admin: makeAdmin }).eq('id', userId);
+      Toast.success(makeAdmin ? 'Admin privileges granted' : 'Admin privileges removed');
+      loadUsers();
+    }
+
+    window.toggleAdmin = toggleAdmin;
+
+    // ---- SCORING ----
+
+    document.getElementById('recalcAllBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('recalcAllBtn');
+      const status = document.getElementById('recalcStatus');
+      btn.disabled = true;
+      btn.textContent = 'Recalculating…';
+      status.textContent = '';
+
+      try {
+        await DB.recalculateScores();
+        Toast.success('✓ Scores recalculated!');
+        status.innerHTML = '<span style="color:var(--green)">✓ Done at ' + new Date().toLocaleTimeString() + '</span>';
+      } catch (err) {
+        Toast.error('Failed: ' + err.message);
+        status.innerHTML = `<span style="color:var(--crimson)">Error: ${err.message}</span>`;
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Recalculate All Scores →';
+    });
+
+    document.getElementById('overrideBtn').addEventListener('click', async () => {
+      const userId = document.getElementById('overrideUser').value;
+      const round  = document.getElementById('overrideRound').value;
+      const pts    = parseInt(document.getElementById('overridePts').value);
+      if (!userId || !round || isNaN(pts)) {
+        Toast.error('Fill in all override fields');
+        return;
+      }
+
+      const sb = DB.initSupabase();
+      const update = { [round + '_points']: pts };
+
+      // Also recalculate total
+      const score = await DB.getUserScore(userId).catch(() => null);
+      if (score) {
+        const rounds = ['round1','round2','round3','round4','round5','round6','round7','round8'];
+        update.total_points = rounds.reduce((sum, r) => {
+          return sum + (r === round ? pts : (score[r + '_points'] || 0));
+        }, 0);
+        await sb.from('scores').update(update).eq('user_id', userId);
+      } else {
+        update.user_id = userId;
+        update.total_points = pts;
+        await sb.from('scores').upsert(update, { onConflict: 'user_id' });
+      }
+
+      Toast.success('✓ Score override applied');
+    });
+
+    init();
+  </script>
+</body>
+</html>

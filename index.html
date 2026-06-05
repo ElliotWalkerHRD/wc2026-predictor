@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WC2026 Predictor — Home</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>">
+  <style>
+    .hero {
+      position: relative;
+      min-height: calc(100vh - var(--nav-height));
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      padding: 4rem 0;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 70% 50%, rgba(240,180,41,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse at 30% 80%, rgba(230,57,70,0.06) 0%, transparent 50%);
+    }
+
+    .hero-content { position: relative; z-index: 1; }
+
+    .hero-eyebrow {
+      font-family: var(--font-condensed);
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--crimson);
+      margin-bottom: 0.75rem;
+    }
+
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: clamp(3.5rem, 12vw, 7rem);
+      line-height: 0.95;
+      color: var(--white);
+      margin-bottom: 0.25rem;
+    }
+
+    .hero-title .year {
+      display: block;
+      color: var(--gold);
+      font-size: clamp(4rem, 15vw, 9rem);
+    }
+
+    .hero-subtitle {
+      font-family: var(--font-condensed);
+      font-size: clamp(1rem, 3vw, 1.4rem);
+      font-weight: 500;
+      color: var(--grey-300);
+      letter-spacing: 0.05em;
+      margin-bottom: 2rem;
+      max-width: 500px;
+    }
+
+    .hero-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+
+    .hero-badge {
+      position: absolute;
+      top: 50%;
+      right: 5%;
+      transform: translateY(-50%);
+      font-size: clamp(6rem, 20vw, 16rem);
+      opacity: 0.04;
+      pointer-events: none;
+      user-select: none;
+      animation: float 6s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(-50%) rotate(-5deg); }
+      50% { transform: translateY(-52%) rotate(5deg); }
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+      padding: 4rem 0;
+    }
+
+    .feature-card {
+      background: var(--navy-card);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      transition: all 0.3s;
+    }
+
+    .feature-card:hover {
+      border-color: rgba(240,180,41,0.3);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+    }
+
+    .feature-icon {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    .feature-title {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      color: var(--gold);
+      margin-bottom: 0.5rem;
+      letter-spacing: 0.05em;
+    }
+
+    .feature-desc {
+      font-size: 0.875rem;
+      color: var(--grey-500);
+      line-height: 1.5;
+    }
+
+    .countdown-bar {
+      background: var(--navy-card);
+      border: 1px solid rgba(240,180,41,0.2);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      margin-bottom: 3rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .countdown-label {
+      font-family: var(--font-condensed);
+      font-size: 0.8rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--grey-500);
+    }
+
+    .countdown-time {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      color: var(--gold);
+      letter-spacing: 0.05em;
+    }
+
+    .countdown-units {
+      display: flex;
+      gap: 1.5rem;
+    }
+
+    .countdown-unit { text-align: center; }
+
+    .countdown-num {
+      font-family: var(--font-display);
+      font-size: 2.5rem;
+      color: var(--gold);
+      line-height: 1;
+    }
+
+    .countdown-unit-label {
+      font-family: var(--font-condensed);
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--grey-500);
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.07);
+      margin: 2rem 0;
+    }
+
+    .invite-cta {
+      background: linear-gradient(135deg, rgba(240,180,41,0.1), rgba(230,57,70,0.05));
+      border: 1px solid rgba(240,180,41,0.25);
+      border-radius: var(--radius-lg);
+      padding: 3rem 2rem;
+      text-align: center;
+      margin-bottom: 4rem;
+    }
+
+    .invite-cta h2 {
+      font-family: var(--font-display);
+      font-size: clamp(1.5rem, 5vw, 2.5rem);
+      color: var(--gold);
+      margin-bottom: 0.75rem;
+    }
+
+    .invite-cta p {
+      color: var(--grey-300);
+      max-width: 480px;
+      margin: 0 auto 1.5rem;
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav" id="main-nav"></nav>
+
+  <main class="main-content">
+    <div class="container">
+      <section class="hero">
+        <div class="hero-content">
+          <p class="hero-eyebrow">🇺🇸 🇨🇦 🇲🇽 &nbsp; June–July 2026</p>
+          <h1 class="hero-title">
+            World Cup<span class="year">2026</span>
+          </h1>
+          <p class="hero-subtitle">
+            Predict every match, compete with friends, and climb the leaderboard across all 104 games.
+          </p>
+          <div class="hero-actions" id="heroActions">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+        <div class="hero-badge">⚽</div>
+      </section>
+
+      <!-- Countdown -->
+      <div class="countdown-bar" id="countdownBar">
+        <div>
+          <div class="countdown-label">Tournament kicks off</div>
+          <div style="font-family:var(--font-condensed);color:var(--grey-300);margin-top:0.2rem">June 11, 2026 · Estadio Azteca</div>
+        </div>
+        <div class="countdown-units">
+          <div class="countdown-unit">
+            <div class="countdown-num" id="cdDays">—</div>
+            <div class="countdown-unit-label">Days</div>
+          </div>
+          <div class="countdown-unit">
+            <div class="countdown-num" id="cdHours">—</div>
+            <div class="countdown-unit-label">Hours</div>
+          </div>
+          <div class="countdown-unit">
+            <div class="countdown-num" id="cdMins">—</div>
+            <div class="countdown-unit-label">Mins</div>
+          </div>
+          <div class="countdown-unit">
+            <div class="countdown-num" id="cdSecs">—</div>
+            <div class="countdown-unit-label">Secs</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Features -->
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">✏️</div>
+          <div class="feature-title">8 Rounds of Predictions</div>
+          <p class="feature-desc">From pre-tournament questions to the Final — predict scores, group winners, golden boot and more.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">⚡</div>
+          <div class="feature-title">Live Scoring</div>
+          <p class="feature-desc">Points update automatically as results come in. No manual tallying needed.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🏆</div>
+          <div class="feature-title">Live Leaderboard</div>
+          <p class="feature-desc">Real-time standings update the moment scores are confirmed. Every point counts.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">👥</div>
+          <div class="feature-title">Private Game</div>
+          <p class="feature-desc">Invite-only — share your code with friends. No strangers, just your group.</p>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <!-- Invite CTA -->
+      <div class="invite-cta" id="inviteCta">
+        <h2>Ready to Join?</h2>
+        <p>You need an invite code from the group admin to sign up. Already have one? Let's go.</p>
+        <a href="pages/auth.html" class="btn btn-primary btn-lg">Sign Up / Sign In →</a>
+      </div>
+    </div>
+  </main>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/scoring.js"></script>
+  <script src="js/ui.js"></script>
+  <script>
+    DB.initSupabase();
+
+    // Render nav
+    Nav.render('home');
+
+    // Hero actions based on auth state
+    async function renderHeroActions() {
+      const session = await DB.getSession();
+      const el = document.getElementById('heroActions');
+      if (session) {
+        el.innerHTML = `
+          <a href="pages/predictions.html" class="btn btn-primary btn-lg">Make Predictions →</a>
+          <a href="pages/leaderboard.html" class="btn btn-ghost btn-lg">View Leaderboard</a>
+        `;
+        document.getElementById('inviteCta').style.display = 'none';
+      } else {
+        el.innerHTML = `
+          <a href="pages/auth.html" class="btn btn-primary btn-lg">Get Started →</a>
+          <a href="pages/leaderboard.html" class="btn btn-ghost btn-lg">View Leaderboard</a>
+        `;
+      }
+    }
+
+    renderHeroActions();
+
+    // Countdown to June 11, 2026 23:00 UTC (first kickoff)
+    const kickoff = new Date('2026-06-11T23:00:00Z');
+
+    function updateCountdown() {
+      const now = new Date();
+      const diff = kickoff - now;
+      if (diff <= 0) {
+        document.getElementById('cdDays').textContent = '0';
+        document.getElementById('cdHours').textContent = '0';
+        document.getElementById('cdMins').textContent = '0';
+        document.getElementById('cdSecs').textContent = '0';
+        return;
+      }
+      const d = Math.floor(diff / 86400000);
+      const h = Math.floor((diff % 86400000) / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      document.getElementById('cdDays').textContent  = String(d).padStart(2,'0');
+      document.getElementById('cdHours').textContent = String(h).padStart(2,'0');
+      document.getElementById('cdMins').textContent  = String(m).padStart(2,'0');
+      document.getElementById('cdSecs').textContent  = String(s).padStart(2,'0');
+    }
+
+    updateCountdown();
+    setInterval(updateCountdown, 1000);
+  </script>
+</body>
+</html>

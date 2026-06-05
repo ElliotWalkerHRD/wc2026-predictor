@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WC2026 — Leaderboard</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .leaderboard-wrap { padding: 2rem 0 4rem; }
+
+    .top3-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.15fr 1fr;
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+      align-items: end;
+    }
+
+    .podium-card {
+      background: var(--navy-card);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-md);
+      padding: 1.5rem 1rem;
+      text-align: center;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .podium-card::before {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 3px;
+    }
+
+    .podium-card.rank-1 {
+      border-color: rgba(240,180,41,0.4);
+      background: linear-gradient(160deg, rgba(240,180,41,0.1) 0%, var(--navy-card) 60%);
+      transform: translateY(-12px);
+    }
+    .podium-card.rank-1::before { background: var(--gold); }
+
+    .podium-card.rank-2::before { background: #c0c0c0; }
+    .podium-card.rank-3::before { background: #cd7f32; }
+
+    .podium-position {
+      font-family: var(--font-display);
+      font-size: 0.9rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.75rem;
+    }
+    .rank-1 .podium-position { color: var(--gold); }
+    .rank-2 .podium-position { color: #c0c0c0; }
+    .rank-3 .podium-position { color: #cd7f32; }
+
+    .podium-avatar {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      color: var(--navy);
+      margin: 0 auto 0.75rem;
+    }
+
+    .podium-name {
+      font-family: var(--font-condensed);
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+    }
+
+    .podium-pts {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      color: var(--gold);
+    }
+
+    .podium-pts-label {
+      font-family: var(--font-condensed);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--grey-500);
+    }
+
+    .full-table-card {
+      background: var(--navy-card);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+
+    .table-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+
+    .table-header h3 {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      color: var(--gold);
+      letter-spacing: 0.08em;
+    }
+
+    .live-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-family: var(--font-condensed);
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--green);
+    }
+
+    .live-dot-green {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: blink 1.5s ease-in-out infinite;
+    }
+
+    .player-cell {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .player-info .name {
+      font-family: var(--font-condensed);
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .player-info .you-badge {
+      font-size: 0.65rem;
+      background: var(--gold-glow);
+      color: var(--gold);
+      border: 1px solid rgba(240,180,41,0.3);
+      padding: 0.1rem 0.4rem;
+      border-radius: 3px;
+      font-family: var(--font-condensed);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-left: 0.4rem;
+    }
+
+    .round-col {
+      text-align: center;
+      font-family: var(--font-condensed);
+      font-size: 0.8rem;
+      color: var(--grey-500);
+    }
+
+    .total-col {
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      color: var(--gold);
+      text-align: center;
+    }
+
+    .movement {
+      font-family: var(--font-condensed);
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .movement.up { color: var(--green); }
+    .movement.down { color: var(--crimson); }
+    .movement.same { color: var(--grey-700); }
+
+    @media (max-width: 768px) {
+      .top3-grid { grid-template-columns: 1fr; }
+      .podium-card.rank-1 { transform: none; order: -1; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav" id="main-nav"></nav>
+
+  <main class="main-content">
+    <div class="container">
+      <div class="page-header">
+        <div class="breadcrumb">WC2026 &gt; <span>Leaderboard</span></div>
+        <h1 class="display-title">Leaderboard</h1>
+        <p class="text-muted" style="font-family:var(--font-condensed)">Real-time standings · Updates automatically</p>
+      </div>
+
+      <div class="leaderboard-wrap">
+        <div id="leaderboardContent">
+          <div class="loading-overlay">
+            <div class="spinner"></div>
+            <span>Loading standings...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/data.js"></script>
+  <script src="../js/supabase-client.js"></script>
+  <script src="../js/scoring.js"></script>
+  <script src="../js/ui.js"></script>
+  <script>
+    DB.initSupabase();
+    Nav.render('leaderboard');
+
+    let currentUserId = null;
+
+    async function loadLeaderboard() {
+      const session = await DB.getSession();
+      currentUserId = session?.user?.id || null;
+
+      try {
+        const scores = await DB.getScores();
+        renderLeaderboard(scores);
+      } catch (err) {
+        document.getElementById('leaderboardContent').innerHTML =
+          `<div class="alert alert-error">⚠ Failed to load leaderboard: ${err.message}</div>`;
+      }
+    }
+
+    function renderLeaderboard(scores) {
+      if (!scores.length) {
+        document.getElementById('leaderboardContent').innerHTML = `
+          <div class="loading-overlay" style="padding:3rem">
+            <div style="font-size:3rem">🏆</div>
+            <p style="color:var(--grey-500);font-family:var(--font-condensed)">No scores yet — predictions needed!</p>
+          </div>
+        `;
+        return;
+      }
+
+      const top3 = scores.slice(0, 3);
+      const rest = scores;
+
+      // Build podium for top 3
+      const podiumOrder = [
+        scores[1] || null,   // 2nd (left)
+        scores[0] || null,   // 1st (centre/raised)
+        scores[2] || null,   // 3rd (right)
+      ];
+
+      const podiumHTML = podiumOrder.map((s, idx) => {
+        if (!s) return '<div></div>';
+        const rankNum = idx === 0 ? 2 : idx === 1 ? 1 : 3;
+        const rankLabel = rankNum === 1 ? '🥇 1st' : rankNum === 2 ? '🥈 2nd' : '🥉 3rd';
+        const initials = s.profiles?.display_name?.charAt(0).toUpperCase() || '?';
+        const color = s.profiles?.avatar_color || '#f0b429';
+        const isYou = s.user_id === currentUserId;
+        return `
+          <div class="podium-card rank-${rankNum}">
+            <div class="podium-position">${rankLabel}</div>
+            <div class="podium-avatar" style="background:${color}">${initials}</div>
+            <div class="podium-name">${s.profiles?.display_name || 'Player'}${isYou ? ' <span class="you-badge">You</span>' : ''}</div>
+            <div class="podium-pts">${s.total_points || 0}</div>
+            <div class="podium-pts-label">Points</div>
+          </div>
+        `;
+      }).join('');
+
+      // Full table
+      const rounds = ['round1','round2','round3','round4','round5','round6','round7','round8'];
+      const roundLabels = ['R1','R2','GS','R32','R16','QF','SF','Final'];
+
+      const rowsHTML = scores.map((s, i) => {
+        const rankNum = i + 1;
+        const isYou = s.user_id === currentUserId;
+        const initials = s.profiles?.display_name?.charAt(0).toUpperCase() || '?';
+        const color = s.profiles?.avatar_color || '#f0b429';
+        let rankClass = rankNum <= 3 ? `rank-${rankNum}` : 'rank-other';
+
+        const roundPts = rounds.map(r => {
+          const pts = s[r + '_points'];
+          return `<td class="round-col hide-mobile">${pts != null ? pts : '—'}</td>`;
+        }).join('');
+
+        return `
+          <tr class="${isYou ? 'current-user-row' : ''}">
+            <td>
+              <div class="rank-badge ${rankClass}">${rankNum}</div>
+            </td>
+            <td>
+              <div class="player-cell">
+                <div class="avatar" style="background:${color};width:32px;height:32px;font-size:0.85rem">${initials}</div>
+                <div class="player-info">
+                  <span class="name">${s.profiles?.display_name || 'Player'}</span>
+                  ${isYou ? '<span class="you-badge">You</span>' : ''}
+                </div>
+              </div>
+            </td>
+            ${roundPts}
+            <td class="total-col">${s.total_points || 0}</td>
+          </tr>
+        `;
+      }).join('');
+
+      const roundHeaders = roundLabels.map(r =>
+        `<th class="hide-mobile" style="text-align:center">${r}</th>`
+      ).join('');
+
+      document.getElementById('leaderboardContent').innerHTML = `
+        <div class="top3-grid">${podiumHTML}</div>
+
+        <div class="full-table-card">
+          <div class="table-header">
+            <h3>📋 Full Standings</h3>
+            <div class="live-indicator">
+              <div class="live-dot-green"></div>
+              Live
+            </div>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="leaderboard-table">
+              <thead>
+                <tr>
+                  <th style="width:44px">#</th>
+                  <th>Player</th>
+                  ${roundHeaders}
+                  <th style="text-align:center">Total</th>
+                </tr>
+              </thead>
+              <tbody>${rowsHTML}</tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="margin-top:1rem;text-align:right">
+          <span class="text-xs text-muted" style="font-family:var(--font-condensed)">
+            R1=Pre-tournament · R2=Group winners · GS=Group stage scores · R32/R16/QF/SF/Final=Knockouts
+          </span>
+        </div>
+      `;
+    }
+
+    // Real-time subscription
+    loadLeaderboard().then(() => {
+      DB.subscribeToLeaderboard(() => loadLeaderboard());
+    });
+  </script>
+</body>
+</html>

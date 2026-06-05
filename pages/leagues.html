@@ -225,12 +225,32 @@
       document.getElementById(containerId).innerHTML = '';
     }
 
-    function copyText(text, btn) {
-      navigator.clipboard.writeText(text).then(() => {
-        const orig = btn.innerHTML;
+    async function copyText(text, btn) {
+      const orig = btn.innerHTML;
+      const onSuccess = () => {
         btn.innerHTML = '<i class="ti ti-check"></i> Copied!';
         setTimeout(() => { btn.innerHTML = orig; }, 2000);
-      }).catch(() => Toast.error('Could not copy — please copy manually.'));
+        Toast.success('Copied to clipboard!');
+      };
+      try {
+        await navigator.clipboard.writeText(text);
+        onSuccess();
+      } catch (err) {
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
+          document.body.appendChild(ta);
+          ta.focus();
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          onSuccess();
+        } catch (fallbackErr) {
+          console.error('Copy failed:', fallbackErr);
+          Toast.error('Could not copy — please copy manually.');
+        }
+      }
     }
 
     async function loadMyLeagues() {

@@ -21,10 +21,11 @@
       align-items: center;
       gap: 0.35rem;
       flex: 1;
+      min-width: 0;
     }
     .score-team.away { flex-direction: row-reverse; text-align: right; }
-    .score-team-flag { font-size: 1.3rem; }
-    .score-team-name { font-size: 0.8rem; font-weight: 600; }
+    .score-team-flag { font-size: 1.3rem; flex-shrink: 0; }
+    .score-team-name { font-size: 0.8rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .score-inputs {
       display: flex;
       align-items: center;

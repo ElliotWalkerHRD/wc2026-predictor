@@ -1266,6 +1266,15 @@ select.form-control option {
 .info-row .pts { font-weight: 700; color: var(--ink); }
 .info-row + .info-row { border-top: 1px solid var(--grey-100); }
 
+@media (max-width: 479px) {
+  .info-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
+    padding: 0.4rem 0;
+  }
+}
+
 /* ---- Round filter bar ---- */
 .filter-bar {
   display: flex;
@@ -1336,6 +1345,10 @@ select.form-control option {
 
 .hidden { display: none !important; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+
+@media (max-width: 559px) {
+  .hide-mobile { display: none !important; }
+}
 
 .divider {
   border: none;

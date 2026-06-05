@@ -300,21 +300,36 @@
           return;
         }
 
-        await DB.signUp(email, password, name);
+        const signupResult = await DB.signUp(email, password, name);
+        const profileUpdate = { display_name: name, avatar_color: color, invite_code_used: invite };
 
+        // Email confirmation OFF — signUp returns a session immediately
+        if (signupResult?.session && signupResult?.user) {
+          try { await DB.upsertProfile(signupResult.user.id, profileUpdate); } catch (_) {}
+          window.location.href = '../index.html';
+          return;
+        }
+
+        // No session from signUp — try signing in manually
         try {
-          const { data } = await DB.signIn(email, password);
-          if (data?.user) {
-            await DB.upsertProfile(data.user.id, {
-              display_name: name,
-              avatar_color: color,
-              invite_code_used: invite
-            });
+          const siData = await DB.signIn(email, password);
+          if (siData?.user) {
+            try { await DB.upsertProfile(siData.user.id, profileUpdate); } catch (_) {}
+          }
+          if (siData?.session) {
+            window.location.href = '../index.html';
+            return;
           }
         } catch (_) {}
 
-        showAlert('signupAlert', 'Account created! Check your email to confirm, then sign in.', 'success');
-        btn.innerHTML = 'Account Created!';
+        // Email confirmation still required — guide user to sign in
+        showAlert('signupAlert', 'Account created! Please sign in below.', 'success');
+        btn.innerHTML = 'Create Account <i class="ti ti-arrow-right"></i>';
+        btn.disabled = false;
+        setTimeout(() => {
+          document.querySelector('[data-tab="signin"]').click();
+          document.getElementById('siEmail').value = email;
+        }, 1200);
       } catch (err) {
         showAlert('signupAlert', err.message || 'Sign-up failed. Please try again.');
         btn.disabled = false;

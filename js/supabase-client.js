@@ -84,6 +84,26 @@ async function upsertProfile(userId, updates) {
   return data;
 }
 
+async function getProfiles(userIds) {
+  if (!userIds.length) return [];
+  const sb = initSupabase();
+  const { data, error } = await sb
+    .from('profiles')
+    .select('id, display_name, avatar_color')
+    .in('id', userIds);
+  if (error) throw error;
+  return data || [];
+}
+
+async function getAllProfiles() {
+  const sb = initSupabase();
+  const { data, error } = await sb
+    .from('profiles')
+    .select('id, display_name, avatar_color');
+  if (error) throw error;
+  return data || [];
+}
+
 async function isAdmin(userId) {
   const profile = await getProfile(userId);
   return profile?.is_admin === true;
@@ -372,7 +392,7 @@ function getRoundLockDate(round) {
 // Export to global
 window.DB = {
   signUp, signIn, signOut, getSession, getCurrentUser, onAuthChange,
-  getProfile, upsertProfile, isAdmin,
+  getProfile, upsertProfile, getProfiles, getAllProfiles, isAdmin,
   savePrediction, getUserPredictions, getAllPredictions,
   getScores, getUserScore,
   getMatchResults, upsertMatchResult,

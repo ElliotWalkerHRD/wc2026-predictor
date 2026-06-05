@@ -438,17 +438,103 @@
         );
         if (!res.ok) throw new Error(`API returned ${res.status}`);
         const data = await res.json();
-        const saves = [];
+
+        // ---- Team-code normalisation ----
+        // Maps API TLAs that differ from our data.js codes.
+        // Extend this map whenever the API uses a different abbreviation.
+        const TLA_ALIAS = {
+          CUR: 'CUW',   // Curaçao
+          URY: 'URU',   // Uruguay
+        };
+        const norm = code => {
+          if (!code) return null;
+          const u = code.toUpperCase();
+          return TLA_ALIAS[u] || u;
+        };
+
+        // ---- Group-stage lookup: "GROUP:HOME:AWAY" -> our match id ----
+        // Also stores the swapped key so we handle any home/away inversion
+        const groupLookup = {};
+        GROUP_FIXTURES.forEach(([id, , , group, home, away]) => {
+          groupLookup[`${group}:${home}:${away}`] = id;
+          groupLookup[`${group}:${away}:${home}`] = id;
+        });
+
+        // ---- Knockout lookup: API stage -> our match IDs in schedule order ----
+        // Both we and the API assign IDs sequentially; sorting by ID gives a
+        // consistent positional alignment between the two datasets.
+        const STAGE_MAP = {
+          ROUND_OF_32:    'round32',
+          ROUND_OF_16:    'round16',
+          QUARTER_FINALS: 'quarterfinals',
+          SEMI_FINALS:    'semifinals',
+          FINAL:          'final',
+        };
+        const ourKOByStage = {};
+        Object.entries(STAGE_MAP).forEach(([apiStage, ourKey]) => {
+          ourKOByStage[apiStage] = (KNOCKOUT_ROUNDS[ourKey]?.matches || [])
+            .slice().sort((a, b) => a.id - b.id).map(m => m.id);
+        });
+
+        // Bucket API matches by stage, sorted by API ID for positional alignment
+        const apiByStage = {};
+        (data.matches || []).forEach(m => {
+          if (!apiByStage[m.stage]) apiByStage[m.stage] = [];
+          apiByStage[m.stage].push(m);
+        });
+        Object.values(apiByStage).forEach(arr => arr.sort((a, b) => a.id - b.id));
+
+        // ---- Map each finished API match to our fixture ID ----
+        const saves   = [];
+        const unmapped = [];
 
         (data.matches || []).forEach(match => {
-          if (match.score?.fullTime?.home === null) return;
+          // Skip anything without a confirmed full-time score
+          if (match.score?.fullTime?.home == null) return;
+
+          const stage = match.stage;
+          let ourId = null;
+
+          if (stage === 'GROUP_STAGE') {
+            const g = (match.group || '').replace('GROUP_', '');
+            const h = norm(match.homeTeam?.tla);
+            const a = norm(match.awayTeam?.tla);
+            if (g && h && a) ourId = groupLookup[`${g}:${h}:${a}`] ?? null;
+          } else if (STAGE_MAP[stage]) {
+            // Positional: find this API match's sorted index within its stage,
+            // then look up the same index in our ordered knockout fixture list.
+            const bucket  = apiByStage[stage] || [];
+            const pos     = bucket.findIndex(m => m.id === match.id);
+            const ourIds  = ourKOByStage[stage] || [];
+            if (pos >= 0 && pos < ourIds.length) ourId = ourIds[pos];
+          }
+
+          if (ourId == null) {
+            unmapped.push(
+              `Stage=${stage}  API#${match.id}  ` +
+              `${match.homeTeam?.tla ?? '?'} vs ${match.awayTeam?.tla ?? '?'}  ` +
+              `score=${match.score.fullTime.home}-${match.score.fullTime.away}`
+            );
+            return;
+          }
+
           saves.push(DB.upsertMatchResult(
-            match.id, match.score.fullTime.home, match.score.fullTime.away, match.status
+            ourId, match.score.fullTime.home, match.score.fullTime.away, match.status
           ));
         });
 
         await Promise.all(saves);
-        statusEl.innerHTML = `<div class="alert alert-success"><i class="ti ti-check"></i> Synced ${saves.length} results from API</div>`;
+
+        let html = `<div class="alert alert-success"><i class="ti ti-check"></i> Synced ${saves.length} result${saves.length !== 1 ? 's' : ''} from API.</div>`;
+        if (unmapped.length) {
+          html += `<div class="alert alert-info" style="margin-top:0.5rem">
+            <i class="ti ti-info-circle"></i>
+            <strong>${unmapped.length} API match${unmapped.length !== 1 ? 'es' : ''} could not be mapped</strong>
+            — add missing aliases to TLA_ALIAS if needed:<br>
+            <pre style="margin:0.4rem 0 0;font-size:0.7rem;white-space:pre-wrap;opacity:0.85">${unmapped.join('\n')}</pre>
+          </div>`;
+        }
+        statusEl.innerHTML = html;
         loadResultsPanel();
       } catch (err) {
         statusEl.innerHTML = `<div class="alert alert-error"><i class="ti ti-alert-triangle"></i> API error: ${err.message}. Check your API key in config.js</div>`;

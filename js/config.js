@@ -8,11 +8,6 @@ const CONFIG = {
   SUPABASE_URL: 'https://juknwgkehoatkbentidw.supabase.co',          // e.g. https://abcxyz.supabase.co
   SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp1a253Z2tlaG9hdGtiZW50aWR3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NDgxNjMsImV4cCI6MjA5NjIyNDE2M30.D2tK0eqvj8i5uPTnAeVNksn5K6oPwZEr7aiYA-2ljOQ', // public anon key from Supabase dashboard
 
-  // --- Football Data API (football-data.org) ---
-  FOOTBALL_API_KEY: 'YOUR_FOOTBALL_DATA_API_KEY', // free key from football-data.org
-  FOOTBALL_API_BASE: 'https://api.football-data.org/v4',
-  WC2026_COMPETITION_ID: 2000, // FIFA World Cup competition ID on football-data.org
-
   // --- App Settings ---
   ADMIN_EMAIL: 'ehwalker92@gmail.com', // your email — gets admin privileges
   APP_NAME: 'WC2026 Predictor',

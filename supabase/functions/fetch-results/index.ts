@@ -1,0 +1,211 @@
+// ============================================================
+//  WC2026 — Supabase Edge Function: fetch-results
+//  Deploy:  supabase functions deploy fetch-results
+//
+//  Calls football-data.org server-side (no browser CORS issue),
+//  maps each finished match to our internal match ID (1-104),
+//  upserts into match_results via the service role.
+//
+//  Required Supabase secret (set once):
+//    supabase secrets set FOOTBALL_API_KEY=<your_key>
+// ============================================================
+
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+// ---- Fixture data (mirrors client-side data.js) ----
+// Tuple: [ourMatchId, group, homeCode, awayCode]
+const GROUP_FIXTURES: [number, string, string, string][] = [
+  [1,"A","MEX","RSA"],[2,"A","KOR","CZE"],[3,"B","CAN","BIH"],[4,"D","USA","PAR"],
+  [5,"C","HAI","SCO"],[6,"D","AUS","TUR"],[7,"C","BRA","MAR"],[8,"B","QAT","SUI"],
+  [9,"E","CIV","ECU"],[10,"E","GER","CUW"],[11,"F","NED","JPN"],[12,"F","SWE","TUN"],
+  [13,"H","KSA","URU"],[14,"H","ESP","CPV"],[15,"G","IRN","NZL"],[16,"G","BEL","EGY"],
+  [17,"I","FRA","SEN"],[18,"I","IRQ","NOR"],[19,"J","ARG","ALG"],[20,"J","AUT","JOR"],
+  [21,"L","GHA","PAN"],[22,"L","ENG","CRO"],[23,"K","POR","COD"],[24,"K","UZB","COL"],
+  [25,"A","CZE","RSA"],[26,"B","SUI","BIH"],[27,"B","CAN","QAT"],[28,"A","MEX","KOR"],
+  [29,"C","BRA","HAI"],[30,"C","SCO","MAR"],[31,"D","TUR","PAR"],[32,"D","USA","AUS"],
+  [33,"E","GER","CIV"],[34,"E","ECU","CUW"],[35,"F","NED","SWE"],[36,"F","TUN","JPN"],
+  [37,"H","URU","CPV"],[38,"H","ESP","KSA"],[39,"G","BEL","IRN"],[40,"G","NZL","EGY"],
+  [41,"I","NOR","SEN"],[42,"I","FRA","IRQ"],[43,"J","ARG","AUT"],[44,"J","JOR","ALG"],
+  [45,"L","ENG","GHA"],[46,"L","PAN","CRO"],[47,"K","POR","UZB"],[48,"K","COL","COD"],
+  [49,"C","SCO","BRA"],[50,"C","MAR","HAI"],[51,"B","SUI","CAN"],[52,"B","BIH","QAT"],
+  [53,"A","CZE","MEX"],[54,"A","RSA","KOR"],[55,"E","CUW","CIV"],[56,"E","ECU","GER"],
+  [57,"F","JPN","SWE"],[58,"F","TUN","NED"],[59,"D","TUR","USA"],[60,"D","PAR","AUS"],
+  [61,"I","NOR","FRA"],[62,"I","SEN","IRQ"],[63,"G","EGY","IRN"],[64,"G","NZL","BEL"],
+  [65,"H","CPV","KSA"],[66,"H","URU","ESP"],[67,"L","PAN","ENG"],[68,"L","CRO","GHA"],
+  [69,"J","ALG","AUT"],[70,"J","JOR","ARG"],[71,"K","COL","POR"],[72,"K","COD","UZB"],
+];
+
+// Knockout stages: our match IDs in schedule order.
+// API and our data both assign IDs sequentially, so sorting by ID gives a
+// stable positional alignment between the two datasets.
+const KNOCKOUT_IDS: Record<string, number[]> = {
+  ROUND_OF_32:    [73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88],
+  ROUND_OF_16:    [89,90,91,92,93,94,95,96],
+  QUARTER_FINALS: [97,98,99,100],
+  SEMI_FINALS:    [101,102],
+  THIRD_PLACE:    [103],
+  FINAL:          [104],
+};
+
+// Team-code aliases: API TLA → our data.js code.
+// Extend this map if the API uses other abbreviations.
+const TLA_ALIAS: Record<string, string> = {
+  CUR: "CUW",  // Curaçao
+  URY: "URU",  // Uruguay
+};
+
+const norm = (tla: string | null | undefined): string | null => {
+  if (!tla) return null;
+  const u = tla.toUpperCase();
+  return TLA_ALIAS[u] ?? u;
+};
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  // ---- Auth: must be called by an authenticated admin ----
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const supabaseAdmin = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    { auth: { persistSession: false } }
+  );
+
+  const supabaseUser = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_ANON_KEY")!,
+    { global: { headers: { Authorization: authHeader } } }
+  );
+
+  const { data: { user } } = await supabaseUser.auth.getUser();
+  if (!user) {
+    return new Response(JSON.stringify({ error: "Invalid token" }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const { data: profile } = await supabaseAdmin
+    .from("profiles").select("is_admin").eq("id", user.id).single();
+
+  if (!profile?.is_admin) {
+    return new Response(JSON.stringify({ error: "Admin only" }), {
+      status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // ---- Call football-data.org server-side ----
+  const apiKey = Deno.env.get("FOOTBALL_API_KEY");
+  if (!apiKey) {
+    return new Response(JSON.stringify({ error: "FOOTBALL_API_KEY secret not set on this project" }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  let apiMatches: any[];
+  try {
+    const apiRes = await fetch(
+      "https://api.football-data.org/v4/competitions/2000/matches",
+      { headers: { "X-Auth-Token": apiKey } }
+    );
+    if (!apiRes.ok) {
+      const text = await apiRes.text();
+      throw new Error(`football-data.org returned ${apiRes.status}: ${text.slice(0, 200)}`);
+    }
+    const body = await apiRes.json();
+    apiMatches = body.matches ?? [];
+  } catch (err: any) {
+    return new Response(JSON.stringify({ error: `Upstream fetch failed: ${err.message}` }), {
+      status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // ---- Build group-stage lookup: "GROUP:HOME:AWAY" → our match id ----
+  // Both orientations stored so a home/away inversion in the API is tolerated.
+  const groupLookup = new Map<string, number>();
+  for (const [id, group, home, away] of GROUP_FIXTURES) {
+    groupLookup.set(`${group}:${home}:${away}`, id);
+    groupLookup.set(`${group}:${away}:${home}`, id);
+  }
+
+  // ---- Bucket & sort API matches by stage (by API id for positional alignment) ----
+  const apiByStage = new Map<string, any[]>();
+  for (const m of apiMatches) {
+    if (!apiByStage.has(m.stage)) apiByStage.set(m.stage, []);
+    apiByStage.get(m.stage)!.push(m);
+  }
+  for (const arr of apiByStage.values()) arr.sort((a, b) => a.id - b.id);
+
+  // ---- Map each finished API match to our internal fixture ID ----
+  const upserts: any[] = [];
+  const unmapped: string[] = [];
+
+  for (const match of apiMatches) {
+    if (match.score?.fullTime?.home == null) continue; // not finished
+
+    const stage: string = match.stage;
+    let ourId: number | null = null;
+
+    if (stage === "GROUP_STAGE") {
+      const g = (match.group ?? "").replace("GROUP_", "");
+      const h = norm(match.homeTeam?.tla);
+      const a = norm(match.awayTeam?.tla);
+      if (g && h && a) ourId = groupLookup.get(`${g}:${h}:${a}`) ?? null;
+    } else if (KNOCKOUT_IDS[stage]) {
+      // Positional: index of this API match (sorted by API id) within its stage
+      // maps to the same index in our sequential knockout id list.
+      const bucket = apiByStage.get(stage) ?? [];
+      const pos    = bucket.findIndex((m: any) => m.id === match.id);
+      const ourIds = KNOCKOUT_IDS[stage];
+      if (pos >= 0 && pos < ourIds.length) ourId = ourIds[pos];
+    }
+
+    if (ourId == null) {
+      unmapped.push(
+        `stage=${stage} api#${match.id} ` +
+        `${match.homeTeam?.tla ?? "?"} vs ${match.awayTeam?.tla ?? "?"} ` +
+        `score=${match.score.fullTime.home}-${match.score.fullTime.away}`
+      );
+      continue;
+    }
+
+    upserts.push({
+      match_id:   ourId,
+      home_score: match.score.fullTime.home,
+      away_score: match.score.fullTime.away,
+      status:     match.status,
+      updated_at: new Date().toISOString(),
+    });
+  }
+
+  // ---- Upsert via service role (bypasses RLS) ----
+  if (upserts.length > 0) {
+    const { error } = await supabaseAdmin
+      .from("match_results")
+      .upsert(upserts, { onConflict: "match_id" });
+
+    if (error) {
+      return new Response(JSON.stringify({ error: `DB upsert failed: ${error.message}` }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+  }
+
+  return new Response(
+    JSON.stringify({ updated: upserts.length, unmapped }),
+    { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+});

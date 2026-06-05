@@ -23,6 +23,7 @@
 
   <main class="main-content" style="padding-top:0">
     <div class="container" style="padding-top:2rem;padding-bottom:4rem">
+      <div id="leagueSwitcher"></div>
       <div id="leaderboardContent">
         <div class="loading-overlay">
           <div class="spinner"></div>
@@ -43,18 +44,88 @@
     Nav.render('leaderboard');
 
     let currentUserId = null;
+    let allScores     = [];
+    let memberCache   = {};   // leagueId -> Set<userId>
+    let dropdownBuilt = false;
 
     async function loadLeaderboard() {
       const session = await DB.getSession();
       currentUserId = session?.user?.id || null;
 
       try {
-        const scores = await DB.getScores();
-        renderLeaderboard(scores);
+        const [scores, leagues] = await Promise.all([
+          DB.getScores(),
+          currentUserId
+            ? DB.getMyLeagues(currentUserId).catch(() => [])
+            : Promise.resolve([])
+        ]);
+        allScores = scores;
+
+        if (!dropdownBuilt) {
+          buildDropdown(leagues);
+          dropdownBuilt = true;
+        }
+
+        await applyFilter();
       } catch (err) {
         document.getElementById('leaderboardContent').innerHTML =
           `<div class="alert alert-error"><i class="ti ti-alert-triangle"></i> Failed to load: ${err.message}</div>`;
       }
+    }
+
+    function buildDropdown(leagues) {
+      const switcher = document.getElementById('leagueSwitcher');
+      const privateLeagues = leagues.filter(l => !l.is_global);
+
+      if (!currentUserId || privateLeagues.length === 0) {
+        switcher.innerHTML = '';
+        return;
+      }
+
+      const globalLeague = leagues.find(l => l.is_global);
+      const globalLabel  = globalLeague ? globalLeague.name : 'Global';
+
+      const opts = [
+        `<option value="global">${globalLabel} — All Players</option>`,
+        ...privateLeagues.map(l => {
+          const n = l.member_count || 1;
+          return `<option value="${l.id}">${l.name} (${n} ${n === 1 ? 'player' : 'players'})</option>`;
+        })
+      ].join('');
+
+      switcher.innerHTML = `
+        <div class="filter-bar" style="margin-bottom:1.5rem;align-items:center">
+          <label class="filter-label" for="leaguePicker" style="white-space:nowrap">
+            <i class="ti ti-users-group"></i> View:
+          </label>
+          <select id="leaguePicker" class="form-control" style="min-width:200px;max-width:320px">${opts}</select>
+        </div>
+      `;
+
+      document.getElementById('leaguePicker').addEventListener('change', applyFilter);
+    }
+
+    async function applyFilter() {
+      const picker = document.getElementById('leaguePicker');
+      const val = picker ? picker.value : 'global';
+
+      if (val === 'global' || !val) {
+        renderLeaderboard(allScores);
+        return;
+      }
+
+      if (!memberCache[val]) {
+        try {
+          const ids = await DB.getLeagueMemberIds(val);
+          memberCache[val] = new Set(ids);
+        } catch {
+          renderLeaderboard(allScores);
+          return;
+        }
+      }
+
+      const members = memberCache[val];
+      renderLeaderboard(allScores.filter(s => members.has(s.user_id)));
     }
 
     function renderLeaderboard(scores) {
@@ -100,7 +171,7 @@
         const isYou = s.user_id === currentUserId;
         const initials = s.profiles?.display_name?.charAt(0).toUpperCase() || '?';
         const color = s.profiles?.avatar_color || '#c8f135';
-        let rankClass = rankNum <= 3 ? `rank-${rankNum}` : 'rank-other';
+        const rankClass = rankNum <= 3 ? `rank-${rankNum}` : 'rank-other';
 
         const roundPts = rounds.map(r => {
           const pts = s[r + '_points'];
@@ -162,7 +233,10 @@
     }
 
     loadLeaderboard().then(() => {
-      DB.subscribeToLeaderboard(() => loadLeaderboard());
+      DB.subscribeToLeaderboard(async () => {
+        allScores = await DB.getScores().catch(() => allScores);
+        applyFilter();
+      });
     });
   </script>
 </body>

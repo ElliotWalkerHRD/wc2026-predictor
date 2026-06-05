@@ -275,14 +275,28 @@
               <div class="league-actions">
                 ${l.is_global
                   ? '<span class="chip chip-grey" style="font-size:0.72rem"><i class="ti ti-lock"></i> Global</span>'
-                  : `<button class="btn btn-outline btn-sm" style="color:var(--red)" data-leave="${l.id}" data-name="${l.name.replace(/"/g,'&quot;')}">
-                      <i class="ti ti-door-exit"></i> Leave
-                    </button>`
+                  : `<button class="btn btn-sm" style="background:#25D366;color:#fff;border-color:#25D366"
+                        data-wa data-wa-code="${l.join_code}" data-wa-name="${l.name.replace(/"/g,'&quot;')}">
+                        <i class="ti ti-brand-whatsapp"></i> Share
+                      </button>
+                      <button class="btn btn-outline btn-sm" style="color:var(--red)" data-leave="${l.id}" data-name="${l.name.replace(/"/g,'&quot;')}">
+                        <i class="ti ti-door-exit"></i> Leave
+                      </button>`
                 }
               </div>
             </div>
           `;
         }).join('');
+
+        el.querySelectorAll('[data-wa]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const name = btn.dataset.waName;
+            const code = btn.dataset.waCode;
+            const link = `${CONFIG.APP_URL}/pages/leagues.html?join=${code}`;
+            const msg = `Join my World Cup 2026 prediction league "${name}" on Lock Your Picks! Use code ${code} or tap: ${link}`;
+            window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+          });
+        });
 
         el.querySelectorAll('[data-leave]').forEach(btn => {
           btn.addEventListener('click', async () => {

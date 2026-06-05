@@ -1444,9 +1444,9 @@ select.form-control option {
 /* object-fit:contain keeps full flag visible; flex-shrink:0 prevents squash. */
 .flag-img {
   display: inline-block;
-  width: 22px;
-  height: 16px;
-  object-fit: contain;
+  width: 28px;
+  height: 20px;
+  object-fit: cover;
   vertical-align: middle;
   border-radius: 2px;
   flex-shrink: 0;

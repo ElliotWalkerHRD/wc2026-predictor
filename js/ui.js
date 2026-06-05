@@ -43,38 +43,38 @@ const Nav = {
     if (session) {
       profile = await DB.getProfile(session.user.id);
       if (profile?.is_admin) {
-        adminLink = `<li><a href="pages/admin.html" ${activePage === 'admin' ? 'class="active"' : ''}>⚙ Admin</a></li>`;
+        adminLink = `<li><a href="pages/admin.html" ${activePage === 'admin' ? 'class="active"' : ''}><i class="ti ti-settings"></i> Admin</a></li>`;
       }
     }
 
     const initials = profile?.display_name
       ? profile.display_name.charAt(0).toUpperCase()
       : '?';
-    const avatarColor = profile?.avatar_color || '#f0b429';
+    const avatarColor = profile?.avatar_color || '#c8f135';
 
     navEl.innerHTML = `
-      <a class="nav-brand" href="index.html">WC<span>2026</span> ⚽</a>
-
-      <button class="mobile-nav-toggle" id="navToggle" aria-label="Menu">☰</button>
+      <a class="nav-brand" href="index.html"><span class="lime">WC</span> 2026</a>
 
       <ul class="nav-links" id="navLinks">
-        <li><a href="index.html" ${activePage === 'home' ? 'class="active"' : ''}>🏠 Home</a></li>
-        <li><a href="pages/leaderboard.html" ${activePage === 'leaderboard' ? 'class="active"' : ''}>🏆 Leaderboard</a></li>
-        <li><a href="pages/predictions.html" ${activePage === 'predictions' ? 'class="active"' : ''}>✏️ Predictions</a></li>
-        <li><a href="pages/matches.html" ${activePage === 'matches' ? 'class="active"' : ''}>⚽ Matches</a></li>
-        <li><a href="pages/my-predictions.html" ${activePage === 'mypreds' ? 'class="active"' : ''}>📋 My Picks</a></li>
+        <li><a href="index.html" ${activePage === 'home' ? 'class="active"' : ''}><i class="ti ti-home"></i> Home</a></li>
+        <li><a href="pages/leaderboard.html" ${activePage === 'leaderboard' ? 'class="active"' : ''}><i class="ti ti-trophy"></i> Leaderboard</a></li>
+        <li><a href="pages/predictions.html" ${activePage === 'predictions' ? 'class="active"' : ''}><i class="ti ti-pencil"></i> Predictions</a></li>
+        <li><a href="pages/matches.html" ${activePage === 'matches' ? 'class="active"' : ''}><i class="ti ti-ball-football"></i> Matches</a></li>
+        <li><a href="pages/my-predictions.html" ${activePage === 'mypreds' ? 'class="active"' : ''}><i class="ti ti-list-check"></i> My Picks</a></li>
         ${adminLink}
       </ul>
 
+      <button class="nav-hamburger" id="navToggle" aria-label="Menu"><i class="ti ti-menu-2"></i></button>
+
       <div class="nav-user">
         ${session ? `
-          <div class="avatar" style="background:${avatarColor}" title="${profile?.display_name || ''}">
+          <div class="avatar" style="background:${avatarColor};color:#0d0d0d" title="${profile?.display_name || ''}">
             ${initials}
           </div>
           <span class="nav-username">${profile?.display_name || session.user.email}</span>
           <button class="btn btn-ghost btn-sm" id="signOutBtn">Sign out</button>
         ` : `
-          <a href="pages/auth.html" class="btn btn-primary btn-sm">Sign In</a>
+          <a href="pages/auth.html" class="btn btn-lime btn-sm">Sign In</a>
         `}
       </div>
     `;
@@ -118,8 +118,8 @@ async function requireAuthFromPages() {
 
 // ---- Avatar colors ----
 const AVATAR_COLORS = [
-  '#f0b429', '#e63946', '#2ec4b6', '#457b9d', '#a8dadc',
-  '#e76f51', '#2a9d8f', '#264653', '#e9c46a', '#f4a261'
+  '#c8f135', '#22c55e', '#3b82f6', '#f59e0b', '#ec4899',
+  '#8b5cf6', '#06b6d4', '#ef4444', '#84cc16', '#f97316'
 ];
 
 function getRandomAvatarColor() {
@@ -166,7 +166,7 @@ function showLoading(containerId, message = 'Loading...') {
 function showError(containerId, message) {
   const el = document.getElementById(containerId);
   if (!el) return;
-  el.innerHTML = `<div class="alert alert-error">⚠ ${message}</div>`;
+  el.innerHTML = `<div class="alert alert-error"><i class="ti ti-alert-triangle"></i> ${message}</div>`;
 }
 
 // ---- Score display helpers ----
@@ -181,9 +181,9 @@ function renderMatchScore(actual, prediction) {
   if (!prediction) return `<strong>${actH} – ${actA}</strong>`;
 
   const predH = parseInt(prediction.home), predA = parseInt(prediction.away);
-  let cls = 'pred-wrong', label = '✗';
-  if (predH === actH && predA === actA) { cls = 'pred-correct'; label = '✓ Exact!'; }
-  else if (Math.sign(predH - predA) === Math.sign(actH - actA)) { cls = 'pred-correct'; label = '✓ Result'; }
+  let cls = 'pred-wrong', label = '<i class="ti ti-x"></i> Wrong';
+  if (predH === actH && predA === actA) { cls = 'pred-correct'; label = '<i class="ti ti-check"></i> Exact!'; }
+  else if (Math.sign(predH - predA) === Math.sign(actH - actA)) { cls = 'pred-correct'; label = '<i class="ti ti-check"></i> Result'; }
 
   return `
     <div>

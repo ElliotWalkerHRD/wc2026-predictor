@@ -4,17 +4,17 @@
 
 // Supabase is loaded via CDN in each HTML page
 // Initialize client once CONFIG is available
-let supabase = null;
+let supabaseClient = null;
 
 function initSupabase() {
-  if (supabase) return supabase;
+  if (supabaseClient) return supabaseClient;
   if (!window.CONFIG) throw new Error('CONFIG not loaded');
-  supabase = window.supabase.createClient(
+  supabaseClient = window.supabase.createClient(
     CONFIG.SUPABASE_URL,
     CONFIG.SUPABASE_ANON_KEY
   );
-  window._supabase = supabase;
-  return supabase;
+  window._supabase = supabaseClient;
+  return supabaseClient;
 }
 
 // ---- Auth helpers ----

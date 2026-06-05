@@ -4,32 +4,25 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WC2026 — Sign In</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
   <link rel="stylesheet" href="../css/style.css">
   <style>
+    body { background: var(--bg); }
+
     .auth-page {
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 2rem 1rem;
-      position: relative;
-    }
-
-    .auth-page::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background:
-        radial-gradient(ellipse at 30% 40%, rgba(240,180,41,0.07) 0%, transparent 60%),
-        radial-gradient(ellipse at 70% 70%, rgba(230,57,70,0.05) 0%, transparent 50%);
-      pointer-events: none;
+      padding: 2rem 1.25rem;
     }
 
     .auth-container {
       width: 100%;
       max-width: 420px;
-      position: relative;
-      z-index: 1;
     }
 
     .auth-logo {
@@ -38,35 +31,35 @@
     }
 
     .auth-logo a {
-      font-family: var(--font-display);
+      font-family: var(--font-serif);
+      font-style: italic;
       font-size: 2rem;
-      color: var(--gold);
+      color: var(--ink);
       text-decoration: none;
-      letter-spacing: 0.1em;
     }
 
-    .auth-logo a span { color: var(--crimson); }
+    .auth-logo a .lime { color: #5a6e00; }
 
     .auth-logo p {
-      font-family: var(--font-condensed);
-      font-size: 0.8rem;
-      letter-spacing: 0.12em;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
-      color: var(--grey-500);
+      color: var(--grey-400);
       margin-top: 0.25rem;
     }
 
     .auth-card {
-      background: var(--navy-card);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: var(--radius-lg);
+      background: var(--white);
+      border: 1px solid var(--grey-300);
+      border-radius: var(--radius-xl);
       padding: 2rem;
-      box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+      box-shadow: var(--shadow-lg);
     }
 
     .auth-tabs {
       display: flex;
-      border-bottom: 1px solid rgba(255,255,255,0.07);
+      border-bottom: 1.5px solid var(--grey-300);
       margin-bottom: 1.75rem;
     }
 
@@ -76,20 +69,18 @@
       background: none;
       border: none;
       border-bottom: 2px solid transparent;
-      font-family: var(--font-condensed);
-      font-size: 0.9rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--grey-500);
+      font-family: var(--font-sans);
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--grey-400);
       cursor: pointer;
-      transition: all 0.2s;
-      margin-bottom: -1px;
+      transition: all 0.15s;
+      margin-bottom: -1.5px;
     }
 
     .auth-tab.active {
-      color: var(--gold);
-      border-bottom-color: var(--gold);
+      color: var(--ink);
+      border-bottom-color: var(--ink);
     }
 
     .auth-panel { display: none; }
@@ -98,53 +89,30 @@
     .form-footer {
       margin-top: 1.5rem;
       text-align: center;
-      font-size: 0.8rem;
-      color: var(--grey-500);
-      font-family: var(--font-condensed);
-    }
-
-    .form-footer a {
-      color: var(--gold);
-      text-decoration: none;
-    }
-
-    .divider-text {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      margin: 1.25rem 0;
-      color: var(--grey-700);
-      font-size: 0.75rem;
-      font-family: var(--font-condensed);
-      letter-spacing: 0.1em;
-    }
-
-    .divider-text::before, .divider-text::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: rgba(255,255,255,0.07);
+      font-size: 0.78rem;
+      color: var(--grey-400);
     }
 
     .invite-notice {
-      background: rgba(240,180,41,0.08);
-      border: 1px solid rgba(240,180,41,0.2);
-      border-radius: var(--radius-sm);
+      background: rgba(200,241,53,0.1);
+      border: 1px solid rgba(200,241,53,0.35);
+      border-radius: var(--radius-md);
       padding: 0.875rem;
       font-size: 0.82rem;
-      color: var(--grey-300);
+      color: var(--grey-700);
       margin-bottom: 1.25rem;
       line-height: 1.5;
+      display: flex;
+      gap: 0.5rem;
     }
 
-    .invite-notice strong { color: var(--gold); }
+    .invite-notice i { flex-shrink: 0; margin-top: 0.1rem; color: #5a6e00; }
 
     .color-picker-label {
-      font-family: var(--font-condensed);
-      font-size: 0.75rem;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--grey-500);
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--grey-700);
       margin-bottom: 0.5rem;
       display: block;
     }
@@ -159,12 +127,12 @@
       width: 28px; height: 28px;
       border-radius: 50%;
       cursor: pointer;
-      border: 2px solid transparent;
+      border: 2.5px solid transparent;
       transition: all 0.15s;
     }
 
     .color-swatch.selected {
-      border-color: var(--white);
+      border-color: var(--ink);
       transform: scale(1.15);
     }
   </style>
@@ -173,7 +141,7 @@
   <div class="auth-page">
     <div class="auth-container">
       <div class="auth-logo">
-        <a href="../index.html">WC<span>2026</span> ⚽</a>
+        <a href="../index.html"><span class="lime">WC</span> 2026</a>
         <p>World Cup Prediction Game</p>
       </div>
 
@@ -194,15 +162,16 @@
             <label class="form-label" for="siPassword">Password</label>
             <input class="form-control" type="password" id="siPassword" placeholder="••••••••" autocomplete="current-password">
           </div>
-          <button class="btn btn-primary btn-block btn-lg" id="signinBtn">
-            Sign In →
+          <button class="btn btn-lime btn-block btn-lg" id="signinBtn">
+            Sign In <i class="ti ti-arrow-right"></i>
           </button>
         </div>
 
         <!-- Sign Up -->
         <div class="auth-panel" id="panel-signup">
           <div class="invite-notice">
-            <strong>🔒 Invite only.</strong> You need an invite code from the group admin to join. Ask them to send you a link or code.
+            <i class="ti ti-lock"></i>
+            <span><strong>Invite only.</strong> You need an invite code from the group admin to join.</span>
           </div>
           <div id="signupAlert"></div>
           <div class="form-group">
@@ -224,10 +193,10 @@
           <div class="form-group">
             <span class="color-picker-label">Choose avatar colour</span>
             <div class="color-swatches" id="colorSwatches"></div>
-            <input type="hidden" id="suColor" value="#f0b429">
+            <input type="hidden" id="suColor" value="#c8f135">
           </div>
-          <button class="btn btn-primary btn-block btn-lg" id="signupBtn">
-            Create Account →
+          <button class="btn btn-lime btn-block btn-lg" id="signupBtn">
+            Create Account <i class="ti ti-arrow-right"></i>
           </button>
           <div class="form-footer mt-2">
             By signing up you agree to have fun and accept all controversial referee decisions.
@@ -246,13 +215,11 @@
   <script>
     DB.initSupabase();
 
-    // Redirect if already logged in
     (async () => {
       const session = await DB.getSession();
       if (session) window.location.href = '../index.html';
     })();
 
-    // Tab switching
     document.querySelectorAll('.auth-tab').forEach(tab => {
       tab.addEventListener('click', () => {
         document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
@@ -262,12 +229,11 @@
       });
     });
 
-    // Colour swatches
     const swatchContainer = document.getElementById('colorSwatches');
     const colorInput = document.getElementById('suColor');
     AVATAR_COLORS.forEach(color => {
       const s = document.createElement('div');
-      s.className = 'color-swatch' + (color === '#f0b429' ? ' selected' : '');
+      s.className = 'color-swatch' + (color === '#c8f135' ? ' selected' : '');
       s.style.background = color;
       s.title = color;
       s.addEventListener('click', () => {
@@ -278,44 +244,36 @@
       swatchContainer.appendChild(s);
     });
 
-    // Check invite in URL param
     const params = new URLSearchParams(window.location.search);
     if (params.get('invite')) {
       document.getElementById('suInvite').value = params.get('invite').toUpperCase();
-      // Switch to signup tab
       document.querySelector('[data-tab="signup"]').click();
     }
 
-    // Alert helpers
     function showAlert(id, message, type = 'error') {
-      document.getElementById(id).innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+      const icon = type === 'error' ? 'ti-alert-triangle' : type === 'success' ? 'ti-check' : 'ti-info-circle';
+      document.getElementById(id).innerHTML = `<div class="alert alert-${type}"><i class="ti ${icon}"></i>${message}</div>`;
     }
-    function clearAlert(id) {
-      document.getElementById(id).innerHTML = '';
-    }
+    function clearAlert(id) { document.getElementById(id).innerHTML = ''; }
 
-    // Sign In
     document.getElementById('signinBtn').addEventListener('click', async () => {
       clearAlert('signinAlert');
       const email    = document.getElementById('siEmail').value.trim();
       const password = document.getElementById('siPassword').value;
-      if (!email || !password) {
-        return showAlert('signinAlert', 'Please fill in all fields.');
-      }
+      if (!email || !password) return showAlert('signinAlert', 'Please fill in all fields.');
       const btn = document.getElementById('signinBtn');
       btn.disabled = true;
-      btn.textContent = 'Signing in…';
+      btn.innerHTML = 'Signing in&hellip;';
       try {
         await DB.signIn(email, password);
         window.location.href = '../index.html';
       } catch (err) {
         showAlert('signinAlert', err.message || 'Sign-in failed. Check your credentials.');
         btn.disabled = false;
-        btn.textContent = 'Sign In →';
+        btn.innerHTML = 'Sign In <i class="ti ti-arrow-right"></i>';
       }
     });
 
-    // Sign Up
     document.getElementById('signupBtn').addEventListener('click', async () => {
       clearAlert('signupAlert');
       const invite   = document.getElementById('suInvite').value.trim().toUpperCase();
@@ -331,22 +289,19 @@
 
       const btn = document.getElementById('signupBtn');
       btn.disabled = true;
-      btn.textContent = 'Creating account…';
+      btn.innerHTML = 'Creating account&hellip;';
 
       try {
-        // Validate invite code
         const valid = await DB.validateInviteCode(invite);
         if (!valid) {
           showAlert('signupAlert', 'Invalid or expired invite code. Ask the admin for a fresh one.');
           btn.disabled = false;
-          btn.textContent = 'Create Account →';
+          btn.innerHTML = 'Create Account <i class="ti ti-arrow-right"></i>';
           return;
         }
 
-        // Create auth user
         await DB.signUp(email, password, name);
 
-        // Sign them in immediately (Supabase may auto-confirm or need email verify)
         try {
           const { data } = await DB.signIn(email, password);
           if (data?.user) {
@@ -358,19 +313,15 @@
           }
         } catch (_) {}
 
-        showAlert('signupAlert',
-          '✓ Account created! Check your email to confirm, then sign in.',
-          'success'
-        );
-        btn.textContent = 'Account Created!';
+        showAlert('signupAlert', 'Account created! Check your email to confirm, then sign in.', 'success');
+        btn.innerHTML = 'Account Created!';
       } catch (err) {
         showAlert('signupAlert', err.message || 'Sign-up failed. Please try again.');
         btn.disabled = false;
-        btn.textContent = 'Create Account →';
+        btn.innerHTML = 'Create Account <i class="ti ti-arrow-right"></i>';
       }
     });
 
-    // Allow enter key
     ['siEmail','siPassword'].forEach(id => {
       document.getElementById(id)?.addEventListener('keydown', e => {
         if (e.key === 'Enter') document.getElementById('signinBtn').click();

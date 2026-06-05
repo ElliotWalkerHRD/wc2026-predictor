@@ -4,21 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WC2026 — Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
   <link rel="stylesheet" href="../css/style.css">
   <style>
-    .admin-page { padding: 2rem 0 4rem; }
-
-    .admin-tabs {
-      display: flex;
-      gap: 0.25rem;
-      border-bottom: 1px solid rgba(255,255,255,0.07);
-      margin-bottom: 2rem;
-    }
-
     .admin-panel { display: none; }
     .admin-panel.active { display: block; }
 
-    /* Invite codes */
     .invite-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -27,172 +21,116 @@
     }
 
     .invite-card {
-      background: var(--navy-card);
-      border: 1px solid rgba(255,255,255,0.07);
-      border-radius: var(--radius-md);
+      background: var(--white);
+      border: 1px solid var(--grey-300);
+      border-radius: var(--radius-lg);
       padding: 1.25rem;
       display: flex;
       flex-direction: column;
       gap: 0.75rem;
+      box-shadow: var(--shadow-sm);
     }
 
-    .invite-code {
-      font-family: var(--font-display);
-      font-size: 1.8rem;
-      color: var(--gold);
-      letter-spacing: 0.15em;
-    }
-
-    .invite-label {
-      font-family: var(--font-condensed);
-      font-size: 0.8rem;
-      color: var(--grey-500);
-      letter-spacing: 0.05em;
-    }
-
-    .invite-link {
-      font-family: var(--font-condensed);
-      font-size: 0.72rem;
-      color: var(--grey-700);
-      word-break: break-all;
-    }
-
+    .invite-code-display { font-family: var(--font-serif); font-size: 1.8rem; letter-spacing: 0.15em; }
+    .invite-label { font-size: 0.8rem; color: var(--grey-500); }
+    .invite-link { font-size: 0.7rem; color: var(--grey-400); word-break: break-all; }
     .invite-card-actions { display: flex; gap: 0.5rem; }
 
-    /* Users table */
-    .users-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.85rem;
-    }
-
-    .users-table th {
-      font-family: var(--font-condensed);
-      font-size: 0.72rem;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--grey-500);
-      padding: 0.6rem 0.75rem;
-      border-bottom: 1px solid rgba(255,255,255,0.07);
-      text-align: left;
-    }
-
-    .users-table td {
-      padding: 0.75rem;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-    }
-
-    /* Match result entry */
-    .result-entry-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-      gap: 1rem;
-    }
+    .users-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .users-table th { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--grey-500); padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--grey-300); text-align: left; }
+    .users-table td { padding: 0.75rem; border-bottom: 1px solid var(--grey-100); }
 
     .result-card {
-      background: var(--navy-card);
-      border: 1px solid rgba(255,255,255,0.07);
-      border-radius: var(--radius-md);
-      padding: 1.25rem;
+      background: var(--white);
+      border: 1px solid var(--grey-300);
+      border-radius: var(--radius-lg);
+      padding: 1.125rem;
+      box-shadow: var(--shadow-sm);
     }
 
     .result-card-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 0.875rem;
+      margin-bottom: 0.75rem;
+      gap: 0.5rem;
     }
 
     .result-teams {
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      margin-bottom: 0.875rem;
-      font-family: var(--font-condensed);
-      font-size: 0.88rem;
-      font-weight: 700;
+      margin-bottom: 0.75rem;
+      font-size: 0.875rem;
+      font-weight: 600;
     }
 
-    .result-inputs {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
+    .result-inputs { display: flex; align-items: center; gap: 0.4rem; }
 
     .result-num {
-      width: 56px;
+      width: 52px;
       text-align: center;
-      font-family: var(--font-display);
+      font-family: var(--font-serif);
       font-size: 1.4rem;
-      padding: 0.4rem;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.04);
-      border-radius: var(--radius-sm);
-      color: var(--white);
+      padding: 0.3rem;
+      border: 1.5px solid var(--grey-300);
+      border-radius: var(--radius-md);
+      background: var(--white);
+      color: var(--ink);
       outline: none;
     }
 
-    .result-num:focus { border-color: var(--gold); }
+    .result-num:focus { border-color: var(--ink); }
 
-    .status-select {
-      max-width: 140px;
-      font-size: 0.8rem;
-      padding: 0.35rem 0.6rem;
-    }
+    .status-select { font-size: 0.8rem; }
 
-    /* Scoring panel */
-    .recalc-section {
-      max-width: 560px;
-    }
+    .group-filter-row { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1rem; }
 
     .recalc-card {
-      background: var(--navy-card);
-      border: 1px solid rgba(255,255,255,0.07);
-      border-radius: var(--radius-md);
-      padding: 2rem;
+      background: var(--white);
+      border: 1px solid var(--grey-300);
+      border-radius: var(--radius-lg);
+      padding: 2.5rem 2rem;
       text-align: center;
+      box-shadow: var(--shadow-sm);
     }
 
-    .recalc-icon { font-size: 3rem; margin-bottom: 1rem; }
-
-    .group-filter-row {
-      display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-      margin-bottom: 1rem;
-    }
+    .recalc-icon { font-size: 2.5rem; color: var(--grey-400); margin-bottom: 1rem; }
   </style>
 </head>
 <body>
   <nav class="nav" id="main-nav"></nav>
 
-  <main class="main-content">
+  <div class="page-banner">
     <div class="container">
-      <div class="page-header">
-        <div class="breadcrumb">WC2026 &gt; <span>Admin Panel</span></div>
-        <h1 class="display-title">Admin Panel</h1>
-        <p class="text-muted" style="font-family:var(--font-condensed)">Manage invites · Enter results · Recalculate scores</p>
-      </div>
+      <nav class="breadcrumb">WC2026 &rsaquo; <span>Admin Panel</span></nav>
+      <h1 class="page-title">Admin Panel</h1>
+      <p class="page-desc">Manage invites &middot; Enter results &middot; Recalculate scores</p>
+    </div>
+  </div>
+
+  <main class="main-content" style="padding-top:0">
+    <div class="container" style="padding-top:2rem;padding-bottom:4rem">
 
       <div id="adminAccessDenied" class="alert alert-error hidden">
-        🚫 Access denied — admin only.
+        <i class="ti ti-ban"></i> Access denied — admin only.
       </div>
 
-      <div id="adminContent" class="admin-page hidden">
-        <div class="admin-tabs" id="adminTabs">
-          <button class="tab-btn active" data-tab="invites">🔗 Invite Codes</button>
-          <button class="tab-btn" data-tab="results">⚽ Match Results</button>
-          <button class="tab-btn" data-tab="users">👥 Users</button>
-          <button class="tab-btn" data-tab="scoring">🏆 Scoring</button>
+      <div id="adminContent" class="hidden">
+        <div class="tabs mb-4" id="adminTabs">
+          <button class="tab-btn active" data-tab="invites"><i class="ti ti-link"></i> Invite Codes</button>
+          <button class="tab-btn" data-tab="results"><i class="ti ti-ball-football"></i> Match Results</button>
+          <button class="tab-btn" data-tab="users"><i class="ti ti-users"></i> Users</button>
+          <button class="tab-btn" data-tab="scoring"><i class="ti ti-calculator"></i> Scoring</button>
         </div>
 
         <!-- Invites Panel -->
         <div class="admin-panel active" id="panel-invites">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem">
-            <h2 class="section-title" style="margin:0">Invite Codes</h2>
+            <h2 style="font-family:var(--font-serif);font-size:1.35rem">Invite Codes</h2>
             <div style="display:flex;gap:0.75rem;align-items:center">
               <input type="text" id="inviteLabelInput" class="form-control" placeholder="Label (e.g. John)" style="width:180px">
-              <button class="btn btn-primary" id="createInviteBtn">Generate Code</button>
+              <button class="btn btn-lime" id="createInviteBtn"><i class="ti ti-plus"></i> Generate Code</button>
             </div>
           </div>
           <div id="inviteGrid" class="invite-grid">
@@ -203,17 +141,15 @@
         <!-- Results Panel -->
         <div class="admin-panel" id="panel-results">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:1rem">
-            <h2 class="section-title" style="margin:0">Enter Match Results</h2>
-            <button class="btn btn-ghost btn-sm" id="fetchLiveBtn">🔄 Fetch from API</button>
+            <h2 style="font-family:var(--font-serif);font-size:1.35rem">Enter Match Results</h2>
+            <button class="btn btn-outline btn-sm" id="fetchLiveBtn"><i class="ti ti-refresh"></i> Fetch from API</button>
           </div>
 
           <div id="apiStatus" style="margin-bottom:1rem"></div>
 
           <div class="group-filter-row" id="resultGroupFilter">
-            <button class="btn btn-primary btn-sm" data-group="all">All</button>
-            ${'ABCDEFGHIJKL'.split('').map(g =>
-              `<button class="btn btn-ghost btn-sm" data-group="${g}">Group ${g}</button>`
-            ).join('')}
+            <button class="btn btn-lime btn-sm" data-group="all">All</button>
+            <!-- letters populated by JS -->
           </div>
 
           <div id="resultsGrid" class="result-entry-grid">
@@ -221,60 +157,58 @@
           </div>
 
           <div style="margin-top:1.5rem">
-            <button class="btn btn-crimson" id="saveResultsBtn">💾 Save All Results</button>
+            <button class="btn btn-lime" id="saveResultsBtn"><i class="ti ti-device-floppy"></i> Save All Results</button>
           </div>
         </div>
 
         <!-- Users Panel -->
         <div class="admin-panel" id="panel-users">
-          <h2 class="section-title">Players</h2>
-          <div style="overflow-x:auto">
-            <table class="users-table" id="usersTable">
-              <thead>
-                <tr>
-                  <th>Player</th>
-                  <th>Email</th>
-                  <th>Joined</th>
-                  <th>Total Pts</th>
-                  <th>Admin</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody id="usersBody">
-                <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--grey-500)">
-                  <div class="spinner" style="margin:0 auto"></div>
-                </td></tr>
-              </tbody>
-            </table>
+          <h2 style="font-family:var(--font-serif);font-size:1.35rem;margin-bottom:1.25rem">Players</h2>
+          <div class="card" style="padding:0;overflow:hidden">
+            <div style="overflow-x:auto">
+              <table class="users-table" id="usersTable">
+                <thead>
+                  <tr>
+                    <th>Player</th>
+                    <th>Email</th>
+                    <th>Joined</th>
+                    <th>Total Pts</th>
+                    <th>Role</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="usersBody">
+                  <tr><td colspan="6" style="text-align:center;padding:2rem">
+                    <div class="spinner" style="margin:0 auto"></div>
+                  </td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
         <!-- Scoring Panel -->
         <div class="admin-panel" id="panel-scoring">
-          <div class="recalc-section">
-            <h2 class="section-title">Score Recalculation</h2>
+          <div style="max-width:560px">
+            <h2 style="font-family:var(--font-serif);font-size:1.35rem;margin-bottom:1.25rem">Score Recalculation</h2>
 
-            <div class="recalc-card">
-              <div class="recalc-icon">🔄</div>
-              <h3 style="font-family:var(--font-condensed);color:var(--white);margin-bottom:0.5rem">Recalculate All Scores</h3>
+            <div class="recalc-card mb-4">
+              <div class="recalc-icon"><i class="ti ti-refresh"></i></div>
+              <h3 style="font-weight:700;margin-bottom:0.5rem">Recalculate All Scores</h3>
               <p style="color:var(--grey-500);font-size:0.875rem;margin-bottom:1.5rem;max-width:360px;margin-left:auto;margin-right:auto">
                 Triggers the server-side Edge Function to recalculate every player's points based on current match results and predictions.
               </p>
-              <button class="btn btn-primary btn-lg" id="recalcAllBtn">Recalculate All Scores →</button>
-              <div id="recalcStatus" style="margin-top:1rem;font-family:var(--font-condensed);font-size:0.82rem;color:var(--grey-500)"></div>
+              <button class="btn btn-lime btn-lg" id="recalcAllBtn"><i class="ti ti-refresh"></i> Recalculate All Scores</button>
+              <div id="recalcStatus" style="margin-top:1rem;font-size:0.82rem;color:var(--grey-500)"></div>
             </div>
 
-            <div class="card mt-4">
-              <h4 style="margin-bottom:0.75rem;color:var(--gold)">Manual Score Override</h4>
-              <p style="font-size:0.82rem;color:var(--grey-500);margin-bottom:1rem">
-                Override a specific player's round points directly.
-              </p>
+            <div class="card">
+              <h4 style="font-weight:700;margin-bottom:0.75rem">Manual Score Override</h4>
+              <p style="font-size:0.82rem;color:var(--grey-500);margin-bottom:1rem">Override a specific player's round points directly.</p>
               <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:0.75rem;align-items:end">
                 <div class="form-group" style="margin:0">
                   <label class="form-label">Player</label>
-                  <select id="overrideUser" class="form-control">
-                    <option value="">Select player…</option>
-                  </select>
+                  <select id="overrideUser" class="form-control"><option value="">Select player&hellip;</option></select>
                 </div>
                 <div class="form-group" style="margin:0">
                   <label class="form-label">Round</label>
@@ -294,7 +228,7 @@
                   <input type="number" id="overridePts" class="form-control" min="0" style="width:90px" placeholder="0">
                 </div>
               </div>
-              <button class="btn btn-ghost mt-2" id="overrideBtn">Apply Override</button>
+              <button class="btn btn-outline mt-2" id="overrideBtn"><i class="ti ti-check"></i> Apply Override</button>
             </div>
           </div>
         </div>
@@ -327,22 +261,23 @@
 
       document.getElementById('adminContent').classList.remove('hidden');
 
-      // Tab switching
+      // Build group filter buttons
+      document.getElementById('resultGroupFilter').innerHTML =
+        `<button class="btn btn-lime btn-sm" data-group="all">All</button>` +
+        'ABCDEFGHIJKL'.split('').map(g =>
+          `<button class="btn btn-outline btn-sm" data-group="${g}">Grp ${g}</button>`
+        ).join('');
+
       document.getElementById('adminTabs').addEventListener('click', e => {
         const btn = e.target.closest('[data-tab]');
         if (!btn) return;
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('#adminTabs .tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
         btn.classList.add('active');
         document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
       });
 
-      // Load each tab
-      await Promise.all([
-        loadInviteCodes(),
-        loadResultsPanel(),
-        loadUsers(),
-      ]);
+      await Promise.all([loadInviteCodes(), loadResultsPanel(), loadUsers()]);
     }
 
     // ---- INVITE CODES ----
@@ -352,15 +287,14 @@
         const codes = await DB.getInviteCodes();
         renderInviteCodes(codes);
       } catch (err) {
-        document.getElementById('inviteGrid').innerHTML =
-          `<div class="alert alert-error">⚠ ${err.message}</div>`;
+        document.getElementById('inviteGrid').innerHTML = `<div class="alert alert-error"><i class="ti ti-alert-triangle"></i> ${err.message}</div>`;
       }
     }
 
     function renderInviteCodes(codes) {
       const grid = document.getElementById('inviteGrid');
       if (!codes.length) {
-        grid.innerHTML = '<p class="text-muted" style="font-family:var(--font-condensed)">No invite codes yet. Generate the first one!</p>';
+        grid.innerHTML = '<p class="text-muted">No invite codes yet. Generate the first one!</p>';
         return;
       }
 
@@ -369,17 +303,17 @@
         return `
           <div class="invite-card">
             <div>
-              <div class="invite-code">${c.code}</div>
+              <div class="invite-code-display">${c.code}</div>
               ${c.label ? `<div class="invite-label">${c.label}</div>` : ''}
             </div>
             <div class="invite-link">${inviteUrl}</div>
             <div class="invite-card-actions">
-              <button class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText('${inviteUrl}').then(() => Toast.success('Link copied!'))">
-                📋 Copy Link
+              <button class="btn btn-outline btn-sm" onclick="navigator.clipboard.writeText('${inviteUrl}').then(() => Toast.success('Link copied!'))">
+                <i class="ti ti-copy"></i> Copy Link
               </button>
               ${c.active
-                ? `<button class="btn btn-ghost btn-sm" style="color:var(--crimson)" data-revoke="${c.id}">Revoke</button>`
-                : `<span class="badge badge-grey">Revoked</span>`}
+                ? `<button class="btn btn-outline btn-sm" style="color:var(--red)" data-revoke="${c.id}">Revoke</button>`
+                : `<span class="chip chip-grey">Revoked</span>`}
             </div>
           </div>
         `;
@@ -434,8 +368,8 @@
         return `
           <div class="result-card">
             <div class="result-card-header">
-              <span class="text-xs text-muted" style="font-family:var(--font-condensed)">Match ${id} · Group ${group}</span>
-              <select id="status_${id}" class="form-control status-select">
+              <span class="text-xs text-muted">Match ${id} &middot; Group ${group}</span>
+              <select id="status_${id}" class="form-control status-select" style="max-width:130px;font-size:0.78rem;padding:0.3rem 0.5rem">
                 <option value="TIMED" ${status==='TIMED'?'selected':''}>Upcoming</option>
                 <option value="IN_PLAY" ${status==='IN_PLAY'?'selected':''}>Live</option>
                 <option value="FINISHED" ${status==='FINISHED'?'selected':''}>Finished</option>
@@ -444,12 +378,12 @@
             </div>
             <div class="result-teams">
               <span>${home.flag} ${home.name}</span>
-              <span style="color:var(--grey-700)">vs</span>
+              <span style="color:var(--grey-400)">vs</span>
               <span>${away.flag} ${away.name}</span>
             </div>
             <div class="result-inputs">
               <input type="number" id="rh_${id}" class="result-num" min="0" max="20" value="${hScore}" placeholder="–">
-              <span style="font-family:var(--font-display);color:var(--grey-700);font-size:1.3rem">–</span>
+              <span style="font-size:1.2rem;color:var(--grey-400)">–</span>
               <input type="number" id="ra_${id}" class="result-num" min="0" max="20" value="${aScore}" placeholder="–">
             </div>
           </div>
@@ -457,13 +391,12 @@
       }).join('');
     }
 
-    // Group filter for results
     document.getElementById('resultGroupFilter').addEventListener('click', e => {
       const btn = e.target.closest('[data-group]');
       if (!btn) return;
       resultFilter = btn.dataset.group;
       document.querySelectorAll('#resultGroupFilter [data-group]').forEach(b => {
-        b.className = b.dataset.group === resultFilter ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm';
+        b.className = b.dataset.group === resultFilter ? 'btn btn-lime btn-sm' : 'btn btn-outline btn-sm';
       });
       loadResultsPanel();
     });
@@ -471,7 +404,7 @@
     document.getElementById('saveResultsBtn').addEventListener('click', async () => {
       const btn = document.getElementById('saveResultsBtn');
       btn.disabled = true;
-      btn.textContent = 'Saving…';
+      btn.innerHTML = '<i class="ti ti-loader"></i> Saving&hellip;';
 
       const saves = [];
       const fixtures = resultFilter === 'all' ? GROUP_FIXTURES : GROUP_FIXTURES.filter(m => m[3] === resultFilter);
@@ -485,19 +418,18 @@
 
       try {
         await Promise.all(saves);
-        Toast.success(`✓ Saved ${saves.length} results`);
+        Toast.success(`Saved ${saves.length} results`);
       } catch (err) {
         Toast.error('Save failed: ' + err.message);
       }
 
       btn.disabled = false;
-      btn.textContent = '💾 Save All Results';
+      btn.innerHTML = '<i class="ti ti-device-floppy"></i> Save All Results';
     });
 
-    // Fetch from API
     document.getElementById('fetchLiveBtn').addEventListener('click', async () => {
       const statusEl = document.getElementById('apiStatus');
-      statusEl.innerHTML = '<div class="alert alert-info">🔄 Fetching from football-data.org…</div>';
+      statusEl.innerHTML = '<div class="alert alert-info"><i class="ti ti-refresh"></i> Fetching from football-data.org&hellip;</div>';
 
       try {
         const res = await fetch(
@@ -511,18 +443,15 @@
         (data.matches || []).forEach(match => {
           if (match.score?.fullTime?.home === null) return;
           saves.push(DB.upsertMatchResult(
-            match.id,
-            match.score.fullTime.home,
-            match.score.fullTime.away,
-            match.status
+            match.id, match.score.fullTime.home, match.score.fullTime.away, match.status
           ));
         });
 
         await Promise.all(saves);
-        statusEl.innerHTML = `<div class="alert alert-success">✓ Synced ${saves.length} results from API</div>`;
+        statusEl.innerHTML = `<div class="alert alert-success"><i class="ti ti-check"></i> Synced ${saves.length} results from API</div>`;
         loadResultsPanel();
       } catch (err) {
-        statusEl.innerHTML = `<div class="alert alert-error">⚠ API error: ${err.message}. Check your API key in config.js</div>`;
+        statusEl.innerHTML = `<div class="alert alert-error"><i class="ti ti-alert-triangle"></i> API error: ${err.message}. Check your API key in config.js</div>`;
       }
     });
 
@@ -540,9 +469,8 @@
         const scoreMap = {};
         scores.forEach(s => { scoreMap[s.user_id] = s.total_points; });
 
-        // Populate override dropdown
         const sel = document.getElementById('overrideUser');
-        sel.innerHTML = '<option value="">Select player…</option>' +
+        sel.innerHTML = '<option value="">Select player&hellip;</option>' +
           allUsersData.map(p =>
             `<option value="${p.id}">${p.display_name || p.id}</option>`
           ).join('');
@@ -552,18 +480,18 @@
           <tr>
             <td>
               <div style="display:flex;align-items:center;gap:0.6rem">
-                <div class="avatar" style="background:${p.avatar_color || '#f0b429'};width:28px;height:28px;font-size:0.75rem;flex-shrink:0">
+                <div class="avatar" style="background:${p.avatar_color || '#c8f135'};color:#0d0d0d;width:28px;height:28px;font-size:0.75rem;flex-shrink:0">
                   ${(p.display_name || '?').charAt(0).toUpperCase()}
                 </div>
-                ${p.display_name || '—'}
+                <span style="font-weight:600">${p.display_name || '—'}</span>
               </div>
             </td>
             <td class="text-muted text-sm">${p.email || '—'}</td>
             <td class="text-muted text-sm">${p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}</td>
-            <td style="font-family:var(--font-display);color:var(--gold)">${scoreMap[p.id] || 0}</td>
-            <td>${p.is_admin ? '<span class="badge badge-gold">Admin</span>' : '<span class="badge badge-grey">Player</span>'}</td>
+            <td style="font-family:var(--font-serif);font-size:1.1rem">${scoreMap[p.id] || 0}</td>
+            <td>${p.is_admin ? '<span class="chip chip-ink">Admin</span>' : '<span class="chip chip-grey">Player</span>'}</td>
             <td>
-              <button class="btn btn-ghost btn-sm" onclick="toggleAdmin('${p.id}', ${!p.is_admin})">
+              <button class="btn btn-outline btn-sm" onclick="toggleAdmin('${p.id}', ${!p.is_admin})">
                 ${p.is_admin ? 'Remove Admin' : 'Make Admin'}
               </button>
             </td>
@@ -571,7 +499,7 @@
         `).join('');
       } catch (err) {
         document.getElementById('usersBody').innerHTML =
-          `<tr><td colspan="6"><div class="alert alert-error">⚠ ${err.message}</div></td></tr>`;
+          `<tr><td colspan="6"><div class="alert alert-error"><i class="ti ti-alert-triangle"></i> ${err.message}</div></td></tr>`;
       }
     }
 
@@ -590,41 +518,34 @@
       const btn = document.getElementById('recalcAllBtn');
       const status = document.getElementById('recalcStatus');
       btn.disabled = true;
-      btn.textContent = 'Recalculating…';
+      btn.innerHTML = '<i class="ti ti-loader"></i> Recalculating&hellip;';
       status.textContent = '';
 
       try {
         await DB.recalculateScores();
-        Toast.success('✓ Scores recalculated!');
-        status.innerHTML = '<span style="color:var(--green)">✓ Done at ' + new Date().toLocaleTimeString() + '</span>';
+        Toast.success('Scores recalculated!');
+        status.innerHTML = '<span style="color:var(--green)"><i class="ti ti-check"></i> Done at ' + new Date().toLocaleTimeString() + '</span>';
       } catch (err) {
         Toast.error('Failed: ' + err.message);
-        status.innerHTML = `<span style="color:var(--crimson)">Error: ${err.message}</span>`;
+        status.innerHTML = `<span style="color:var(--red)">Error: ${err.message}</span>`;
       }
 
       btn.disabled = false;
-      btn.textContent = 'Recalculate All Scores →';
+      btn.innerHTML = '<i class="ti ti-refresh"></i> Recalculate All Scores';
     });
 
     document.getElementById('overrideBtn').addEventListener('click', async () => {
       const userId = document.getElementById('overrideUser').value;
       const round  = document.getElementById('overrideRound').value;
       const pts    = parseInt(document.getElementById('overridePts').value);
-      if (!userId || !round || isNaN(pts)) {
-        Toast.error('Fill in all override fields');
-        return;
-      }
+      if (!userId || !round || isNaN(pts)) { Toast.error('Fill in all override fields'); return; }
 
       const sb = DB.initSupabase();
       const update = { [round + '_points']: pts };
-
-      // Also recalculate total
       const score = await DB.getUserScore(userId).catch(() => null);
       if (score) {
         const rounds = ['round1','round2','round3','round4','round5','round6','round7','round8'];
-        update.total_points = rounds.reduce((sum, r) => {
-          return sum + (r === round ? pts : (score[r + '_points'] || 0));
-        }, 0);
+        update.total_points = rounds.reduce((sum, r) => sum + (r === round ? pts : (score[r + '_points'] || 0)), 0);
         await sb.from('scores').update(update).eq('user_id', userId);
       } else {
         update.user_id = userId;
@@ -632,7 +553,7 @@
         await sb.from('scores').upsert(update, { onConflict: 'user_id' });
       }
 
-      Toast.success('✓ Score override applied');
+      Toast.success('Score override applied');
     });
 
     init();

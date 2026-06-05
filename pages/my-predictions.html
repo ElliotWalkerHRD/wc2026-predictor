@@ -4,224 +4,172 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WC2026 — My Predictions</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
   <link rel="stylesheet" href="../css/style.css">
   <style>
-    .mypreds-page { padding: 2rem 0 4rem; }
-
     .round-tabs {
       display: flex;
       gap: 0.25rem;
-      border-bottom: 1px solid rgba(255,255,255,0.07);
-      margin-bottom: 2rem;
+      border-bottom: 1.5px solid var(--grey-300);
+      margin-bottom: 1.75rem;
       overflow-x: auto;
       scrollbar-width: none;
     }
 
     .round-tab-btn {
-      padding: 0.6rem 1rem;
+      position: relative;
+      padding: 0.55rem 0.875rem;
       background: transparent;
       border: none;
-      border-bottom: 2px solid transparent;
+      border-bottom: 2.5px solid transparent;
       color: var(--grey-500);
-      font-family: var(--font-condensed);
-      font-size: 0.82rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
+      font-family: var(--font-sans);
+      font-size: 0.8rem;
+      font-weight: 600;
       cursor: pointer;
-      transition: all 0.2s;
       white-space: nowrap;
-      margin-bottom: -1px;
-      position: relative;
+      margin-bottom: -1.5px;
+      transition: color 0.15s;
     }
 
-    .round-tab-btn:hover { color: var(--grey-100); }
-    .round-tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+    .round-tab-btn:hover { color: var(--ink); }
+    .round-tab-btn.active { color: var(--ink); border-bottom-color: var(--ink); }
 
-    .round-tab-btn .tab-pts {
+    .tab-pts {
       position: absolute;
-      top: 4px;
-      right: 4px;
-      background: var(--gold);
-      color: var(--navy);
+      top: 3px;
+      right: 2px;
+      background: var(--lime);
+      color: var(--ink);
       border-radius: 10px;
-      font-size: 0.55rem;
+      font-size: 0.5rem;
       padding: 0 4px;
       font-weight: 700;
-      line-height: 1.4;
+      line-height: 1.5;
     }
 
     .round-panel { display: none; }
     .round-panel.active { display: block; }
 
     .pred-item {
-      background: var(--navy-card);
-      border: 1px solid rgba(255,255,255,0.06);
-      border-radius: var(--radius-md);
+      background: var(--white);
+      border: 1px solid var(--grey-300);
+      border-radius: var(--radius-lg);
       padding: 1rem 1.25rem;
-      margin-bottom: 0.75rem;
+      margin-bottom: 0.625rem;
       display: grid;
       grid-template-columns: 1fr auto;
       align-items: start;
       gap: 1rem;
+      box-shadow: var(--shadow-sm);
     }
-
-    .pred-item.correct { border-color: rgba(46,196,182,0.25); }
-    .pred-item.wrong   { border-color: rgba(230,57,70,0.15); }
 
     .pred-question {
-      font-family: var(--font-condensed);
-      font-size: 0.78rem;
-      letter-spacing: 0.06em;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
       text-transform: uppercase;
       color: var(--grey-500);
-      margin-bottom: 0.35rem;
+      margin-bottom: 0.3rem;
     }
 
-    .pred-answer {
-      font-family: var(--font-condensed);
-      font-size: 1rem;
-      font-weight: 700;
-      letter-spacing: 0.03em;
-    }
+    .pred-answer { font-size: 0.95rem; font-weight: 600; color: var(--ink); }
 
-    .pred-actual {
-      font-size: 0.78rem;
-      color: var(--grey-500);
-      margin-top: 0.3rem;
-      font-family: var(--font-condensed);
-    }
-
-    .pred-pts {
-      text-align: right;
-    }
-
-    .pts-number {
-      font-family: var(--font-display);
-      font-size: 1.5rem;
-      line-height: 1;
-    }
-
-    .pts-number.positive { color: var(--gold); }
-    .pts-number.zero { color: var(--grey-700); }
-
-    .pts-label {
-      font-family: var(--font-condensed);
-      font-size: 0.65rem;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--grey-700);
-      margin-top: 0.2rem;
-    }
+    .pred-pts { text-align: right; }
+    .pts-number { font-family: var(--font-serif); font-size: 1.5rem; line-height: 1; }
+    .pts-number.positive { color: var(--green); }
+    .pts-number.zero { color: var(--grey-300); }
+    .pts-label { font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--grey-400); margin-top: 0.15rem; }
 
     .round-total-bar {
-      background: rgba(240,180,41,0.08);
-      border: 1px solid rgba(240,180,41,0.15);
-      border-radius: var(--radius-sm);
+      background: var(--grey-100);
+      border: 1px solid var(--grey-300);
+      border-radius: var(--radius-md);
       padding: 0.875rem 1.25rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.25rem;
     }
 
-    .round-total-label {
-      font-family: var(--font-condensed);
-      font-size: 0.82rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--grey-300);
-    }
-
-    .round-total-pts {
-      font-family: var(--font-display);
-      font-size: 1.6rem;
-      color: var(--gold);
-    }
+    .round-total-label { font-size: 0.8rem; font-weight: 600; color: var(--grey-500); }
+    .round-total-pts { font-family: var(--font-serif); font-size: 1.6rem; color: var(--ink); }
 
     .match-pred-row {
-      background: var(--navy-card);
-      border: 1px solid rgba(255,255,255,0.06);
-      border-radius: var(--radius-md);
+      background: var(--white);
+      border: 1px solid var(--grey-300);
+      border-radius: var(--radius-lg);
       padding: 0.875rem 1.25rem;
-      margin-bottom: 0.625rem;
+      margin-bottom: 0.5rem;
       display: grid;
       grid-template-columns: 1fr auto auto;
       align-items: center;
       gap: 1rem;
+      box-shadow: var(--shadow-sm);
     }
 
-    .match-pred-teams {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-family: var(--font-condensed);
-      font-size: 0.85rem;
-    }
+    .match-pred-row.exact { border-color: var(--green); }
+    .match-pred-row.result { border-color: var(--lime-dark); }
+    .match-pred-row.wrong { border-color: var(--red); }
 
-    .match-pred-score {
-      font-family: var(--font-display);
-      font-size: 1.1rem;
-      color: var(--grey-300);
-      text-align: center;
-    }
+    .match-pred-teams { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; font-weight: 600; flex-wrap: wrap; }
 
-    .match-pred-score.exact { color: var(--gold); }
-    .match-pred-score.result { color: var(--green); }
-    .match-pred-score.wrong  { color: var(--crimson); }
+    .match-pred-score { font-family: var(--font-serif); font-size: 1.1rem; text-align: center; color: var(--grey-500); }
+    .match-pred-score.exact { color: var(--green); }
+    .match-pred-score.result { color: var(--lime-dark); }
+    .match-pred-score.wrong { color: var(--red); }
 
     .empty-round {
       text-align: center;
-      padding: 3rem;
-      color: var(--grey-500);
-      font-family: var(--font-condensed);
+      padding: 3rem 1rem;
+      color: var(--grey-400);
     }
 
-    .empty-round a { color: var(--gold); text-decoration: none; }
-    .empty-round a:hover { text-decoration: underline; }
+    .empty-round a { color: var(--ink); font-weight: 600; }
   </style>
 </head>
 <body>
   <nav class="nav" id="main-nav"></nav>
 
-  <main class="main-content">
+  <div class="page-banner">
     <div class="container">
-      <div class="page-header">
-        <div class="breadcrumb">WC2026 &gt; <span>My Predictions</span></div>
-        <h1 class="display-title">My Picks</h1>
-        <p class="text-muted" style="font-family:var(--font-condensed)">All your predictions · Correct/incorrect indicators · Points earned</p>
-      </div>
+      <nav class="breadcrumb">WC2026 &rsaquo; <span>My Predictions</span></nav>
+      <h1 class="page-title">My Picks</h1>
+      <p class="page-desc">All your predictions &middot; Correct/incorrect indicators &middot; Points earned</p>
+    </div>
+  </div>
 
-      <div class="mypreds-page">
-        <!-- Summary strip -->
-        <div class="stats-strip mb-4" id="summaryStrip">
-          <div class="stat-box">
-            <div class="stat-value" id="sumTotal">—</div>
-            <div class="stat-label">Total Points</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-value" id="sumRank">—</div>
-            <div class="stat-label">Rank</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-value" id="sumCorrect">—</div>
-            <div class="stat-label">Correct Results</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-value" id="sumExact">—</div>
-            <div class="stat-label">Exact Scores</div>
-          </div>
+  <main class="main-content" style="padding-top:0">
+    <div class="container" style="padding-top:2rem;padding-bottom:4rem">
+
+      <div class="stats-strip mb-4" id="summaryStrip">
+        <div class="stat-box">
+          <div class="stat-value" id="sumTotal">—</div>
+          <div class="stat-label">Total Points</div>
         </div>
-
-        <!-- Tabs -->
-        <div class="round-tabs" id="roundTabs"></div>
-
-        <!-- Panels -->
-        <div id="roundPanels">
-          <div class="loading-overlay"><div class="spinner"></div></div>
+        <div class="stat-box">
+          <div class="stat-value" id="sumRank">—</div>
+          <div class="stat-label">Rank</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="sumCorrect">—</div>
+          <div class="stat-label">Correct Results</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="sumExact">—</div>
+          <div class="stat-label">Exact Scores</div>
         </div>
       </div>
+
+      <div class="round-tabs" id="roundTabs"></div>
+
+      <div id="roundPanels">
+        <div class="loading-overlay"><div class="spinner"></div></div>
+      </div>
+
     </div>
   </main>
 
@@ -258,20 +206,17 @@
       userScore = uScore;
       scores = allScores;
 
-      // Group by round
       preds.forEach(p => {
         if (!allPreds[p.round]) allPreds[p.round] = [];
         allPreds[p.round].push(p);
       });
 
-      // Summary stats
       if (userScore) {
         document.getElementById('sumTotal').textContent = userScore.total_points || 0;
         const rank = scores.findIndex(s => s.user_id === userId) + 1;
         document.getElementById('sumRank').textContent = rank > 0 ? `#${rank}` : '—';
       }
 
-      // Count correct/exact
       let totalCorrect = 0, totalExact = 0;
       preds.forEach(p => {
         if (!p.question_key.startsWith('m')) return;
@@ -294,25 +239,23 @@
     }
 
     const ROUNDS_INFO = [
-      { id: 'round1', label: 'Pre-Tournament', icon: '🔮' },
-      { id: 'round2', label: 'Group Winners',  icon: '🏅' },
-      { id: 'round3', label: 'Group Scores',   icon: '⚽' },
-      { id: 'round4', label: 'Round of 32',    icon: '🔥' },
-      { id: 'round5', label: 'Round of 16',    icon: '⚡' },
-      { id: 'round6', label: 'Quarter Finals', icon: '💥' },
-      { id: 'round7', label: 'Semi Finals',    icon: '🌟' },
-      { id: 'round8', label: 'Final',          icon: '🏆' },
+      { id: 'round1', label: 'Pre-Tournament', icon: 'ti-sparkles' },
+      { id: 'round2', label: 'Group Winners',  icon: 'ti-medal' },
+      { id: 'round3', label: 'Group Scores',   icon: 'ti-ball-football' },
+      { id: 'round4', label: 'Round of 32',    icon: 'ti-tournament' },
+      { id: 'round5', label: 'Round of 16',    icon: 'ti-tournament' },
+      { id: 'round6', label: 'Quarter Finals', icon: 'ti-tournament' },
+      { id: 'round7', label: 'Semi Finals',    icon: 'ti-star' },
+      { id: 'round8', label: 'Final',          icon: 'ti-trophy' },
     ];
 
     function renderTabs() {
       const tabsEl = document.getElementById('roundTabs');
       tabsEl.innerHTML = ROUNDS_INFO.map(r => {
-        const preds = allPreds[r.id] || [];
         const pts = userScore?.[r.id + '_points'];
         return `
-          <button class="round-tab-btn ${r.id === activeRound ? 'active' : ''}"
-            data-round="${r.id}">
-            ${r.icon} ${r.label}
+          <button class="round-tab-btn ${r.id === activeRound ? 'active' : ''}" data-round="${r.id}">
+            <i class="ti ${r.icon}" style="font-size:0.85rem;margin-right:0.25rem"></i>${r.label}
             ${pts ? `<span class="tab-pts">${pts}</span>` : ''}
           </button>
         `;
@@ -335,10 +278,10 @@
       if (!preds.length) {
         panel.innerHTML = `
           <div class="empty-round">
-            <div style="font-size:2.5rem;margin-bottom:1rem">📭</div>
-            <p>No predictions submitted for this round yet.</p>
-            <p style="margin-top:0.5rem">
-              <a href="${activeRound}.html">Go make your predictions →</a>
+            <i class="ti ti-inbox" style="font-size:2.5rem;color:var(--grey-300);display:block;margin-bottom:1rem"></i>
+            <p style="font-weight:600;color:var(--grey-500)">No predictions submitted for this round yet.</p>
+            <p style="margin-top:0.5rem;font-size:0.875rem">
+              <a href="${activeRound}.html"><i class="ti ti-arrow-right"></i> Go make your predictions</a>
             </p>
           </div>
         `;
@@ -348,20 +291,15 @@
       const pts = userScore?.[activeRound + '_points'];
       const totalBar = `
         <div class="round-total-bar">
-          <span class="round-total-label">Round Points</span>
+          <span class="round-total-label"><i class="ti ti-chart-bar" style="margin-right:0.35rem"></i>Round Points</span>
           <span class="round-total-pts">${pts !== undefined && pts !== null ? pts : '—'}</span>
         </div>
       `;
 
       let content = '';
-
-      if (activeRound === 'round1') {
-        content = renderRound1Panel(preds);
-      } else if (activeRound === 'round2') {
-        content = renderRound2Panel(preds);
-      } else {
-        content = renderScorePanel(preds, activeRound);
-      }
+      if (activeRound === 'round1') content = renderRound1Panel(preds);
+      else if (activeRound === 'round2') content = renderRound2Panel(preds);
+      else content = renderScorePanel(preds, activeRound);
 
       panel.innerHTML = totalBar + content;
     }
@@ -372,8 +310,8 @@
         '1.2':  'Runner-up',
         '1.3a': 'Beaten semi-finalist #1',
         '1.3b': 'Beaten semi-finalist #2',
-        '1.4':  "England top scorer",
-        '1.5':  "England top scorer goals",
+        '1.4':  'England top scorer',
+        '1.5':  'England top scorer goals',
         '1.6':  'Golden boot winner',
         '1.7':  'Golden boot goals',
         '1.8':  'Host nations group goals',
@@ -386,8 +324,6 @@
       return preds.map(p => {
         let val;
         try { val = JSON.parse(p.value); } catch { val = p.value; }
-
-        // For team codes, look up the team
         let displayVal = val;
         if (['1.1','1.2','1.3a','1.3b','1.9'].includes(p.question_key)) {
           const t = getTeam(val);
@@ -427,9 +363,11 @@
             <div>
               <div class="pred-question">Group ${g}</div>
               <div class="pred-answer">
-                ${winner ? `🥇 ${winner.flag} ${winner.name}` : '—'}
-                &nbsp;|&nbsp;
-                ${runner ? `🥈 ${runner.flag} ${runner.name}` : '—'}
+                <i class="ti ti-trophy" style="color:var(--lime-dark);font-size:0.9rem"></i>
+                ${winner ? `${winner.flag} ${winner.name}` : '—'}
+                &nbsp;&middot;&nbsp;
+                <i class="ti ti-medal" style="color:var(--grey-400);font-size:0.9rem"></i>
+                ${runner ? `${runner.flag} ${runner.name}` : '—'}
               </div>
             </div>
             <div class="pred-pts">
@@ -455,7 +393,6 @@
         const result = allResults[matchId];
         const hasResult = result && result.home_score !== null;
 
-        // Find match details
         const fixture = GROUP_FIXTURES.find(f => f[0] === matchId);
         let homeTeam, awayTeam;
         if (fixture) {
@@ -470,11 +407,11 @@
         if (hasResult) {
           const actH = result.home_score, actA = result.away_score;
           if (val.home === actH && val.away === actA) {
-            pts = exactPts; scoreClass = 'exact'; indicator = '✓ Exact';
+            pts = exactPts; scoreClass = 'exact'; indicator = 'Exact';
           } else if (Math.sign(val.home - val.away) === Math.sign(actH - actA)) {
-            pts = resultPts; scoreClass = 'result'; indicator = '✓ Result';
+            pts = resultPts; scoreClass = 'result'; indicator = 'Result';
           } else {
-            pts = 0; scoreClass = 'wrong'; indicator = '✗';
+            pts = 0; scoreClass = 'wrong'; indicator = 'Wrong';
           }
         }
 
@@ -482,13 +419,13 @@
           <div class="match-pred-row ${scoreClass}">
             <div class="match-pred-teams">
               <span>${homeTeam.flag} ${homeTeam.name}</span>
-              <span style="color:var(--grey-700)">vs</span>
+              <span style="color:var(--grey-400)">vs</span>
               <span>${awayTeam.flag} ${awayTeam.name}</span>
             </div>
             <div class="match-pred-score ${scoreClass}">
               ${val.home} – ${val.away}
-              ${hasResult ? `<div style="font-family:var(--font-condensed);font-size:0.65rem;color:inherit;margin-top:0.2rem">${indicator}</div>` : ''}
-              ${hasResult ? `<div style="font-family:var(--font-condensed);font-size:0.65rem;color:var(--grey-500)">Actual: ${result.home_score}–${result.away_score}</div>` : ''}
+              ${hasResult ? `<div style="font-size:0.65rem;margin-top:0.15rem">${indicator}</div>` : ''}
+              ${hasResult ? `<div style="font-size:0.65rem;color:var(--grey-400)">Actual: ${result.home_score}–${result.away_score}</div>` : ''}
             </div>
             <div class="pred-pts" style="min-width:40px">
               <div class="pts-number ${pts > 0 ? 'positive' : 'zero'}">${hasResult ? pts : '?'}</div>

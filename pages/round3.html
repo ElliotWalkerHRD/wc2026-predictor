@@ -255,7 +255,7 @@
           </div>
           <div class="score-teams">
             <div class="score-team">
-              <span class="score-team-flag">${home.flag}</span>
+              ${teamFlagImg(homeCode)}
               <span class="score-team-name">${home.name}</span>
             </div>
             <div class="score-inputs">
@@ -266,7 +266,7 @@
                 value="${awayVal}" placeholder="0" ${locked ? 'disabled' : ''}>
             </div>
             <div class="score-team away">
-              <span class="score-team-flag">${away.flag}</span>
+              ${teamFlagImg(awayCode)}
               <span class="score-team-name">${away.name}</span>
             </div>
           </div>

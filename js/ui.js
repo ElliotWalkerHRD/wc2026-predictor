@@ -217,6 +217,13 @@ function buildTeamSelect(id, value = '', placeholder = 'Select team...') {
   `;
 }
 
+// ---- Team flag image (flagcdn.com, renders on Windows) ----
+function teamFlagImg(code) {
+  const t = TEAMS_LIST.find(t => t.code === code);
+  if (!t || !t.cc) return `<span class="flag-img" style="background:var(--grey-300);width:27px"></span>`;
+  return `<img src="https://flagcdn.com/h20/${t.cc}.png" srcset="https://flagcdn.com/h40/${t.cc}.png 2x" height="20" alt="${t.name}" class="flag-img" loading="lazy">`;
+}
+
 // ---- Points badge ----
 function ptsBadge(pts) {
   if (!pts && pts !== 0) return '<span class="text-muted">—</span>';
@@ -235,5 +242,6 @@ window.showLoading = showLoading;
 window.showError = showError;
 window.renderMatchScore = renderMatchScore;
 window.buildTeamSelect = buildTeamSelect;
+window.teamFlagImg = teamFlagImg;
 window.ptsBadge = ptsBadge;
 window.AVATAR_COLORS = AVATAR_COLORS;

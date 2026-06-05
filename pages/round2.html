@@ -112,7 +112,7 @@
         `;
 
         const teamPills = teams.map(t =>
-          `<span class="group-team-pill">${t.flag} ${t.name}</span>`
+          `<span class="group-team-pill">${teamFlagImg(t.code)} ${t.name}</span>`
         ).join('');
 
         return `

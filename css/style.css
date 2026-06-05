@@ -1438,3 +1438,13 @@ select.form-control option {
 .pred-item.exact  { border-color: var(--green); }
 .pred-item.result { border-color: var(--lime-dark); }
 .pred-item.wrong  { border-color: var(--red); }
+
+/* ---- Flag images (flagcdn.com) ---- */
+.flag-img {
+  display: inline-block;
+  height: 20px;
+  width: auto;
+  vertical-align: middle;
+  border-radius: 2px;
+  flex-shrink: 0;
+}

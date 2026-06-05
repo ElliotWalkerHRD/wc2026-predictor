@@ -327,7 +327,7 @@
         let displayVal = val;
         if (['1.1','1.2','1.3a','1.3b','1.9'].includes(p.question_key)) {
           const t = getTeam(val);
-          displayVal = t ? `${t.flag} ${t.name}` : val;
+          displayVal = t ? `${teamFlagImg(val)} ${t.name}` : val;
         }
 
         return `
@@ -364,10 +364,10 @@
               <div class="pred-question">Group ${g}</div>
               <div class="pred-answer">
                 <i class="ti ti-trophy" style="color:var(--lime-dark);font-size:0.9rem"></i>
-                ${winner ? `${winner.flag} ${winner.name}` : '—'}
+                ${winner ? `${teamFlagImg(gPreds.w)} ${winner.name}` : '—'}
                 &nbsp;&middot;&nbsp;
                 <i class="ti ti-medal" style="color:var(--grey-400);font-size:0.9rem"></i>
-                ${runner ? `${runner.flag} ${runner.name}` : '—'}
+                ${runner ? `${teamFlagImg(gPreds.r)} ${runner.name}` : '—'}
               </div>
             </div>
             <div class="pred-pts">
@@ -399,8 +399,8 @@
           homeTeam = getTeam(fixture[4]);
           awayTeam = getTeam(fixture[5]);
         } else {
-          homeTeam = { flag: '🏳️', name: 'TBD' };
-          awayTeam = { flag: '🏳️', name: 'TBD' };
+          homeTeam = { code: 'TBD', name: 'TBD' };
+          awayTeam = { code: 'TBD', name: 'TBD' };
         }
 
         let pts = 0, scoreClass = '', indicator = '';
@@ -418,9 +418,9 @@
         return `
           <div class="match-pred-row ${scoreClass}">
             <div class="match-pred-teams">
-              <span>${homeTeam.flag} ${homeTeam.name}</span>
+              <span>${teamFlagImg(homeTeam.code)} ${homeTeam.name}</span>
               <span style="color:var(--grey-400)">vs</span>
-              <span>${awayTeam.flag} ${awayTeam.name}</span>
+              <span>${teamFlagImg(awayTeam.code)} ${awayTeam.name}</span>
             </div>
             <div class="match-pred-score ${scoreClass}">
               ${val.home} – ${val.away}

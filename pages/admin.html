@@ -377,9 +377,9 @@
               </select>
             </div>
             <div class="result-teams">
-              <span>${home.flag} ${home.name}</span>
+              <span>${teamFlagImg(homeCode)} ${home.name}</span>
               <span style="color:var(--grey-400)">vs</span>
-              <span>${away.flag} ${away.name}</span>
+              <span>${teamFlagImg(awayCode)} ${away.name}</span>
             </div>
             <div class="result-inputs">
               <input type="number" id="rh_${id}" class="result-num" min="0" max="20" value="${hScore}" placeholder="–">

@@ -191,7 +191,7 @@
           teamRowHtml = `
             <div class="ko-teams-row">
               <div class="ko-team">
-                <span class="ko-team-flag">${homeTeam.flag}</span>
+                ${teamFlagImg(homeTeam.code)}
                 <span>${homeTeam.name}</span>
               </div>
               <div class="ko-score-inputs">
@@ -202,7 +202,7 @@
                   value="${awayVal}" placeholder="0" ${locked ? 'disabled' : ''}>
               </div>
               <div class="ko-team away">
-                <span class="ko-team-flag">${awayTeam.flag}</span>
+                ${teamFlagImg(awayTeam.code)}
                 <span>${awayTeam.name}</span>
               </div>
             </div>

@@ -327,7 +327,7 @@
               ${venue ? `<div class="match-venue">${venue}${city ? `, ${city}` : ''}</div>` : ''}
             </div>
             <div class="match-team-block">
-              <span class="match-team-flag">${home.flag}</span>
+              ${teamFlagImg(home.code)}
               <span class="match-team-name">${home.name}</span>
             </div>
             <div class="match-score-centre">
@@ -335,7 +335,7 @@
               ${statusBadge}
             </div>
             <div class="match-team-block right">
-              <span class="match-team-flag">${away.flag}</span>
+              ${teamFlagImg(away.code)}
               <span class="match-team-name">${away.name}</span>
             </div>
             <div class="match-status-block"></div>

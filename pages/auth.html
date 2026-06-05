@@ -169,12 +169,12 @@
 
         <!-- Sign Up -->
         <div class="auth-panel" id="panel-signup">
-          <div class="invite-notice">
+          <div class="invite-notice" id="inviteNotice">
             <i class="ti ti-lock"></i>
             <span><strong>Invite only.</strong> You need an invite code from the group admin to join.</span>
           </div>
           <div id="signupAlert"></div>
-          <div class="form-group">
+          <div class="form-group" id="inviteCodeGroup">
             <label class="form-label" for="suInvite">Invite Code</label>
             <input class="form-control" type="text" id="suInvite" placeholder="e.g. AB12CD" autocomplete="off" style="text-transform:uppercase;letter-spacing:0.1em">
           </div>
@@ -245,9 +245,20 @@
     });
 
     const params = new URLSearchParams(window.location.search);
+    let leagueJoinCode = null;
+
     if (params.get('invite')) {
       document.getElementById('suInvite').value = params.get('invite').toUpperCase();
       document.querySelector('[data-tab="signup"]').click();
+    } else if (params.get('leaguejoin')) {
+      leagueJoinCode = params.get('leaguejoin').toUpperCase();
+      document.querySelector('[data-tab="signup"]').click();
+      document.getElementById('inviteCodeGroup').style.display = 'none';
+      document.getElementById('inviteNotice').innerHTML =
+        '<i class="ti ti-users-group" style="color:#25D366"></i>' +
+        '<span>You\'ve been invited to join a private league. Create your account below to get started!</span>';
+      document.getElementById('signupBtn').innerHTML =
+        'Create Account &amp; Join League <i class="ti ti-arrow-right"></i>';
     }
 
     function showAlert(id, message, type = 'error') {
@@ -266,7 +277,9 @@
       btn.innerHTML = 'Signing in&hellip;';
       try {
         await DB.signIn(email, password);
-        window.location.href = '../index.html';
+        window.location.href = leagueJoinCode
+          ? `leagues.html?join=${encodeURIComponent(leagueJoinCode)}`
+          : '../index.html';
       } catch (err) {
         showAlert('signinAlert', err.message || 'Sign-in failed. Check your credentials.');
         btn.disabled = false;
@@ -276,13 +289,13 @@
 
     document.getElementById('signupBtn').addEventListener('click', async () => {
       clearAlert('signupAlert');
-      const invite   = document.getElementById('suInvite').value.trim().toUpperCase();
+      const invite   = leagueJoinCode ? '' : document.getElementById('suInvite').value.trim().toUpperCase();
       const name     = document.getElementById('suName').value.trim();
       const email    = document.getElementById('suEmail').value.trim();
       const password = document.getElementById('suPassword').value;
       const color    = document.getElementById('suColor').value;
 
-      if (!invite)  return showAlert('signupAlert', 'Please enter your invite code.');
+      if (!leagueJoinCode && !invite) return showAlert('signupAlert', 'Please enter your invite code.');
       if (!name)    return showAlert('signupAlert', 'Please enter a display name.');
       if (!email)   return showAlert('signupAlert', 'Please enter your email.');
       if (password.length < 8) return showAlert('signupAlert', 'Password must be at least 8 characters.');
@@ -291,49 +304,69 @@
       btn.disabled = true;
       btn.innerHTML = 'Creating account&hellip;';
 
+      const btnLabel = leagueJoinCode
+        ? 'Create Account &amp; Join League <i class="ti ti-arrow-right"></i>'
+        : 'Create Account <i class="ti ti-arrow-right"></i>';
+      const redirectUrl = leagueJoinCode ? 'leagues.html' : '../index.html';
+      const resetBtn = () => { btn.disabled = false; btn.innerHTML = btnLabel; };
+
       try {
-        const valid = await DB.validateInviteCode(invite);
-        if (!valid) {
-          showAlert('signupAlert', 'Invalid or expired invite code. Ask the admin for a fresh one.');
-          btn.disabled = false;
-          btn.innerHTML = 'Create Account <i class="ti ti-arrow-right"></i>';
-          return;
+        // Validate authorisation — league code path or admin invite code path
+        if (leagueJoinCode) {
+          const league = await DB.validateLeagueCode(leagueJoinCode);
+          if (!league) {
+            showAlert('signupAlert', 'That league link is invalid — check the link and try again.');
+            resetBtn();
+            return;
+          }
+        } else {
+          const valid = await DB.validateInviteCode(invite);
+          if (!valid) {
+            showAlert('signupAlert', 'Invalid or expired invite code. Ask the admin for a fresh one.');
+            resetBtn();
+            return;
+          }
         }
 
         const signupResult = await DB.signUp(email, password, name);
-        const profileUpdate = { display_name: name, avatar_color: color, invite_code_used: invite };
+        const profileUpdate = leagueJoinCode
+          ? { display_name: name, avatar_color: color }
+          : { display_name: name, avatar_color: color, invite_code_used: invite };
+
+        const postSignup = async (uid) => {
+          try { await DB.upsertProfile(uid, profileUpdate); } catch (_) {}
+          if (leagueJoinCode) {
+            try { await DB.joinLeague(uid, leagueJoinCode); } catch (_) {}
+          }
+        };
 
         // Email confirmation OFF — signUp returns a session immediately
         if (signupResult?.session && signupResult?.user) {
-          try { await DB.upsertProfile(signupResult.user.id, profileUpdate); } catch (_) {}
-          window.location.href = '../index.html';
+          await postSignup(signupResult.user.id);
+          window.location.href = redirectUrl;
           return;
         }
 
         // No session from signUp — try signing in manually
         try {
           const siData = await DB.signIn(email, password);
-          if (siData?.user) {
-            try { await DB.upsertProfile(siData.user.id, profileUpdate); } catch (_) {}
-          }
+          if (siData?.user) await postSignup(siData.user.id);
           if (siData?.session) {
-            window.location.href = '../index.html';
+            window.location.href = redirectUrl;
             return;
           }
         } catch (_) {}
 
         // Email confirmation still required — guide user to sign in
         showAlert('signupAlert', 'Account created! Please sign in below.', 'success');
-        btn.innerHTML = 'Create Account <i class="ti ti-arrow-right"></i>';
-        btn.disabled = false;
+        resetBtn();
         setTimeout(() => {
           document.querySelector('[data-tab="signin"]').click();
           document.getElementById('siEmail').value = email;
         }, 1200);
       } catch (err) {
         showAlert('signupAlert', err.message || 'Sign-up failed. Please try again.');
-        btn.disabled = false;
-        btn.innerHTML = 'Create Account <i class="ti ti-arrow-right"></i>';
+        resetBtn();
       }
     });
 

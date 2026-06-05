@@ -406,15 +406,21 @@
 
     // ---- Init ----
     async function load() {
-      const session = await requireAuthFromPages();
-      if (!session) return;
+      const params = new URLSearchParams(window.location.search);
+      const joinParam = params.get('join');
+
+      const session = await DB.getSession();
+      if (!session) {
+        // Pass the league code through so new users can sign up directly into the league
+        window.location.href = joinParam
+          ? `auth.html?leaguejoin=${encodeURIComponent(joinParam.toUpperCase())}`
+          : '/pages/auth.html';
+        return;
+      }
       userId = session.user.id;
 
       await loadMyLeagues();
 
-      // ?join=CODE — pre-fill and auto-attempt
-      const params = new URLSearchParams(window.location.search);
-      const joinParam = params.get('join');
       if (joinParam) {
         const codeInput = document.getElementById('joinCode');
         codeInput.value = joinParam.toUpperCase();

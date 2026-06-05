@@ -293,6 +293,17 @@ async function getLeagueMemberIds(leagueId) {
   return (data || []).map(r => r.user_id);
 }
 
+async function validateLeagueCode(code) {
+  const sb = initSupabase();
+  const { data, error } = await sb
+    .from('leagues')
+    .select('id, name')
+    .eq('join_code', code.trim().toUpperCase())
+    .single();
+  if (error) return null;
+  return data; // { id, name } or null if not found
+}
+
 // ---- Storage ----
 
 async function uploadAvatar(userId, file) {
@@ -368,7 +379,7 @@ window.DB = {
   validateInviteCode, getInviteCodes, createInviteCode,
   subscribeToLeaderboard, subscribeToMatchResults,
   recalculateScores, isRoundLocked, getRoundLockDate,
-  getMyLeagues, createLeague, joinLeague, leaveLeague, getLeagueMemberIds,
+  getMyLeagues, createLeague, joinLeague, leaveLeague, getLeagueMemberIds, validateLeagueCode,
   uploadAvatar, removeAvatar,
   initSupabase
 };

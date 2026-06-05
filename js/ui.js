@@ -66,6 +66,7 @@ const Nav = {
         <li><a href="${p}predictions.html" ${activePage === 'predictions' ? 'class="active"' : ''}><i class="ti ti-pencil"></i> Predictions</a></li>
         <li><a href="${p}matches.html" ${activePage === 'matches' ? 'class="active"' : ''}><i class="ti ti-ball-football"></i> Matches</a></li>
         <li><a href="${p}my-predictions.html" ${activePage === 'mypreds' ? 'class="active"' : ''}><i class="ti ti-list-check"></i> My Picks</a></li>
+        ${session ? `<li><a href="${p}profile.html" ${activePage === 'profile' ? 'class="active"' : ''}><i class="ti ti-user-circle"></i> Profile</a></li>` : ''}
         ${adminLink}
       </ul>
 
@@ -73,9 +74,10 @@ const Nav = {
 
       <div class="nav-user">
         ${session ? `
-          <div class="avatar" style="background:${avatarColor};color:#0d0d0d" title="${profile?.display_name || ''}">
-            ${initials}
-          </div>
+          ${profile?.avatar_url
+            ? `<img src="${profile.avatar_url}" class="avatar" alt="" style="object-fit:cover">`
+            : `<div class="avatar" style="background:${avatarColor};color:#0d0d0d" title="${profile?.display_name || ''}">${initials}</div>`
+          }
           <span class="nav-username">${profile?.display_name || session.user.email}</span>
           <button class="btn btn-ghost btn-sm" id="signOutBtn">Sign out</button>
         ` : `

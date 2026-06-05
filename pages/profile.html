@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WC2026 — My Profile</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .profile-card {
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    .avatar-section {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+      padding-bottom: 1.75rem;
+      border-bottom: 1px solid var(--grey-300);
+    }
+
+    .avatar-lg {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-serif);
+      font-size: 2rem;
+      font-weight: 400;
+      overflow: hidden;
+    }
+
+    .avatar-lg img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .avatar-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      align-items: flex-start;
+    }
+
+    .avatar-hint {
+      font-size: 0.72rem;
+      color: var(--grey-400);
+      margin-top: 0.25rem;
+    }
+
+    .color-swatches {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .color-swatch {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2.5px solid transparent;
+      transition: all 0.15s;
+    }
+
+    .color-swatch.selected {
+      border-color: var(--ink);
+      transform: scale(1.15);
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav" id="main-nav"></nav>
+
+  <div class="page-banner">
+    <div class="container">
+      <nav class="breadcrumb">WC2026 &rsaquo; <span>My Profile</span></nav>
+      <h1 class="page-title">My Profile</h1>
+      <p class="page-desc">Edit your display name, avatar colour, and profile photo</p>
+    </div>
+  </div>
+
+  <main class="main-content" style="padding-top:0">
+    <div class="container" style="padding-top:2rem;padding-bottom:4rem">
+      <div class="profile-card">
+        <div class="card">
+
+          <!-- Avatar section -->
+          <div class="avatar-section">
+            <div class="avatar-lg" id="avatarDisplay"></div>
+            <div class="avatar-actions">
+              <label class="btn btn-outline btn-sm" for="photoInput" style="cursor:pointer">
+                <i class="ti ti-camera"></i> Change photo
+              </label>
+              <input type="file" id="photoInput" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none">
+              <button class="btn btn-outline btn-sm hidden" id="removePhotoBtn" style="color:var(--red)">
+                <i class="ti ti-trash"></i> Remove photo
+              </button>
+              <span class="avatar-hint">JPG, PNG or WebP &middot; max 2 MB</span>
+            </div>
+          </div>
+
+          <!-- Display name -->
+          <div class="form-group">
+            <label class="form-label" for="displayName">Display Name</label>
+            <input type="text" id="displayName" class="form-control" maxlength="24" placeholder="Your name (shown to all players)">
+          </div>
+
+          <!-- Avatar colour -->
+          <div class="form-group">
+            <label class="form-label">Avatar Colour <span style="font-weight:400;color:var(--grey-400)">(shown when no photo)</span></label>
+            <div class="color-swatches" id="colorSwatches"></div>
+            <input type="hidden" id="avatarColor" value="#c8f135">
+          </div>
+
+          <div id="profileAlert" style="margin-bottom:1rem"></div>
+
+          <button class="btn btn-lime btn-block" id="saveBtn">
+            <i class="ti ti-device-floppy"></i> Save Changes
+          </button>
+
+        </div>
+
+        <!-- SQL note -->
+        <div class="info-box mt-3" style="font-size:0.78rem">
+          <strong><i class="ti ti-database"></i> Supabase setup required</strong> — run this once in your Supabase SQL Editor, then create a public storage bucket named <code>avatars</code>:
+          <pre style="background:var(--grey-100);border-radius:var(--radius-sm);padding:0.625rem;margin-top:0.5rem;overflow-x:auto;font-size:0.75rem">ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+
+-- Storage bucket (Dashboard > Storage > New bucket):
+-- Name: avatars   Type: Public</pre>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/data.js"></script>
+  <script src="../js/supabase-client.js"></script>
+  <script src="../js/scoring.js"></script>
+  <script src="../js/ui.js"></script>
+  <script>
+    DB.initSupabase();
+    Nav.render('profile');
+
+    let userId = null;
+    let currentProfile = null;
+    let pendingFile = null;
+    let removePhoto = false;
+
+    function showAlert(msg, type = 'error') {
+      const icon = type === 'error' ? 'ti-alert-triangle' : type === 'success' ? 'ti-check' : 'ti-info-circle';
+      document.getElementById('profileAlert').innerHTML =
+        `<div class="alert alert-${type}"><i class="ti ${icon}"></i> ${msg}</div>`;
+    }
+
+    function renderAvatarDisplay(url, color, initial) {
+      const el = document.getElementById('avatarDisplay');
+      if (url) {
+        el.style.background = 'transparent';
+        el.innerHTML = `<img src="${url}" alt="">`;
+      } else {
+        el.style.background = color || '#c8f135';
+        el.style.color = '#0d0d0d';
+        el.innerHTML = initial || '?';
+      }
+    }
+
+    async function load() {
+      const session = await requireAuthFromPages();
+      if (!session) return;
+      userId = session.user.id;
+
+      try {
+        currentProfile = await DB.getProfile(userId);
+      } catch (_) {
+        currentProfile = null;
+      }
+
+      // Populate display name
+      const nameEl = document.getElementById('displayName');
+      nameEl.value = currentProfile?.display_name || '';
+
+      // Populate avatar colour swatches
+      const colorInput = document.getElementById('avatarColor');
+      const savedColor = currentProfile?.avatar_color || '#c8f135';
+      colorInput.value = savedColor;
+
+      const swatchContainer = document.getElementById('colorSwatches');
+      AVATAR_COLORS.forEach(color => {
+        const s = document.createElement('div');
+        s.className = 'color-swatch' + (color === savedColor ? ' selected' : '');
+        s.style.background = color;
+        s.title = color;
+        s.addEventListener('click', () => {
+          document.querySelectorAll('.color-swatch').forEach(x => x.classList.remove('selected'));
+          s.classList.add('selected');
+          colorInput.value = color;
+          // Update preview only if no photo is set/pending
+          if (!pendingFile && !currentProfile?.avatar_url) {
+            const initial = (nameEl.value || '?').charAt(0).toUpperCase();
+            renderAvatarDisplay(null, color, initial);
+          }
+        });
+        swatchContainer.appendChild(s);
+      });
+
+      // Render initial avatar
+      const initial = (currentProfile?.display_name || '?').charAt(0).toUpperCase();
+      renderAvatarDisplay(currentProfile?.avatar_url || null, savedColor, initial);
+
+      // Show remove button if photo exists
+      if (currentProfile?.avatar_url) {
+        document.getElementById('removePhotoBtn').classList.remove('hidden');
+      }
+    }
+
+    // Photo file selection → preview
+    document.getElementById('photoInput').addEventListener('change', function () {
+      const file = this.files[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) {
+        showAlert('Photo must be under 2 MB.');
+        this.value = '';
+        return;
+      }
+      pendingFile = file;
+      removePhoto = false;
+      const url = URL.createObjectURL(file);
+      renderAvatarDisplay(url, null, null);
+      document.getElementById('removePhotoBtn').classList.remove('hidden');
+      document.getElementById('profileAlert').innerHTML = '';
+    });
+
+    // Remove photo button
+    document.getElementById('removePhotoBtn').addEventListener('click', () => {
+      pendingFile = null;
+      removePhoto = true;
+      document.getElementById('photoInput').value = '';
+      const color = document.getElementById('avatarColor').value;
+      const initial = (document.getElementById('displayName').value || '?').charAt(0).toUpperCase();
+      renderAvatarDisplay(null, color, initial);
+      document.getElementById('removePhotoBtn').classList.add('hidden');
+    });
+
+    // Save
+    document.getElementById('saveBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('saveBtn');
+      const name = document.getElementById('displayName').value.trim();
+      const color = document.getElementById('avatarColor').value;
+
+      if (!name) { showAlert('Display name cannot be empty.'); return; }
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="ti ti-loader"></i> Saving&hellip;';
+      document.getElementById('profileAlert').innerHTML = '';
+
+      try {
+        let avatarUrl = currentProfile?.avatar_url || null;
+
+        if (pendingFile) {
+          avatarUrl = await DB.uploadAvatar(userId, pendingFile);
+          pendingFile = null;
+        } else if (removePhoto) {
+          await DB.removeAvatar(userId);
+          avatarUrl = null;
+          removePhoto = false;
+        }
+
+        const updated = await DB.upsertProfile(userId, {
+          display_name: name,
+          avatar_color: color,
+          avatar_url: avatarUrl
+        });
+
+        currentProfile = updated;
+        const initial = name.charAt(0).toUpperCase();
+        renderAvatarDisplay(avatarUrl, color, initial);
+
+        if (avatarUrl) {
+          document.getElementById('removePhotoBtn').classList.remove('hidden');
+        } else {
+          document.getElementById('removePhotoBtn').classList.add('hidden');
+        }
+
+        showAlert('Profile saved!', 'success');
+      } catch (err) {
+        showAlert(err.message || 'Save failed. Please try again.');
+      }
+
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ti ti-device-floppy"></i> Save Changes';
+    });
+
+    load();
+  </script>
+</body>
+</html>

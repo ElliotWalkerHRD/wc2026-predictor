@@ -214,6 +214,29 @@ async function createInviteCode(label) {
   return data;
 }
 
+// ---- Storage ----
+
+async function uploadAvatar(userId, file) {
+  const sb = initSupabase();
+  const ext = file.name.split('.').pop().toLowerCase();
+  const path = `${userId}/avatar.${ext}`;
+  const { error } = await sb.storage
+    .from('avatars')
+    .upload(path, file, { upsert: true, contentType: file.type });
+  if (error) throw error;
+  const { data } = sb.storage.from('avatars').getPublicUrl(path);
+  return data.publicUrl;
+}
+
+async function removeAvatar(userId) {
+  const sb = initSupabase();
+  // Try common extensions; ignore errors if file doesn't exist
+  const exts = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+  await Promise.allSettled(exts.map(ext =>
+    sb.storage.from('avatars').remove([`${userId}/avatar.${ext}`])
+  ));
+}
+
 // ---- Real-time subscriptions ----
 
 function subscribeToLeaderboard(callback) {
@@ -266,5 +289,6 @@ window.DB = {
   validateInviteCode, getInviteCodes, createInviteCode,
   subscribeToLeaderboard, subscribeToMatchResults,
   recalculateScores, isRoundLocked, getRoundLockDate,
+  uploadAvatar, removeAvatar,
   initSupabase
 };

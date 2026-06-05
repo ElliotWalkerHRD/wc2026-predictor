@@ -16,7 +16,7 @@ const CONFIG = {
   // --- App Settings ---
   ADMIN_EMAIL: 'ehwalker92@gmail.com', // your email — gets admin privileges
   APP_NAME: 'WC2026 Predictor',
-  APP_URL: 'https://ElliotWalkerHRD.github.io/wc2026-predictor', // your GitHub Pages URL
+  APP_URL: 'https://www.lockyourpicks.com', // custom domain
 
   // --- Round lock times (ISO 8601 UTC) ---
   // Set these to just before each round's first kickoff

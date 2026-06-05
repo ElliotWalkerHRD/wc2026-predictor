@@ -66,6 +66,7 @@ const Nav = {
         <li><a href="${p}predictions.html" ${activePage === 'predictions' ? 'class="active"' : ''}><i class="ti ti-pencil"></i> Predictions</a></li>
         <li><a href="${p}matches.html" ${activePage === 'matches' ? 'class="active"' : ''}><i class="ti ti-ball-football"></i> Matches</a></li>
         <li><a href="${p}my-predictions.html" ${activePage === 'mypreds' ? 'class="active"' : ''}><i class="ti ti-list-check"></i> My Picks</a></li>
+        ${session ? `<li><a href="${p}leagues.html" ${activePage === 'leagues' ? 'class="active"' : ''}><i class="ti ti-users-group"></i> Leagues</a></li>` : ''}
         ${session ? `<li><a href="${p}profile.html" ${activePage === 'profile' ? 'class="active"' : ''}><i class="ti ti-user-circle"></i> Profile</a></li>` : ''}
         ${adminLink}
       </ul>

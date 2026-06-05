@@ -214,6 +214,75 @@ async function createInviteCode(label) {
   return data;
 }
 
+// ---- Leagues ----
+
+async function getMyLeagues(userId) {
+  const sb = initSupabase();
+  const { data: memberships, error } = await sb
+    .from('league_members')
+    .select('league_id, leagues(id, name, join_code, owner_id, is_global, created_at)')
+    .eq('user_id', userId);
+  if (error) throw error;
+  if (!memberships?.length) return [];
+
+  const leagueIds = memberships.map(m => m.league_id);
+  const { data: allMembers } = await sb
+    .from('league_members')
+    .select('league_id')
+    .in('league_id', leagueIds);
+
+  const countMap = {};
+  (allMembers || []).forEach(r => {
+    countMap[r.league_id] = (countMap[r.league_id] || 0) + 1;
+  });
+
+  return memberships
+    .map(m => m.leagues)
+    .filter(Boolean)
+    .map(l => ({ ...l, member_count: countMap[l.id] || 1 }));
+}
+
+async function createLeague(userId, name) {
+  const sb = initSupabase();
+  const join_code = Math.random().toString(36).substring(2, 8).toUpperCase();
+  const { data: league, error: leagueErr } = await sb
+    .from('leagues')
+    .insert({ name: name.trim(), join_code, owner_id: userId, is_global: false })
+    .select()
+    .single();
+  if (leagueErr) throw leagueErr;
+  const { error: memberErr } = await sb
+    .from('league_members')
+    .insert({ league_id: league.id, user_id: userId });
+  if (memberErr) throw memberErr;
+  return league;
+}
+
+async function joinLeague(userId, joinCode) {
+  const sb = initSupabase();
+  const { data: league, error: lookupErr } = await sb
+    .from('leagues')
+    .select('*')
+    .eq('join_code', joinCode.trim().toUpperCase())
+    .single();
+  if (lookupErr || !league) throw new Error('No league found with that code. Double-check and try again.');
+  const { error } = await sb
+    .from('league_members')
+    .upsert({ league_id: league.id, user_id: userId }, { onConflict: 'league_id,user_id', ignoreDuplicates: true });
+  if (error) throw error;
+  return league;
+}
+
+async function leaveLeague(userId, leagueId) {
+  const sb = initSupabase();
+  const { error } = await sb
+    .from('league_members')
+    .delete()
+    .eq('user_id', userId)
+    .eq('league_id', leagueId);
+  if (error) throw error;
+}
+
 // ---- Storage ----
 
 async function uploadAvatar(userId, file) {
@@ -289,6 +358,7 @@ window.DB = {
   validateInviteCode, getInviteCodes, createInviteCode,
   subscribeToLeaderboard, subscribeToMatchResults,
   recalculateScores, isRoundLocked, getRoundLockDate,
+  getMyLeagues, createLeague, joinLeague, leaveLeague,
   uploadAvatar, removeAvatar,
   initSupabase
 };

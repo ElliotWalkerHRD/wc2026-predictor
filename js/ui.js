@@ -221,8 +221,8 @@ function buildTeamSelect(id, value = '', placeholder = 'Select team...') {
 // ---- Team flag image (flagcdn.com, renders on Windows) ----
 function teamFlagImg(code) {
   const t = TEAMS_LIST.find(t => t.code === code);
-  if (!t || !t.cc) return `<span class="flag-img" style="background:var(--grey-300);width:27px"></span>`;
-  return `<img src="https://flagcdn.com/h20/${t.cc}.png" srcset="https://flagcdn.com/h40/${t.cc}.png 2x" height="20" alt="${t.name}" class="flag-img" loading="lazy">`;
+  if (!t || !t.cc) return `<span class="flag-img" style="background:var(--grey-300)"></span>`;
+  return `<img src="https://flagcdn.com/h20/${t.cc}.png" srcset="https://flagcdn.com/h40/${t.cc}.png 2x" alt="${t.name}" class="flag-img" loading="lazy">`;
 }
 
 // ---- Points badge ----

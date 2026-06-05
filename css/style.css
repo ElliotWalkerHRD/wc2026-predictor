@@ -1440,10 +1440,13 @@ select.form-control option {
 .pred-item.wrong  { border-color: var(--red); }
 
 /* ---- Flag images (flagcdn.com) ---- */
+/* Fixed box so all flags occupy the same space regardless of aspect ratio.  */
+/* object-fit:contain keeps full flag visible; flex-shrink:0 prevents squash. */
 .flag-img {
   display: inline-block;
-  height: 20px;
-  width: auto;
+  width: 22px;
+  height: 16px;
+  object-fit: contain;
   vertical-align: middle;
   border-radius: 2px;
   flex-shrink: 0;

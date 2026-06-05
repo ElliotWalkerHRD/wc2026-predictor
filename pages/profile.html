@@ -130,14 +130,6 @@
 
         </div>
 
-        <!-- SQL note -->
-        <div class="info-box mt-3" style="font-size:0.78rem">
-          <strong><i class="ti ti-database"></i> Supabase setup required</strong> — run this once in your Supabase SQL Editor, then create a public storage bucket named <code>avatars</code>:
-          <pre style="background:var(--grey-100);border-radius:var(--radius-sm);padding:0.625rem;margin-top:0.5rem;overflow-x:auto;font-size:0.75rem">ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar_url TEXT;
-
--- Storage bucket (Dashboard > Storage > New bucket):
--- Name: avatars   Type: Public</pre>
-        </div>
       </div>
     </div>
   </main>

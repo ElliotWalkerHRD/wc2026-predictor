@@ -67,11 +67,11 @@ const norm = (tla: string | null | undefined): string | null => {
 };
 
 serve(async (req) => {
+  console.log("1 start");
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
-
-  console.log("1 request received");
 
   // ---- Auth: must be called by an authenticated admin ----
   const authHeader = req.headers.get("Authorization");
@@ -93,25 +93,45 @@ serve(async (req) => {
     { global: { headers: { Authorization: authHeader } } }
   );
 
-  const { data: { user } } = await supabaseUser.auth.getUser();
+  let user: any;
+  try {
+    const { data, error } = await supabaseUser.auth.getUser();
+    if (error) throw error;
+    user = data.user;
+  } catch (err: any) {
+    console.error("getUser failed:", err?.message);
+    return new Response(JSON.stringify({ error: "Invalid token" }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
   if (!user) {
     return new Response(JSON.stringify({ error: "Invalid token" }), {
       status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
-  console.log("2 auth ok");
+  console.log("2 got user");
 
-  const { data: profile } = await supabaseAdmin
-    .from("profiles").select("is_admin").eq("id", user.id).single();
+  let profile: any;
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("profiles").select("is_admin").eq("id", user.id).single();
+    if (error) throw error;
+    profile = data;
+  } catch (err: any) {
+    console.error("profiles query failed:", err?.message);
+    return new Response(JSON.stringify({ error: "Failed to check admin status" }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  console.log("3 admin checked");
 
   if (!profile?.is_admin) {
     return new Response(JSON.stringify({ error: "Admin only" }), {
       status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-
-  console.log("3 admin ok");
 
   // ---- Call football-data.org server-side ----
   const apiKey = Deno.env.get("FOOTBALL_API_KEY");
@@ -142,7 +162,6 @@ serve(async (req) => {
     }
     const body = await apiRes.json();
     apiMatches = body.matches ?? [];
-    console.log("5 api returned " + apiMatches.length);
   } catch (err: any) {
     if (err.name === "AbortError") {
       return new Response(JSON.stringify({ error: "upstream timeout" }), {
@@ -153,6 +172,8 @@ serve(async (req) => {
       status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+
+  console.log("5 api done " + apiMatches.length);
 
   // ---- Build group-stage lookup: "GROUP:HOME:AWAY" → our match id ----
   // Both orientations stored so a home/away inversion in the API is tolerated.
@@ -226,6 +247,7 @@ serve(async (req) => {
     }
   }
 
+  console.log("7 returning");
   return new Response(
     JSON.stringify({ updated: upserts.length, unmapped }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } }

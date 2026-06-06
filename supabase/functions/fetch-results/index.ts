@@ -71,6 +71,8 @@ serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  console.log("request received", req.method);
+
   // ---- Auth: must be called by an authenticated admin ----
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) {
@@ -98,6 +100,8 @@ serve(async (req) => {
     });
   }
 
+  console.log("auth ok, user=" + user.id);
+
   const { data: profile } = await supabaseAdmin
     .from("profiles").select("is_admin").eq("id", user.id).single();
 
@@ -107,6 +111,8 @@ serve(async (req) => {
     });
   }
 
+  console.log("admin ok");
+
   // ---- Call football-data.org server-side ----
   const apiKey = Deno.env.get("FOOTBALL_API_KEY");
   if (!apiKey) {
@@ -115,20 +121,31 @@ serve(async (req) => {
     });
   }
 
+  console.log("calling football-data");
+
   let apiMatches: any[];
   try {
-    const apiRes = await fetch(
-      "https://api.football-data.org/v4/competitions/2000/matches",
-      { headers: { "X-Auth-Token": apiKey } }
-    );
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10_000);
+    let apiRes: Response;
+    try {
+      apiRes = await fetch(
+        "https://api.football-data.org/v4/competitions/2000/matches",
+        { headers: { "X-Auth-Token": apiKey }, signal: controller.signal }
+      );
+    } finally {
+      clearTimeout(timeout);
+    }
     if (!apiRes.ok) {
       const text = await apiRes.text();
       throw new Error(`football-data.org returned ${apiRes.status}: ${text.slice(0, 200)}`);
     }
     const body = await apiRes.json();
     apiMatches = body.matches ?? [];
+    console.log("api returned " + apiMatches.length + " matches");
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: `Upstream fetch failed: ${err.message}` }), {
+    const msg = err.name === "AbortError" ? "football-data.org timed out after 10 s" : `Upstream fetch failed: ${err.message}`;
+    return new Response(JSON.stringify({ error: msg }), {
       status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
@@ -192,6 +209,7 @@ serve(async (req) => {
   }
 
   // ---- Upsert via service role (bypasses RLS) ----
+  console.log("upserting " + upserts.length);
   if (upserts.length > 0) {
     const { error } = await supabaseAdmin
       .from("match_results")

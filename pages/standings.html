@@ -54,6 +54,7 @@
       width: 100%;
       border-collapse: collapse;
       font-size: 0.8rem;
+      table-layout: fixed; /* prevents long names from pushing stat cols */
     }
     .standings-table th {
       padding: 0.35rem 0.4rem;
@@ -65,26 +66,30 @@
       text-transform: uppercase;
       background: var(--grey-100);
       border-bottom: 1px solid var(--grey-300);
+      white-space: nowrap;
+      overflow: hidden;
     }
-    .standings-table th.team-col { text-align: left; padding-left: 0.75rem; min-width: 130px; }
+    /* team col fills remaining space; stat cols are fixed-width */
+    .standings-table th.team-col { text-align: left; padding-left: 0.75rem; }
+    .standings-table th:not(.team-col) { width: 26px; }
     .standings-table td {
       padding: 0.45rem 0.4rem;
       text-align: center;
       border-bottom: 1px solid var(--grey-100);
       color: var(--grey-700);
     }
-    .standings-table td.team-col { text-align: left; padding-left: 0; }
+    .standings-table td.team-col { text-align: left; padding-left: 0; overflow: hidden; }
     .standings-table tr:last-child td { border-bottom: none; }
     .standings-table tr.qual-1 td.team-col { border-left: 3px solid var(--lime-dark); }
     .standings-table tr.qual-2 td.team-col { border-left: 3px solid var(--lime-dark); }
-    .standings-table tr.qual-3 td.team-col { border-left: 3px solid #a3e635; opacity-note: "3rd may advance"; }
+    .standings-table tr.qual-3 td.team-col { border-left: 3px solid #a3e635; }
 
     .team-cell {
       display: flex;
       align-items: center;
       gap: 0.4rem;
       padding-left: 0.5rem;
-      white-space: nowrap;
+      overflow: hidden; /* clip flex container to td width */
     }
     .team-rank {
       color: var(--grey-400);
@@ -93,11 +98,30 @@
       flex-shrink: 0;
       text-align: right;
     }
-    .team-cell .team-name {
+    /* name span: flex:1 + min-width:0 allows shrinking; ellipsis does the rest */
+    .team-cell .team-name-full,
+    .team-cell .team-name-abbr {
       font-weight: 500;
+      flex: 1;
+      min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
+      white-space: nowrap;
     }
+    .team-name-abbr { display: none; }
+
+    /* 2-col grid (600–1099px): hide GF/GA/GD to free space for team name */
+    @media (min-width: 600px) and (max-width: 1099px) {
+      .standings-table .col-gf,
+      .standings-table .col-ga,
+      .standings-table .col-gd { display: none; }
+    }
+    /* Narrowest 2-col cards (600–799px): swap full name for 3-letter code */
+    @media (min-width: 600px) and (max-width: 799px) {
+      .team-name-full { display: none; }
+      .team-name-abbr { display: inline; }
+    }
+
     .pts-cell { font-weight: 700; color: var(--ink); }
     .gd-pos { color: #16a34a; font-weight: 600; }
     .gd-neg { color: var(--red); font-weight: 600; }
@@ -342,16 +366,17 @@
               <div class="team-cell">
                 <span class="team-rank">${i + 1}</span>
                 ${teamFlagImg(s.code)}
-                <span class="team-name">${getTeam(s.code).name}</span>
+                <span class="team-name-full">${getTeam(s.code).name}</span>
+                <span class="team-name-abbr">${s.code}</span>
               </div>
             </td>
             <td>${s.P}</td>
             <td>${s.W}</td>
             <td>${s.D}</td>
             <td>${s.L}</td>
-            <td>${s.GF}</td>
-            <td>${s.GA}</td>
-            <td class="${gdClass}">${s.P > 0 ? gdStr : '—'}</td>
+            <td class="col-gf">${s.GF}</td>
+            <td class="col-ga">${s.GA}</td>
+            <td class="col-gd ${gdClass}">${s.P > 0 ? gdStr : '—'}</td>
             <td class="pts-cell">${s.Pts}</td>
           </tr>`;
       }).join('');
@@ -370,9 +395,9 @@
                 <th title="Won">W</th>
                 <th title="Drawn">D</th>
                 <th title="Lost">L</th>
-                <th title="Goals For">GF</th>
-                <th title="Goals Against">GA</th>
-                <th title="Goal Difference">GD</th>
+                <th class="col-gf" title="Goals For">GF</th>
+                <th class="col-ga" title="Goals Against">GA</th>
+                <th class="col-gd" title="Goal Difference">GD</th>
                 <th title="Points">Pts</th>
               </tr>
             </thead>

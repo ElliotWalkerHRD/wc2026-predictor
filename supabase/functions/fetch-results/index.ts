@@ -71,7 +71,7 @@ serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  console.log("request received", req.method);
+  console.log("1 request received");
 
   // ---- Auth: must be called by an authenticated admin ----
   const authHeader = req.headers.get("Authorization");
@@ -100,7 +100,7 @@ serve(async (req) => {
     });
   }
 
-  console.log("auth ok, user=" + user.id);
+  console.log("2 auth ok");
 
   const { data: profile } = await supabaseAdmin
     .from("profiles").select("is_admin").eq("id", user.id).single();
@@ -111,7 +111,7 @@ serve(async (req) => {
     });
   }
 
-  console.log("admin ok");
+  console.log("3 admin ok");
 
   // ---- Call football-data.org server-side ----
   const apiKey = Deno.env.get("FOOTBALL_API_KEY");
@@ -121,7 +121,7 @@ serve(async (req) => {
     });
   }
 
-  console.log("calling football-data");
+  console.log("4 calling api");
 
   let apiMatches: any[];
   try {
@@ -142,10 +142,14 @@ serve(async (req) => {
     }
     const body = await apiRes.json();
     apiMatches = body.matches ?? [];
-    console.log("api returned " + apiMatches.length + " matches");
+    console.log("5 api returned " + apiMatches.length);
   } catch (err: any) {
-    const msg = err.name === "AbortError" ? "football-data.org timed out after 10 s" : `Upstream fetch failed: ${err.message}`;
-    return new Response(JSON.stringify({ error: msg }), {
+    if (err.name === "AbortError") {
+      return new Response(JSON.stringify({ error: "upstream timeout" }), {
+        status: 504, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    return new Response(JSON.stringify({ error: `Upstream fetch failed: ${err.message}` }), {
       status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
@@ -209,7 +213,7 @@ serve(async (req) => {
   }
 
   // ---- Upsert via service role (bypasses RLS) ----
-  console.log("upserting " + upserts.length);
+  console.log("6 upserting " + upserts.length);
   if (upserts.length > 0) {
     const { error } = await supabaseAdmin
       .from("match_results")

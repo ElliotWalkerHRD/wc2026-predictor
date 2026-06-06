@@ -78,10 +78,7 @@ const Nav = {
 
       <div class="nav-user">
         ${session ? `
-          ${profile?.avatar_url
-            ? `<img src="${profile.avatar_url}" class="avatar" alt="" style="object-fit:cover">`
-            : `<div class="avatar" style="background:${avatarColor};color:#0d0d0d" title="${profile?.display_name || ''}">${initials}</div>`
-          }
+          ${renderAvatar(profile, 'avatar', '', profile?.display_name || '')}
           <span class="nav-username">${profile?.display_name || session.user.email}</span>
           <button class="btn btn-ghost btn-sm" id="signOutBtn">Sign out</button>
         ` : `
@@ -225,6 +222,20 @@ function teamFlagImg(code) {
   return `<img src="https://flagcdn.com/h20/${t.cc}.png" srcset="https://flagcdn.com/h40/${t.cc}.png 2x" alt="${t.name}" class="flag-img" loading="lazy">`;
 }
 
+// ---- Avatar renderer ----
+// Renders a photo <img> if profile.avatar_url is set; otherwise a colour+initial <div>.
+// cls: CSS class applied to both variants  style: extra inline CSS  title: tooltip/alt text
+function renderAvatar(profile, cls = 'avatar', style = '', title = '') {
+  const initial   = (profile?.display_name || '?').charAt(0).toUpperCase();
+  const color     = profile?.avatar_color || '#c8f135';
+  const titleAttr = title ? ` title="${title}"` : '';
+  const styleBase = style ? `;${style}` : '';
+  if (profile?.avatar_url) {
+    return `<img src="${profile.avatar_url}" class="${cls}"${titleAttr} alt="${title}" style="object-fit:cover;flex-shrink:0${styleBase}">`;
+  }
+  return `<div class="${cls}"${titleAttr} style="background:${color};color:#0d0d0d;flex-shrink:0${styleBase}">${initial}</div>`;
+}
+
 // ---- Points badge ----
 function ptsBadge(pts) {
   if (!pts && pts !== 0) return '<span class="text-muted">—</span>';
@@ -245,4 +256,5 @@ window.renderMatchScore = renderMatchScore;
 window.buildTeamSelect = buildTeamSelect;
 window.teamFlagImg = teamFlagImg;
 window.ptsBadge = ptsBadge;
+window.renderAvatar = renderAvatar;
 window.AVATAR_COLORS = AVATAR_COLORS;

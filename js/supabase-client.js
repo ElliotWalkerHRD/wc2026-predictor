@@ -89,7 +89,7 @@ async function getProfiles(userIds) {
   const sb = initSupabase();
   const { data, error } = await sb
     .from('profiles')
-    .select('id, display_name, avatar_color')
+    .select('id, display_name, avatar_color, avatar_url')
     .in('id', userIds);
   if (error) throw error;
   return data || [];
@@ -99,7 +99,7 @@ async function getAllProfiles() {
   const sb = initSupabase();
   const { data, error } = await sb
     .from('profiles')
-    .select('id, display_name, avatar_color');
+    .select('id, display_name, avatar_color, avatar_url');
   if (error) throw error;
   return data || [];
 }
@@ -152,7 +152,7 @@ async function getScores() {
   const sb = initSupabase();
   const { data, error } = await sb
     .from('scores')
-    .select('*, profiles(display_name, avatar_color)')
+    .select('*, profiles(display_name, avatar_color, avatar_url)')
     .order('total_points', { ascending: false });
   if (error) throw error;
   return data || [];

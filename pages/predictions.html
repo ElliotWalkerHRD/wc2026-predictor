@@ -40,6 +40,12 @@
     .lock-pill--upcoming { background: var(--grey-50,#f9f9f9); color: var(--grey-400); border: 1px solid var(--grey-200); }
     .lock-pill-status { display: block; }
     .lock-pill-detail { display: block; font-size: 0.68rem; font-weight: 400; opacity: 0.8; margin-top: 0.1rem; }
+
+    @keyframes lockPulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(200,241,53,0.55); }
+      50%       { opacity: 0.82; box-shadow: 0 0 0 5px rgba(200,241,53,0); }
+    }
+    .lock-pill--open.urgent { animation: lockPulse 1.8s ease-in-out infinite; }
   </style>
 </head>
 <body>
@@ -147,6 +153,8 @@
         const progress  = Math.min(100, Math.round((preds.length / round.questions) * 100));
         const hasScore  = userScore && userScore[round.id + '_points'] != null;
 
+        const urgent = isOpen && (lockTime - _now) < 86400000;
+
         let lockPill;
         if (locked) {
           lockPill = `
@@ -158,7 +166,7 @@
             </div>`;
         } else if (isOpen) {
           lockPill = `
-            <div class="lock-pill lock-pill--open">
+            <div class="lock-pill lock-pill--open${urgent ? ' urgent' : ''}">
               <i class="ti ti-lock-open"></i>
               <div>
                 <span class="lock-pill-status">Open</span>
@@ -170,7 +178,7 @@
             <div class="lock-pill lock-pill--upcoming">
               <i class="ti ti-lock"></i>
               <div>
-                <span class="lock-pill-status">Upcoming</span>
+                <span class="lock-pill-status">Opens later</span>
               </div>
             </div>`;
         }
@@ -206,6 +214,7 @@
           const h = Math.floor((diff % 86400000) / 3600000);
           const m = Math.floor((diff % 3600000) / 60000);
           el.textContent = d > 0 ? `${d}d ${h}h` : h > 0 ? `${h}h ${m}m` : `${m}m`;
+          el.closest('.lock-pill')?.classList.toggle('urgent', diff < 86400000);
         });
       }
       tickCountdowns();

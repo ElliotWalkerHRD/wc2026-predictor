@@ -245,6 +245,13 @@
     .lock-badge--upcoming { background: var(--grey-100); color: var(--grey-400); }
     .lock-badge-cd { font-size: 0.6rem; display: block; color: var(--grey-500); margin-top: 0.15rem; padding-left: 0.1rem; }
 
+    @keyframes lockPulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(200,241,53,0.55); }
+      50%       { opacity: 0.82; box-shadow: 0 0 0 5px rgba(200,241,53,0); }
+    }
+    .lock-badge--open.urgent,
+    .lock-pill--open.urgent { animation: lockPulse 1.8s ease-in-out infinite; }
+
     /* ---- CTA section ---- */
     .cta-section {
       background: var(--ink);
@@ -484,14 +491,16 @@
         const isOpen   = !locked && lt === nextLock;
         const upcoming = !locked && !isOpen;
 
+        const urgent = isOpen && (lt - now) < 86400000;
+
         let badge, cdLine = '';
         if (locked) {
           badge = `<span class="lock-badge lock-badge--locked"><i class="ti ti-lock"></i> Locked</span>`;
         } else if (isOpen) {
-          badge = `<span class="lock-badge lock-badge--open"><i class="ti ti-lock-open"></i> Open</span>`;
+          badge = `<span class="lock-badge lock-badge--open${urgent ? ' urgent' : ''}"><i class="ti ti-lock-open"></i> Open</span>`;
           cdLine = `<span class="lock-badge-cd home-cd" data-lock="${new Date(lt).toISOString()}"></span>`;
         } else {
-          badge = `<span class="lock-badge lock-badge--upcoming"><i class="ti ti-lock"></i> Upcoming</span>`;
+          badge = `<span class="lock-badge lock-badge--upcoming"><i class="ti ti-lock"></i> Opens later</span>`;
         }
 
         return `
@@ -520,6 +529,8 @@
           const h = Math.floor((diff % 86400000) / 3600000);
           const m = Math.floor((diff % 3600000) / 60000);
           el.textContent = `Locks in ${d > 0 ? `${d}d ${h}h` : h > 0 ? `${h}h ${m}m` : `${m}m`}`;
+          el.closest('.round-lock-card')?.querySelector('.lock-badge--open')
+            ?.classList.toggle('urgent', diff < 86400000);
         });
       }
       tickHomeCd();

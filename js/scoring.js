@@ -93,11 +93,11 @@ const ScoringEngine = {
       breakdown['1.10'] = scored ? 5 : 0;
     }
 
-    // 1.11 Total goals group stage (10pts exact, 5pts within 3)
+    // 1.11 Total goals group stage (10pts exact, 5pts within 10)
     if (predictions['1.11'] && answers['1.11']) {
       const diff = Math.abs(parseInt(predictions['1.11']) - parseInt(answers['1.11']));
       if (diff === 0) { points += 10; breakdown['1.11'] = 10; }
-      else if (diff <= 3) { points += 5; breakdown['1.11'] = 5; }
+      else if (diff <= 10) { points += 5; breakdown['1.11'] = 5; }
       else { breakdown['1.11'] = 0; }
     }
 

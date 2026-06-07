@@ -21,6 +21,25 @@
     }
     .round-entry-card:hover::before { background: var(--ink); }
     .round-entry-card.complete::before { background: var(--green); }
+
+    /* ---- Lock pills ---- */
+    .lock-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      border-radius: 9999px;
+      padding: 0.35rem 0.85rem 0.35rem 0.6rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      line-height: 1.3;
+      margin: 0.375rem 0 0.625rem;
+    }
+    .lock-pill > i { font-size: 1rem; flex-shrink: 0; }
+    .lock-pill--open     { background: rgba(200,241,53,0.18); color: #5c7000; border: 1px solid rgba(200,241,53,0.45); }
+    .lock-pill--locked   { background: var(--grey-100); color: var(--grey-500); border: 1px solid var(--grey-200); }
+    .lock-pill--upcoming { background: var(--grey-50,#f9f9f9); color: var(--grey-400); border: 1px solid var(--grey-200); }
+    .lock-pill-status { display: block; }
+    .lock-pill-detail { display: block; font-size: 0.68rem; font-weight: 400; opacity: 0.8; margin-top: 0.1rem; }
   </style>
 </head>
 <body>
@@ -109,25 +128,51 @@
       const openRounds = ROUNDS_META.filter(r => !DB.isRoundLocked(r.id)).length;
       document.getElementById('roundsOpen').textContent = openRounds;
 
+      // Compute which lock time is "next" so we can distinguish Open vs Upcoming
+      const _now = Date.now();
+      const _openTimes = ROUNDS_META
+        .map(r => DB.getRoundLockDate(r.id)?.getTime())
+        .filter(t => t && t > _now);
+      const nextLockTime = _openTimes.length ? Math.min(..._openTimes) : null;
+
       const grid = document.getElementById('roundsGrid');
       grid.innerHTML = ROUNDS_META.map((round, idx) => {
-        const locked   = DB.isRoundLocked(round.id);
-        const lockDate = DB.getRoundLockDate(round.id);
+        const lockDate  = DB.getRoundLockDate(round.id);
+        const lockTime  = lockDate?.getTime();
+        const locked    = lockTime && lockTime <= _now;
+        const isOpen    = !locked && lockTime === nextLockTime;
+        const upcoming  = !locked && !isOpen;
         const submitted = submittedRounds.has(round.id);
-        const preds    = allPreds.filter(p => p.round === round.id);
-        const progress = Math.min(100, Math.round((preds.length / round.questions) * 100));
+        const preds     = allPreds.filter(p => p.round === round.id);
+        const progress  = Math.min(100, Math.round((preds.length / round.questions) * 100));
+        const hasScore  = userScore && userScore[round.id + '_points'] != null;
 
-        let statusBadge = '';
-        let lockInfo = '';
-
+        let lockPill;
         if (locked) {
-          statusBadge = '<span class="chip chip-grey"><i class="ti ti-lock"></i> Locked</span>';
-          lockInfo = '<span class="lock-time">Predictions closed</span>';
-        } else if (lockDate) {
-          const countdown = formatCountdown(lockDate.toISOString());
-          const soon = (lockDate - new Date()) < 86400000;
-          statusBadge = '<span class="chip chip-green"><i class="ti ti-circle-check"></i> Open</span>';
-          lockInfo = `<span class="lock-time ${soon ? 'soon' : ''}"><i class="ti ti-clock"></i> Locks in ${countdown}</span>`;
+          lockPill = `
+            <div class="lock-pill lock-pill--locked">
+              <i class="ti ti-lock"></i>
+              <div>
+                <span class="lock-pill-status">Locked${hasScore ? ' &middot; Scored' : ''}</span>
+              </div>
+            </div>`;
+        } else if (isOpen) {
+          lockPill = `
+            <div class="lock-pill lock-pill--open">
+              <i class="ti ti-lock-open"></i>
+              <div>
+                <span class="lock-pill-status">Open</span>
+                <span class="lock-pill-detail">Locks in <span class="lock-cd" data-lock="${lockDate.toISOString()}"></span></span>
+              </div>
+            </div>`;
+        } else {
+          lockPill = `
+            <div class="lock-pill lock-pill--upcoming">
+              <i class="ti ti-lock"></i>
+              <div>
+                <span class="lock-pill-status">Upcoming</span>
+              </div>
+            </div>`;
         }
 
         const completedClass = locked ? 'locked' : (submitted && progress >= 100) ? 'complete' : '';
@@ -137,23 +182,35 @@
             <span class="round-num-bg">${idx + 1}</span>
             <div class="round-icon"><i class="ti ${round.icon}"></i></div>
             <div class="round-title">${round.title}</div>
+            ${lockPill}
             <p class="round-desc">${round.desc}</p>
             <div class="progress-bar">
               <div class="progress-fill ${progress >= 100 ? 'complete' : ''}" style="width:${locked ? 100 : progress}%"></div>
             </div>
             <div class="round-meta">
               <div style="display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap">
-                ${statusBadge}
                 ${submitted ? '<span class="chip chip-green"><i class="ti ti-check"></i> Submitted</span>' : ''}
               </div>
-              ${lockInfo}
-            </div>
-            <div class="round-meta mt-1">
               <span class="points-avail">Up to ${round.points} pts</span>
             </div>
           </a>
         `;
       }).join('');
+
+      // Tick open-round countdowns live
+      function tickCountdowns() {
+        document.querySelectorAll('.lock-cd[data-lock]').forEach(el => {
+          const diff = new Date(el.dataset.lock) - new Date();
+          if (diff <= 0) { el.textContent = 'now'; return; }
+          const d = Math.floor(diff / 86400000);
+          const h = Math.floor((diff % 86400000) / 3600000);
+          const m = Math.floor((diff % 3600000) / 60000);
+          el.textContent = d > 0 ? `${d}d ${h}h` : h > 0 ? `${h}h ${m}m` : `${m}m`;
+        });
+      }
+      tickCountdowns();
+      const _cdTick = setInterval(tickCountdowns, 10_000);
+      window.addEventListener('pagehide', () => clearInterval(_cdTick));
     }
 
     load();

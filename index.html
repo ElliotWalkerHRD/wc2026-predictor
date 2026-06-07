@@ -65,6 +65,18 @@
     }
 
     /* Countdown inside hero */
+    .lock-hero-label {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--lime);
+      margin-bottom: 0.5rem;
+    }
+
     .hero-countdown {
       display: flex;
       gap: 1.25rem;
@@ -171,6 +183,68 @@
       line-height: 1.5;
     }
 
+    /* ---- Round lock grid ---- */
+    .rounds-lock-section { padding: 2.5rem 0 0.5rem; }
+    .rounds-lock-heading {
+      font-family: var(--font-serif);
+      font-size: 1.5rem;
+      margin-bottom: 0.3rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .rounds-lock-sub { font-size: 0.85rem; color: var(--grey-500); margin-bottom: 1.25rem; }
+    .rounds-lock-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.625rem;
+    }
+    @media (min-width: 680px) { .rounds-lock-grid { grid-template-columns: repeat(8, 1fr); } }
+    @media (max-width: 400px) { .rounds-lock-grid { grid-template-columns: repeat(2, 1fr); } }
+
+    .round-lock-card {
+      background: var(--white);
+      border: 1px solid var(--grey-200);
+      border-radius: var(--radius-lg);
+      padding: 0.875rem 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      text-decoration: none;
+      color: inherit;
+      transition: box-shadow 0.15s, transform 0.15s;
+    }
+    .round-lock-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+    .round-lock-card.is-locked { background: var(--grey-100); }
+    .round-lock-num {
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--grey-400);
+    }
+    .round-lock-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--ink);
+      line-height: 1.25;
+    }
+    .lock-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.65rem;
+      font-weight: 600;
+      padding: 0.15rem 0.5rem;
+      border-radius: 9999px;
+      margin-top: 0.25rem;
+      width: fit-content;
+    }
+    .lock-badge--open     { background: rgba(200,241,53,0.2); color: #5c7000; }
+    .lock-badge--locked   { background: var(--grey-200); color: var(--grey-500); }
+    .lock-badge--upcoming { background: var(--grey-100); color: var(--grey-400); }
+    .lock-badge-cd { font-size: 0.6rem; display: block; color: var(--grey-500); margin-top: 0.15rem; padding-left: 0.1rem; }
+
     /* ---- CTA section ---- */
     .cta-section {
       background: var(--ink);
@@ -211,6 +285,9 @@
             Predict every match, pick your winners, and compete with friends across all 104 games of the greatest tournament on earth.
           </p>
 
+          <div class="lock-hero-label" id="cdLabel">
+            <i class="ti ti-lock-open"></i> Next round locks in
+          </div>
           <div class="hero-countdown">
             <div class="countdown-unit">
               <span class="countdown-num" id="cdDays">--</span>
@@ -305,6 +382,9 @@
 
       <hr class="divider">
 
+      <!-- Round lock status grid -->
+      <div id="roundsLockSection"></div>
+
       <!-- CTA -->
       <div class="cta-section" id="inviteCta">
         <h2>Ready to Join?</h2>
@@ -343,16 +423,39 @@
 
     renderHeroActions();
 
-    const kickoff = new Date('2026-06-11T21:00:00Z');
+    // ---- Round lock data ----
+    const ROUNDS_HOME = [
+      { id:'round1', label:'R1',  title:'Pre-Tournament', page:'pages/round1.html' },
+      { id:'round2', label:'R2',  title:'Group Winners',  page:'pages/round2.html' },
+      { id:'round3', label:'GS',  title:'Group Stage',    page:'pages/round3.html' },
+      { id:'round4', label:'R32', title:'Round of 32',    page:'pages/round4.html' },
+      { id:'round5', label:'R16', title:'Round of 16',    page:'pages/round5.html' },
+      { id:'round6', label:'QF',  title:'Quarter Finals', page:'pages/round6.html' },
+      { id:'round7', label:'SF',  title:'Semi Finals',    page:'pages/round7.html' },
+      { id:'round8', label:'F',   title:'The Final',      page:'pages/round8.html' },
+    ];
+
+    function getNextLockTarget() {
+      const now = Date.now();
+      const times = Object.values(CONFIG.ROUND_LOCKS)
+        .map(t => new Date(t).getTime())
+        .filter(t => t > now)
+        .sort((a, b) => a - b);
+      return times.length ? times[0] : null;
+    }
 
     function updateCountdown() {
-      const diff = kickoff - new Date();
-      if (diff <= 0) {
+      const target = getNextLockTarget();
+      const labelEl = document.getElementById('cdLabel');
+      if (!target) {
         ['cdDays','cdHours','cdMins','cdSecs'].forEach(id => {
           document.getElementById(id).textContent = '00';
         });
+        if (labelEl) labelEl.innerHTML = '<i class="ti ti-lock"></i> All rounds locked';
         return;
       }
+      const diff = target - Date.now();
+      if (diff <= 0) return;
       const d = Math.floor(diff / 86400000);
       const h = Math.floor((diff % 86400000) / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
@@ -364,7 +467,67 @@
     }
 
     updateCountdown();
-    setInterval(updateCountdown, 1000);
+    const _heroTick = setInterval(updateCountdown, 1000);
+    window.addEventListener('pagehide', () => clearInterval(_heroTick));
+
+    // ---- Round lock status grid ----
+    function renderRoundLockGrid() {
+      const now = Date.now();
+      const openTimes = ROUNDS_HOME
+        .map(r => DB.getRoundLockDate(r.id)?.getTime())
+        .filter(t => t && t > now);
+      const nextLock = openTimes.length ? Math.min(...openTimes) : null;
+
+      const cards = ROUNDS_HOME.map(r => {
+        const lt     = DB.getRoundLockDate(r.id)?.getTime();
+        const locked   = lt && lt <= now;
+        const isOpen   = !locked && lt === nextLock;
+        const upcoming = !locked && !isOpen;
+
+        let badge, cdLine = '';
+        if (locked) {
+          badge = `<span class="lock-badge lock-badge--locked"><i class="ti ti-lock"></i> Locked</span>`;
+        } else if (isOpen) {
+          badge = `<span class="lock-badge lock-badge--open"><i class="ti ti-lock-open"></i> Open</span>`;
+          cdLine = `<span class="lock-badge-cd home-cd" data-lock="${new Date(lt).toISOString()}"></span>`;
+        } else {
+          badge = `<span class="lock-badge lock-badge--upcoming"><i class="ti ti-lock"></i> Upcoming</span>`;
+        }
+
+        return `
+          <a class="round-lock-card${locked ? ' is-locked' : ''}" href="${r.page}">
+            <div class="round-lock-num">${r.label}</div>
+            <div class="round-lock-title">${r.title}</div>
+            ${badge}${cdLine}
+          </a>`;
+      }).join('');
+
+      document.getElementById('roundsLockSection').innerHTML = `
+        <section class="rounds-lock-section">
+          <h2 class="rounds-lock-heading"><i class="ti ti-lock" style="color:var(--lime)"></i> Round Status</h2>
+          <p class="rounds-lock-sub">Lock your picks before each round kicks off — no changes after the whistle.</p>
+          <div class="rounds-lock-grid">${cards}</div>
+        </section>
+        <hr class="divider" style="margin-top:2.5rem">
+      `;
+
+      // Tick open-round countdowns
+      function tickHomeCd() {
+        document.querySelectorAll('.home-cd[data-lock]').forEach(el => {
+          const diff = new Date(el.dataset.lock) - new Date();
+          if (diff <= 0) { el.textContent = ''; return; }
+          const d = Math.floor(diff / 86400000);
+          const h = Math.floor((diff % 86400000) / 3600000);
+          const m = Math.floor((diff % 3600000) / 60000);
+          el.textContent = `Locks in ${d > 0 ? `${d}d ${h}h` : h > 0 ? `${h}h ${m}m` : `${m}m`}`;
+        });
+      }
+      tickHomeCd();
+      const _cdGrid = setInterval(tickHomeCd, 10_000);
+      window.addEventListener('pagehide', () => clearInterval(_cdGrid));
+    }
+
+    renderRoundLockGrid();
   </script>
 </body>
 </html>

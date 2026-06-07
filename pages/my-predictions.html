@@ -320,8 +320,14 @@
         '1.11': 'Group stage total goals',
         '1.12': 'Hardest group',
       };
+      const KEY_ORDER = Object.keys(R1_LABELS);
+      const sorted = [...preds].sort((a, b) => {
+        const ia = KEY_ORDER.indexOf(a.question_key);
+        const ib = KEY_ORDER.indexOf(b.question_key);
+        return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+      });
 
-      return preds.map(p => {
+      return sorted.map(p => {
         let val;
         try { val = JSON.parse(p.value); } catch { val = p.value; }
         let displayVal = val;
@@ -355,7 +361,7 @@
         grouped[g][pos] = p.value.replace(/"/g,'');
       });
 
-      return Object.entries(grouped).map(([g, gPreds]) => {
+      return Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([g, gPreds]) => {
         const winner = gPreds.w ? getTeam(gPreds.w) : null;
         const runner = gPreds.r ? getTeam(gPreds.r) : null;
         return `
@@ -384,11 +390,15 @@
       const exactPts = isFinale ? 10 : 7;
       const resultPts = isFinale ? 7 : 5;
 
-      return preds.map(p => {
-        if (!p.question_key.startsWith('m')) return '';
+      const sorted = [...preds]
+        .filter(p => p.question_key.startsWith('m'))
+        .sort((a, b) => parseInt(a.question_key.slice(1)) - parseInt(b.question_key.slice(1)));
+
+      return sorted.map(p => {
         const matchId = parseInt(p.question_key.slice(1));
         let val;
-        try { val = JSON.parse(p.value); } catch { return ''; }
+        try { val = JSON.parse(p.value); } catch { val = null; }
+        if (!val) return '';
 
         const result = allResults[matchId];
         const hasResult = result && result.home_score !== null;

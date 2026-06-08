@@ -242,6 +242,19 @@ function ptsBadge(pts) {
   return `<span class="points-badge">${pts}</span>`;
 }
 
+// ---- Round bracket readiness (shared by home page and predictions page) ----
+const ROUND_TO_KO = {
+  round4: 'round32', round5: 'round16',
+  round6: 'quarterfinals', round7: 'semifinals', round8: 'final',
+};
+
+function bracketReady(id) {
+  const key = ROUND_TO_KO[id];
+  if (!key) return true; // rounds 1-3 have no KO bracket — always ready
+  const ms = KNOCKOUT_ROUNDS[key]?.matches || [];
+  return ms.length > 0 && ms.every(m => m.home_team && m.away_team);
+}
+
 window.Toast = Toast;
 window.Nav = Nav;
 window.requireAuth = requireAuth;
@@ -257,4 +270,6 @@ window.buildTeamSelect = buildTeamSelect;
 window.teamFlagImg = teamFlagImg;
 window.ptsBadge = ptsBadge;
 window.renderAvatar = renderAvatar;
+window.ROUND_TO_KO = ROUND_TO_KO;
+window.bracketReady = bracketReady;
 window.AVATAR_COLORS = AVATAR_COLORS;

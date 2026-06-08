@@ -567,7 +567,7 @@ function renderGroupsTab() {
   return `
     <div class="load-picks-bar">
       <span>See the tables your Round 3 picks produce</span>
-      <button id="loadR3Btn" class="btn btn-ghost btn-sm"><i class="ti ti-download"></i> Load my Round 3 picks</button>
+      <button id="loadR3Btn" class="btn btn-lime btn-sm"><i class="ti ti-download"></i> Load my Round 3 picks</button>
     </div>
     <div class="groups-input-grid">${groups}</div>`;
 }
@@ -951,7 +951,7 @@ async function loadRound3Picks() {
   let count = 0;
   for (const p of picks) {
     if (!p.question_key.startsWith('m')) continue;
-    const v = p.value;
+    const v = typeof p.value === 'string' ? JSON.parse(p.value) : p.value;
     if (v == null || v.home == null || v.away == null) continue;
     scoreMap[p.question_key] = { home: parseInt(v.home), away: parseInt(v.away) };
     count++;

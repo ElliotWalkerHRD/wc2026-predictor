@@ -180,11 +180,12 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="../js/config.js"></script>
 <script src="../js/data.js"></script>
 <script src="../js/supabase-client.js"></script>
-<script src="../js/ui.js"></script>
 <script src="../js/scoring.js"></script>
+<script src="../js/ui.js"></script>
 <script>
 'use strict';
 
@@ -941,7 +942,7 @@ function attachPopulateListeners(el) {
 
 // ---- Init ----
 (async function init() {
-  await Nav.render('scenario');
+  await Nav.render('calculator');
   const session = await DB.getSession();
   const root = document.getElementById('scenario-root');
 

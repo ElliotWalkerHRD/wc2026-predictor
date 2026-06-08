@@ -13,29 +13,6 @@
     .admin-panel { display: none; }
     .admin-panel.active { display: block; }
 
-    .invite-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 0.875rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .invite-card {
-      background: var(--white);
-      border: 1px solid var(--grey-300);
-      border-radius: var(--radius-lg);
-      padding: 1.25rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .invite-code-display { font-family: var(--font-serif); font-size: 1.8rem; letter-spacing: 0.15em; }
-    .invite-label { font-size: 0.8rem; color: var(--grey-500); }
-    .invite-link { font-size: 0.7rem; color: var(--grey-400); word-break: break-all; }
-    .invite-card-actions { display: flex; gap: 0.5rem; }
-
     .users-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
     .users-table th { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--grey-500); padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--grey-300); text-align: left; }
     .users-table td { padding: 0.75rem; border-bottom: 1px solid var(--grey-100); }
@@ -87,7 +64,6 @@
     .group-filter-row { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1rem; }
 
     @media (max-width: 559px) {
-      .invite-grid { grid-template-columns: 1fr; }
       .override-grid { grid-template-columns: 1fr !important; }
     }
 
@@ -110,7 +86,7 @@
     <div class="container">
       <nav class="breadcrumb">WC2026 &rsaquo; <span>Admin Panel</span></nav>
       <h1 class="page-title">Admin Panel</h1>
-      <p class="page-desc">Manage invites &middot; Enter results &middot; Recalculate scores</p>
+      <p class="page-desc">Enter results &middot; Manage players &middot; Recalculate scores</p>
     </div>
   </div>
 
@@ -123,28 +99,13 @@
 
       <div id="adminContent" class="hidden">
         <div class="tabs mb-4" id="adminTabs">
-          <button class="tab-btn active" data-tab="invites"><i class="ti ti-link"></i> Invite Codes</button>
-          <button class="tab-btn" data-tab="results"><i class="ti ti-ball-football"></i> Match Results</button>
+          <button class="tab-btn active" data-tab="results"><i class="ti ti-ball-football"></i> Match Results</button>
           <button class="tab-btn" data-tab="users"><i class="ti ti-users"></i> Users</button>
           <button class="tab-btn" data-tab="scoring"><i class="ti ti-calculator"></i> Scoring</button>
         </div>
 
-        <!-- Invites Panel -->
-        <div class="admin-panel active" id="panel-invites">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem">
-            <h2 style="font-family:var(--font-serif);font-size:1.35rem">Invite Codes</h2>
-            <div style="display:flex;gap:0.75rem;align-items:center">
-              <input type="text" id="inviteLabelInput" class="form-control" placeholder="Label (e.g. John)" style="width:180px">
-              <button class="btn btn-lime" id="createInviteBtn"><i class="ti ti-plus"></i> Generate Code</button>
-            </div>
-          </div>
-          <div id="inviteGrid" class="invite-grid">
-            <div class="loading-overlay"><div class="spinner"></div></div>
-          </div>
-        </div>
-
         <!-- Results Panel -->
-        <div class="admin-panel" id="panel-results">
+        <div class="admin-panel active" id="panel-results">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:1rem">
             <h2 style="font-family:var(--font-serif);font-size:1.35rem">Enter Match Results</h2>
             <button class="btn btn-outline btn-sm" id="fetchLiveBtn"><i class="ti ti-refresh"></i> Fetch from API</button>
@@ -282,69 +243,8 @@
         document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
       });
 
-      await Promise.all([loadInviteCodes(), loadResultsPanel(), loadUsers()]);
+      await Promise.all([loadResultsPanel(), loadUsers()]);
     }
-
-    // ---- INVITE CODES ----
-
-    async function loadInviteCodes() {
-      try {
-        const codes = await DB.getInviteCodes();
-        renderInviteCodes(codes);
-      } catch (err) {
-        document.getElementById('inviteGrid').innerHTML = `<div class="alert alert-error"><i class="ti ti-alert-triangle"></i> ${err.message}</div>`;
-      }
-    }
-
-    function renderInviteCodes(codes) {
-      const grid = document.getElementById('inviteGrid');
-      if (!codes.length) {
-        grid.innerHTML = '<p class="text-muted">No invite codes yet. Generate the first one!</p>';
-        return;
-      }
-
-      grid.innerHTML = codes.map(c => {
-        const inviteUrl = `${CONFIG.APP_URL}/pages/auth.html?invite=${c.code}`;
-        return `
-          <div class="invite-card">
-            <div>
-              <div class="invite-code-display">${c.code}</div>
-              ${c.label ? `<div class="invite-label">${c.label}</div>` : ''}
-            </div>
-            <div class="invite-link">${inviteUrl}</div>
-            <div class="invite-card-actions">
-              <button class="btn btn-outline btn-sm" onclick="navigator.clipboard.writeText('${inviteUrl}').then(() => Toast.success('Link copied!'))">
-                <i class="ti ti-copy"></i> Copy Link
-              </button>
-              ${c.active
-                ? `<button class="btn btn-outline btn-sm" style="color:var(--red)" data-revoke="${c.id}">Revoke</button>`
-                : `<span class="chip chip-grey">Revoked</span>`}
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      grid.querySelectorAll('[data-revoke]').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const sb = DB.initSupabase();
-          await sb.from('invite_codes').update({ active: false }).eq('id', btn.dataset.revoke);
-          Toast.info('Invite code revoked');
-          loadInviteCodes();
-        });
-      });
-    }
-
-    document.getElementById('createInviteBtn').addEventListener('click', async () => {
-      const label = document.getElementById('inviteLabelInput').value.trim();
-      try {
-        const code = await DB.createInviteCode(label || 'Unnamed');
-        Toast.success(`Code ${code.code} created!`);
-        document.getElementById('inviteLabelInput').value = '';
-        loadInviteCodes();
-      } catch (err) {
-        Toast.error('Failed: ' + err.message);
-      }
-    });
 
     // ---- RESULTS ----
 

@@ -26,6 +26,8 @@
       border-radius: var(--radius-lg);
       overflow: hidden;
       box-shadow: var(--shadow-sm);
+      padding-left: 0.5rem;
+      padding-right: 0.5rem;
     }
 
     .group-card-header {
@@ -35,6 +37,8 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      margin-left: -0.5rem;
+      margin-right: -0.5rem;
     }
     .group-card-header .group-label {
       font-family: var(--font-serif);
@@ -69,6 +73,9 @@
       white-space: nowrap;
       overflow: hidden;
     }
+    /* Allow PTS header to render into its own padding — text fits within the 26px
+       cell border-box but overflow: hidden clips it to the 10px content area */
+    .standings-table th:last-child { overflow: visible; }
     /* team col fills remaining space; stat cols are fixed-width */
     .standings-table th.team-col { text-align: left; padding-left: 0.75rem; }
     .standings-table th:not(.team-col) { width: 26px; }

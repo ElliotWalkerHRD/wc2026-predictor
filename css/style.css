@@ -1535,13 +1535,5 @@ select.form-control option {
   .standings-table .team-name-abbr { display: inline; }
 }
 
-/* Standings table inset — pulls the table away from both card edges so
-   the PTS column (right) and team stripe (left) don't touch the card border.
-   Selector specificity (0,2,0) beats per-page `.standings-table` (0,1,0)
-   and wins regardless of cascade order, so no !important needed. */
-.group-card .standings-table {
-  width: calc(100% - 0.75rem);
-  margin: 0 0.375rem;
-}
 /* Bottom gap so last row doesn't touch the card bottom border */
 .group-card { padding-bottom: 0.375rem; }

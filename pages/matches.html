@@ -277,13 +277,42 @@
       const session = await DB.getSession();
       currentUserId = session?.user?.id || null;
 
-      const [matchResults, predictions] = await Promise.all([
+      // Compute which match question_keys have already kicked off
+      const now = Date.now();
+      const lockedKeys = [
+        ...GROUP_FIXTURES
+          .filter(f => now >= new Date(`${f[1]}T${f[2]}:00Z`).getTime())
+          .map(f => `m${f[0]}`),
+        ...Object.values(KNOCKOUT_ROUNDS)
+          .flatMap(r => r.matches || [])
+          .filter(m => m.date && m.time && now >= new Date(`${m.date}T${m.time}:00Z`).getTime())
+          .map(m => `m${m.id}`)
+      ];
+
+      // Own predictions (always safe) + all-user preds only for kicked-off matches
+      const ownPredsPromise    = currentUserId ? DB.getUserPredictions(currentUserId).catch(() => []) : Promise.resolve([]);
+      const ownProfilePromise  = currentUserId ? DB.getProfiles([currentUserId]).catch(() => [])      : Promise.resolve([]);
+      const lockedPredsPromise = lockedKeys.length ? DB.getAllPredictions(null, lockedKeys).catch(() => []) : Promise.resolve([]);
+
+      const [matchResults, ownPreds, ownProfiles, lockedPreds] = await Promise.all([
         DB.getMatchResults().catch(() => []),
-        DB.getAllPredictions().catch(() => [])
+        ownPredsPromise,
+        ownProfilePromise,
+        lockedPredsPromise
       ]);
 
       matchResults.forEach(r => { allResults[r.match_id] = r; });
-      allPreds = predictions;
+      const ownProfile = ownProfiles[0] || null;
+
+      // Pre-kickoff matches: own prediction only, enriched with own profile for modal avatar rendering
+      const lockedKeySet = new Set(lockedKeys);
+      const ownPreKickoffPreds = ownPreds
+        .filter(p => !lockedKeySet.has(p.question_key))
+        .map(p => ({ ...p, profiles: ownProfile }));
+
+      // allPreds: all-user data for locked matches + own-only for pre-kickoff
+      // Others' pre-kickoff predictions are never fetched — enforcement is at query level above
+      allPreds = [...lockedPreds, ...ownPreKickoffPreds];
 
       if (currentUserId) {
         DB.getMyLeagues(currentUserId).then(l => { myLeagues = l || []; }).catch(() => {});

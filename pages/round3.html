@@ -844,6 +844,24 @@
       if (!bodyEl) return;
       bodyEl.innerHTML = `<div style="padding:2.5rem;text-align:center"><div class="spinner" style="margin:0 auto"></div></div>`;
 
+      // Per-match kickoff enforcement — others' picks only visible after the match starts
+      const fixture = GROUP_FIXTURES.find(f => f[0] === matchId);
+      const kickoff = fixture ? new Date(`${fixture[1]}T${fixture[2]}:00Z`) : null;
+      if (!kickoff || Date.now() < kickoff.getTime()) {
+        const myPred = saved[`m${matchId}`];
+        const myHtml = (myPred && myPred.home !== undefined)
+          ? `<div class="player-pred-row is-you">
+              <span class="player-pred-name" style="font-weight:600">You</span>
+              <span class="player-pred-score">${myPred.home}–${myPred.away}</span>
+            </div>`
+          : `<div style="padding:1rem 1.25rem;color:var(--grey-400)">You haven't predicted this match yet.</div>`;
+        bodyEl.innerHTML = myHtml +
+          `<div style="padding:0.75rem 1.25rem;font-size:0.8rem;color:var(--grey-400);border-top:1px solid var(--grey-100);display:flex;align-items:center;gap:0.5rem">
+            <i class="ti ti-lock"></i> Other predictions reveal at kick-off
+          </div>`;
+        return;
+      }
+
       try {
         let memberIds = null;
         if (activePredLeague !== 'global') {
@@ -853,7 +871,7 @@
           memberIds = memberCache[activePredLeague];
         }
 
-        const preds = await DB.getMatchPredictions(matchId, memberIds);
+        const preds = await DB.getMatchPredictions(matchId, { userIds: memberIds, currentUserId: userId, isLocked: true });
         const predMap = {};
         preds.forEach(p => { predMap[p.user_id] = p; });
 

@@ -137,24 +137,38 @@ async function getUserPredictions(userId, round = null) {
   return data || [];
 }
 
-async function getAllPredictions(round = null) {
+async function getAllPredictions(round = null, questionKeys = null) {
   const sb = initSupabase();
-  let query = sb.from('predictions').select('*, profiles(display_name, avatar_color)');
+  let query = sb.from('predictions').select('*, profiles(display_name, avatar_color, avatar_url)');
   if (round) query = query.eq('round', round);
+  // When questionKeys supplied, restrict to those match question_keys only —
+  // used to fetch all-user data only for already-kicked-off matches.
+  if (questionKeys && questionKeys.length) query = query.in('question_key', questionKeys);
   const { data, error } = await query;
   if (error) throw error;
   return data || [];
 }
 
-// Fetch all predictions for a single match (any round), optionally scoped to a list of user IDs.
-// Lock enforcement is in the caller — only call this for matches past their kickoff time.
-async function getMatchPredictions(matchId, userIds = null) {
+// Fetch predictions for a single match with kick-off enforcement at the query level.
+// isLocked: true  → return all predictions (optionally scoped to userIds)
+// isLocked: false → return ONLY the currentUserId's own row; others' data is never sent over
+//                   the network. Pass currentUserId=null to get an empty result.
+async function getMatchPredictions(matchId, { userIds = null, currentUserId = null, isLocked = false } = {}) {
+  if (!isLocked && !currentUserId) return [];
+
   const sb = initSupabase();
   let query = sb
     .from('predictions')
     .select('user_id, value, profiles(display_name, avatar_color, avatar_url)')
     .eq('question_key', `m${matchId}`);
-  if (userIds && userIds.length) query = query.in('user_id', userIds);
+
+  if (!isLocked) {
+    // Pre-kickoff: restrict to own row in the query — enforcement is here, not in the UI
+    query = query.eq('user_id', currentUserId);
+  } else if (userIds && userIds.length) {
+    query = query.in('user_id', userIds);
+  }
+
   const { data, error } = await query;
   if (error) throw error;
   return data || [];

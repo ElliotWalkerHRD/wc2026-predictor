@@ -441,13 +441,15 @@ function computeDerived(sm, qual, bt) {
     if (watched.has(ac)) nationGoals[ac] += a;
   }
 
-  // Hardest group: smallest Pts gap between 2nd and 3rd (need 3rd to have played)
+  // Hardest group: smallest Pts gap between 1st and 4th (Q1.12 scoring rule)
+  // Tie-break: higher GD of the 4th-place team (more compressed bottom)
   let hardestGroup = null, minGap = Infinity;
   for (const g of GROUP_KEYS) {
-    const { runnerUp, third } = qual.groups[g];
-    if (!runnerUp || !third || third.P === 0) continue;
-    const gap = runnerUp.Pts - third.Pts;
-    if (gap < minGap || (gap === minGap && (third.GD - (qual.groups[hardestGroup]?.third?.GD ?? -Infinity)) > 0)) {
+    const { all } = qual.groups[g];
+    if (!all || all.length < 4 || all[3].P === 0) continue;
+    const gap = all[0].Pts - all[3].Pts;
+    const prevFourth = qual.groups[hardestGroup]?.all?.[3];
+    if (gap < minGap || (gap === minGap && all[3].GD > (prevFourth?.GD ?? -Infinity))) {
       minGap = gap; hardestGroup = g;
     }
   }
@@ -689,7 +691,7 @@ function derivedAnswersHtml(d) {
     ['1.8 Host goals (USA/CAN/MEX)', d.hasAnyScore ? tNum(d.hostGoals) : '<span class="dim">—</span>'],
     ['1.9 Top nation (ENG/FRA/BRA/ARG)', topN ? `${tTeam(topN)} <span style="color:var(--grey-500);font-size:0.75rem">(${topNGoals} goals)</span>` : '<span class="dim">—</span>'],
     ['1.11 Total group goals',  d.hasAnyScore ? tNum(d.totalGoals) : '<span class="dim">—</span>'],
-    ['1.12 Hardest group',      d.hardestGroup ? `<strong>Group ${d.hardestGroup}</strong> <span style="color:var(--grey-500);font-size:0.75rem">(${d.minGap}pt gap 2nd↔3rd)</span>` : '<span class="dim">—</span>'],
+    ['1.12 Hardest group',      d.hardestGroup ? `<strong>Group ${d.hardestGroup}</strong> <span style="color:var(--grey-500);font-size:0.75rem">(${d.minGap}pt gap 1st↔4th)</span>` : '<span class="dim">—</span>'],
   ].map(([k,v]) => `<div class="derived-row"><span class="derived-key">${k}</span><span class="derived-val">${v}</span></div>`).join('');
 
   return `

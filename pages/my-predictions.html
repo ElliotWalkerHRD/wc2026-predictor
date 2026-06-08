@@ -17,6 +17,8 @@
       margin-bottom: 1.75rem;
       overflow-x: auto;
       scrollbar-width: none;
+      scroll-snap-type: x mandatory;
+      scroll-padding: 0;
     }
 
     .round-tab-btn {
@@ -33,6 +35,7 @@
       white-space: nowrap;
       margin-bottom: -1.5px;
       transition: color 0.15s;
+      scroll-snap-align: start;
     }
 
     .round-tab-btn:hover { color: var(--ink); }
@@ -346,9 +349,14 @@
           activeRound = btn.dataset.round;
           tabsEl.querySelectorAll('.round-tab-btn').forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
+          btn.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
           renderActivePanel();
         });
       });
+
+      // Scroll the initially-active tab into view
+      tabsEl.querySelector('.round-tab-btn.active')
+        ?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
     }
 
     function renderActivePanel() {

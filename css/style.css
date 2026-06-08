@@ -1487,4 +1487,42 @@ select.form-control option {
     max-width: 100%;
     width: 100%;
   }
+
+  /* League picker: remove fixed min-width so it fills the row */
+  #leaguePicker {
+    min-width: 0 !important;
+    width: 100%;
+  }
+}
+
+/* ============================================================
+   Mobile pass 2 — structural layout fixes
+   ============================================================ */
+
+/* Leaderboard: hide per-round columns, show only Rank/Player/Total */
+@media (max-width: 640px) {
+  .hide-mobile { display: none !important; }
+
+  /* Bracket: right-fade affordance to signal horizontal scroll */
+  .bracket-outer {
+    -webkit-mask-image: linear-gradient(to right, #000 88%, transparent 100%);
+            mask-image: linear-gradient(to right, #000 88%, transparent 100%);
+  }
+}
+
+/* Standings tables: on 1-col mobile, keep only Team / P / GD / Pts */
+@media (max-width: 599px) {
+  /* W (col 3), D (col 4), L (col 5) — no class on these, use nth-child */
+  .standings-table th:nth-child(3),
+  .standings-table th:nth-child(4),
+  .standings-table th:nth-child(5),
+  .standings-table td:nth-child(3),
+  .standings-table td:nth-child(4),
+  .standings-table td:nth-child(5),
+  /* GF / GA already classed */
+  .standings-table .col-gf,
+  .standings-table .col-ga { display: none; }
+  /* Abbreviate team names */
+  .standings-table .team-name-full { display: none; }
+  .standings-table .team-name-abbr { display: inline; }
 }

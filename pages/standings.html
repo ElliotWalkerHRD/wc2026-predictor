@@ -382,7 +382,7 @@
         ? computePredGroup(groupKey, predMap)
         : computeGroup(groupKey);
       const count = Math.round(rows.reduce((n, r) => n + r.P, 0) / 2);
-      const total = GROUPS[groupKey].teams.length * 3;
+      const total = GROUP_FIXTURES.filter(f => f[3] === groupKey).length;
       const playedLabel = viewMode === 'predicted'
         ? (count > 0 ? `${count} / ${total} predicted` : 'None predicted')
         : (count > 0 ? `${count} / ${total} played` : 'Pre-tournament');

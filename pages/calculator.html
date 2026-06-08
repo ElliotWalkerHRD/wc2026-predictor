@@ -10,11 +10,6 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
   <link rel="stylesheet" href="../css/style.css?v=4">
   <style>
-    /* ---- Scenario page ---- */
-    .scenario-intro { margin-bottom: 1.5rem; }
-    .scenario-intro h1 { font-family: var(--font-serif); font-size: 1.9rem; margin: 0 0 0.3rem; }
-    .scenario-intro p  { font-size: 0.88rem; color: var(--grey-500); margin: 0; }
-
     /* Tabs */
     .scenario-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--grey-200); margin-bottom: 1.5rem; overflow-x: auto; }
     .s-tab-btn {
@@ -159,13 +154,23 @@
   </style>
 </head>
 <body>
-<header><nav id="main-nav" class="main-nav"></nav></header>
+<nav class="nav" id="main-nav"></nav>
 
-<main class="container" style="padding-top:1.5rem;padding-bottom:4rem">
+<div class="page-banner">
+  <div class="container">
+    <nav class="breadcrumb">WC2026 &rsaquo; <span>Calculator</span></nav>
+    <h1 class="page-title">Calculator</h1>
+    <p class="page-desc">Enter hypothetical scores &middot; See the bracket fill &middot; Push to your picks</p>
+  </div>
+</div>
+
+<main class="main-content" style="padding-top:0">
+  <div class="container" style="padding-top:2rem;padding-bottom:4rem">
   <div id="scenario-root">
     <div style="text-align:center;padding:3rem">
       <i class="ti ti-loader-2 spin" style="font-size:2rem;color:var(--grey-400)"></i>
     </div>
+  </div>
   </div>
 </main>
 
@@ -873,10 +878,6 @@ function onWinnerChange(e) {
 function renderApp() {
   const root = document.getElementById('scenario-root');
   root.innerHTML = `
-    <div class="scenario-intro">
-      <h1><i class="ti ti-chart-treemap" style="color:var(--lime);font-size:1.4rem;vertical-align:-2px"></i> Calculator</h1>
-      <p>Enter hypothetical scores, see the bracket fill, and push results to your real predictions.</p>
-    </div>
     <div class="scenario-tabs">
       <button class="s-tab-btn active" data-tab="groups"><i class="ti ti-table"></i> Group Stage</button>
       <button class="s-tab-btn" data-tab="bracket"><i class="ti ti-tournament"></i> Bracket</button>

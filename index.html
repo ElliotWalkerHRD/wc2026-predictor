@@ -196,11 +196,11 @@
     .rounds-lock-sub { font-size: 0.85rem; color: var(--grey-500); margin-bottom: 1.25rem; }
     .rounds-lock-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(2, 1fr);
       gap: 0.625rem;
     }
-    @media (min-width: 680px) { .rounds-lock-grid { grid-template-columns: repeat(8, 1fr); } }
-    @media (max-width: 400px) { .rounds-lock-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (min-width: 480px) { .rounds-lock-grid { grid-template-columns: repeat(4, 1fr); } }
+    @media (min-width: 900px) { .rounds-lock-grid { grid-template-columns: repeat(8, 1fr); } }
 
     .round-lock-card {
       background: var(--white);
@@ -480,16 +480,11 @@
     // ---- Round lock status grid ----
     function renderRoundLockGrid() {
       const now = Date.now();
-      const openTimes = ROUNDS_HOME
-        .map(r => DB.getRoundLockDate(r.id)?.getTime())
-        .filter(t => t && t > now);
-      const nextLock = openTimes.length ? Math.min(...openTimes) : null;
 
       const cards = ROUNDS_HOME.map(r => {
-        const lt     = DB.getRoundLockDate(r.id)?.getTime();
-        const locked   = lt && lt <= now;
-        const isOpen   = !locked && lt === nextLock;
-        const upcoming = !locked && !isOpen;
+        const lt   = DB.getRoundLockDate(r.id)?.getTime();
+        const locked = lt && lt <= now;
+        const isOpen = !locked && lt > now;
 
         const urgent = isOpen && (lt - now) < 86400000;
 

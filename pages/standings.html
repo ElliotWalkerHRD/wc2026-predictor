@@ -24,9 +24,8 @@
       background: var(--white);
       border: 1px solid var(--grey-300);
       border-radius: var(--radius-lg);
-      overflow: visible;
+      overflow: hidden;
       box-shadow: var(--shadow-sm);
-      padding: 0 12px;
     }
 
     .group-card-header {
@@ -40,6 +39,7 @@
     .group-card-header .group-label {
       font-family: var(--font-serif);
       font-size: 1.05rem;
+      color: var(--white);
     }
     .group-played-chip {
       font-size: 0.68rem;
@@ -73,6 +73,9 @@
     /* team col fills remaining space; stat cols are fixed-width */
     .standings-table th.team-col { text-align: left; padding-left: 0.75rem; }
     .standings-table th:not(.team-col) { width: 26px; }
+    .standings-table th:last-child,
+    .standings-table td:last-child { width: 32px; padding-right: 0.75rem; }
+    .standings-table th:last-child { overflow: visible; }
     .standings-table td {
       padding: 0.45rem 0.5rem;
       text-align: center;
@@ -379,7 +382,7 @@
         ? computePredGroup(groupKey, predMap)
         : computeGroup(groupKey);
       const count = Math.round(rows.reduce((n, r) => n + r.P, 0) / 2);
-      const total = GROUPS[groupKey].teams.length * 3;
+      const total = GROUP_FIXTURES.filter(f => f[3] === groupKey).length;
       const playedLabel = viewMode === 'predicted'
         ? (count > 0 ? `${count} / ${total} predicted` : 'None predicted')
         : (count > 0 ? `${count} / ${total} played` : 'Pre-tournament');

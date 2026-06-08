@@ -250,6 +250,86 @@
       gap: 0.375rem;
       margin-bottom: 0.875rem;
     }
+
+    /* ---- My Predicted Tables ---- */
+    #predTablesSection { margin-top: 2.5rem; }
+    .pred-tables-hd {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: var(--font-serif);
+      font-size: 1.15rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1.5px solid var(--grey-300);
+      margin-bottom: 0.875rem;
+    }
+    .pred-tables-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+    @media (min-width: 600px)  { .pred-tables-grid { grid-template-columns: 1fr 1fr; } }
+    @media (min-width: 1100px) { .pred-tables-grid { grid-template-columns: 1fr 1fr 1fr; } }
+    .group-card {
+      background: var(--white);
+      border: 1px solid var(--grey-300);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+    .group-card-header {
+      background: var(--ink);
+      color: var(--white);
+      padding: 0.55rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .group-card-header .group-label { font-family: var(--font-serif); font-size: 1.05rem; }
+    .group-played-chip {
+      font-size: 0.68rem; font-weight: 600;
+      background: rgba(255,255,255,0.12);
+      border-radius: 999px; padding: 0.15rem 0.6rem;
+      color: rgba(255,255,255,0.65); letter-spacing: 0.03em;
+    }
+    .standings-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; table-layout: fixed; }
+    .standings-table th {
+      padding: 0.35rem 0.4rem; text-align: center;
+      font-size: 0.65rem; font-weight: 700; letter-spacing: 0.07em;
+      color: var(--grey-500); text-transform: uppercase;
+      background: var(--grey-100); border-bottom: 1px solid var(--grey-300);
+      white-space: nowrap; overflow: hidden;
+    }
+    .standings-table th.team-col { text-align: left; padding-left: 0.75rem; }
+    .standings-table th:not(.team-col) { width: 26px; }
+    .standings-table td {
+      padding: 0.45rem 0.4rem; text-align: center;
+      border-bottom: 1px solid var(--grey-100); color: var(--grey-700);
+    }
+    .standings-table td.team-col { text-align: left; padding-left: 0; overflow: hidden; }
+    .standings-table tr:last-child td { border-bottom: none; }
+    .standings-table tr.qual-1 td.team-col { border-left: 3px solid var(--lime-dark); }
+    .standings-table tr.qual-2 td.team-col { border-left: 3px solid var(--lime-dark); }
+    .standings-table tr.qual-3 td.team-col { border-left: 3px solid #a3e635; }
+    .team-cell { display: flex; align-items: center; gap: 0.4rem; padding-left: 0.5rem; overflow: hidden; }
+    .team-rank { color: var(--grey-400); font-size: 0.7rem; width: 12px; flex-shrink: 0; text-align: right; }
+    .team-cell .team-name-full,
+    .team-cell .team-name-abbr { font-weight: 500; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .team-name-abbr { display: none; }
+    @media (min-width: 600px) and (max-width: 1099px) {
+      .standings-table .col-gf, .standings-table .col-ga, .standings-table .col-gd { display: none; }
+    }
+    @media (min-width: 600px) and (max-width: 799px) {
+      .team-name-full { display: none; }
+      .team-name-abbr { display: inline; }
+    }
+    .pts-cell { font-weight: 700; color: var(--ink); }
+    .gd-pos { color: #16a34a; font-weight: 600; }
+    .gd-neg { color: var(--red); font-weight: 600; }
+    .legend { display: flex; gap: 1.25rem; flex-wrap: wrap; font-size: 0.72rem; color: var(--grey-500); margin-bottom: 2rem; align-items: center; }
+    .legend-item { display: flex; align-items: center; gap: 0.35rem; }
+    .legend-stripe { width: 10px; height: 14px; border-radius: 2px; flex-shrink: 0; }
   </style>
 </head>
 <body>
@@ -281,6 +361,8 @@
       <div id="matchesContent">
         <div class="loading-overlay"><div class="spinner"></div></div>
       </div>
+
+      <div id="predTablesSection"></div>
 
       <div class="sticky-dock" id="stickySave" style="display:none">
         <div class="sticky-dock-inner">
@@ -385,6 +467,7 @@
 
       renderLockingSoon();
       renderMatches();
+      renderPredTables();
       tickMatchLocks();
       const _lockTick = setInterval(tickMatchLocks, 10_000);
       window.addEventListener('pagehide', () => clearInterval(_lockTick), { once: true });
@@ -405,6 +488,7 @@
           const oa = document.getElementById(`${otherP}a_${id}`);
           if (oh && oa) { oh.value = hEl.value; oa.value = aEl.value; }
           updateFilledCount();
+          renderPredTables();
         });
       });
     }
@@ -585,6 +669,68 @@
           ${matchLocked ? `<button class="view-picks-btn" data-match="${id}"><i class="ti ti-eye"></i> See picks</button>` : ''}
         </div>
       `;
+    }
+
+    function renderPredGroupCard(groupKey) {
+      const rows = computePredGroup(groupKey, saved);
+      const count = Math.round(rows.reduce((n, r) => n + r.P, 0) / 2);
+      const total = GROUPS[groupKey].teams.length * 3;
+      const chipLabel = count > 0 ? `${count} / ${total} predicted` : 'None predicted';
+      const tbody = rows.map((s, i) => {
+        const qualClass = i < 2 ? `qual-${i + 1}` : i === 2 ? 'qual-3' : '';
+        const gdStr = s.GD > 0 ? `+${s.GD}` : `${s.GD}`;
+        const gdClass = s.GD > 0 ? 'gd-pos' : s.GD < 0 ? 'gd-neg' : '';
+        return `
+          <tr class="${qualClass}">
+            <td class="team-col">
+              <div class="team-cell">
+                <span class="team-rank">${i + 1}</span>
+                ${teamFlagImg(s.code)}
+                <span class="team-name-full">${getTeam(s.code).name}</span>
+                <span class="team-name-abbr">${s.code}</span>
+              </div>
+            </td>
+            <td>${s.P}</td><td>${s.W}</td><td>${s.D}</td><td>${s.L}</td>
+            <td class="col-gf">${s.GF}</td>
+            <td class="col-ga">${s.GA}</td>
+            <td class="col-gd ${gdClass}">${s.P > 0 ? gdStr : '—'}</td>
+            <td class="pts-cell">${s.Pts}</td>
+          </tr>`;
+      }).join('');
+      return `
+        <div class="group-card">
+          <div class="group-card-header">
+            <span class="group-label">Group ${groupKey}</span>
+            <span class="group-played-chip">${chipLabel}</span>
+          </div>
+          <table class="standings-table">
+            <thead><tr>
+              <th class="team-col">Team</th>
+              <th title="Played">P</th><th title="Won">W</th><th title="Drawn">D</th><th title="Lost">L</th>
+              <th class="col-gf" title="Goals For">GF</th>
+              <th class="col-ga" title="Goals Against">GA</th>
+              <th class="col-gd" title="Goal Difference">GD</th>
+              <th title="Points">Pts</th>
+            </tr></thead>
+            <tbody>${tbody}</tbody>
+          </table>
+        </div>`;
+    }
+
+    function renderPredTables() {
+      const container = document.getElementById('predTablesSection');
+      if (!container) return;
+      const grid = 'ABCDEFGHIJKL'.split('').map(g => renderPredGroupCard(g)).join('');
+      container.innerHTML = `
+        <div class="pred-tables-hd">
+          <span><i class="ti ti-layout-grid"></i> My Predicted Tables</span>
+          <span style="font-family:var(--font-sans);font-size:0.68rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--grey-400)">Live &middot; updates as you type</span>
+        </div>
+        <div class="pred-tables-grid">${grid}</div>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-stripe" style="background:var(--lime-dark)"></div><span>Top 2 — advance to R32</span></div>
+          <div class="legend-item"><div class="legend-stripe" style="background:#a3e635"></div><span>3rd place — may advance</span></div>
+        </div>`;
     }
 
     function updateFilledCount() {

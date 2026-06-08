@@ -229,6 +229,30 @@
     .legend-item { display: flex; align-items: center; gap: 0.35rem; }
     .legend-stripe { width: 10px; height: 14px; border-radius: 2px; flex-shrink: 0; }
 
+    /* ---- Official / My Predicted toggle ---- */
+    .mode-toggle {
+      display: inline-flex;
+      background: var(--grey-100);
+      border: 1px solid var(--grey-200);
+      border-radius: 9999px;
+      padding: 3px;
+      gap: 2px;
+    }
+    .mode-toggle button {
+      border: none;
+      padding: 0.3rem 0.875rem;
+      border-radius: 9999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: transparent;
+      color: var(--grey-500);
+      transition: background 0.12s, color 0.12s;
+      white-space: nowrap;
+    }
+    .mode-toggle button.active { background: var(--white); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+    .mode-toggle button:not(.active):hover { color: var(--ink); }
+
     .live-chip {
       display: inline-flex;
       align-items: center;
@@ -269,6 +293,7 @@
         <div style="display:flex;align-items:center;margin-bottom:0.875rem;gap:0.75rem;flex-wrap:wrap">
           <h2 class="section-heading" style="margin-bottom:0"><i class="ti ti-layout-grid"></i> Group Stage</h2>
           <span class="live-chip"><div class="live-dot"></div> Live</span>
+          <div id="viewToggle" style="margin-left:auto"></div>
         </div>
         <div class="legend">
           <div class="legend-item">
@@ -312,6 +337,9 @@
     Nav.render('standings');
 
     let resultMap = {}; // match_id -> { home_score, away_score, status }
+    let viewMode = 'official'; // 'official' | 'predicted'
+    let predMap = null;        // question_key -> { home, away } — loaded on demand
+    let currentUser = null;
 
     // ---- Group standings ----
     function computeGroup(groupKey) {
@@ -350,11 +378,14 @@
     }
 
     function renderGroupCard(groupKey) {
-      const rows = computeGroup(groupKey);
-      const totalPlayed = rows.reduce((n, r) => n + r.P, 0) / 2;
-      const playedLabel = totalPlayed > 0
-        ? `${Math.round(totalPlayed)} / ${GROUPS[groupKey].teams.length * 3} played`
-        : 'Pre-tournament';
+      const rows = viewMode === 'predicted'
+        ? computePredGroup(groupKey, predMap)
+        : computeGroup(groupKey);
+      const count = Math.round(rows.reduce((n, r) => n + r.P, 0) / 2);
+      const total = GROUPS[groupKey].teams.length * 3;
+      const playedLabel = viewMode === 'predicted'
+        ? (count > 0 ? `${count} / ${total} predicted` : 'None predicted')
+        : (count > 0 ? `${count} / ${total} played` : 'Pre-tournament');
 
       const tbody = rows.map((s, i) => {
         const qualClass = i < 2 ? `qual-${i + 1}` : i === 2 ? 'qual-3' : '';
@@ -407,8 +438,42 @@
     }
 
     function renderGroups() {
-      document.getElementById('groupsGrid').innerHTML =
-        Object.keys(GROUPS).map(k => renderGroupCard(k)).join('');
+      const grid = document.getElementById('groupsGrid');
+      if (viewMode === 'predicted' && !currentUser) {
+        grid.innerHTML = `
+          <div style="grid-column:1/-1;text-align:center;padding:3rem 1rem">
+            <i class="ti ti-lock" style="font-size:2rem;color:var(--grey-300);display:block;margin-bottom:0.75rem"></i>
+            <p style="font-weight:600;color:var(--grey-500)"><a href="auth.html">Log in</a> to see your predicted tables.</p>
+          </div>`;
+        return;
+      }
+      if (viewMode === 'predicted' && (!predMap || !Object.keys(predMap).length)) {
+        grid.innerHTML = `
+          <div style="grid-column:1/-1;text-align:center;padding:3rem 1rem">
+            <i class="ti ti-ball-football" style="font-size:2rem;color:var(--grey-300);display:block;margin-bottom:0.75rem"></i>
+            <p style="font-weight:600;color:var(--grey-500)">You haven't predicted any Round 3 scores yet.</p>
+            <a href="round3.html" class="btn btn-lime btn-sm" style="display:inline-flex;margin-top:0.75rem"><i class="ti ti-ball-football"></i> Go predict</a>
+          </div>`;
+        return;
+      }
+      grid.innerHTML = Object.keys(GROUPS).map(k => renderGroupCard(k)).join('');
+    }
+
+    function renderToggle() {
+      const el = document.getElementById('viewToggle');
+      if (!el) return;
+      el.innerHTML = `
+        <div class="mode-toggle">
+          <button class="${viewMode === 'official' ? 'active' : ''}" data-mode="official">Official</button>
+          <button class="${viewMode === 'predicted' ? 'active' : ''}" data-mode="predicted">My Predicted</button>
+        </div>`;
+      el.querySelectorAll('[data-mode]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          viewMode = btn.dataset.mode;
+          renderToggle();
+          renderGroups();
+        });
+      });
     }
 
     // ---- Knockout bracket ----
@@ -522,6 +587,21 @@
         document.getElementById('bracketContent').innerHTML =
           `<div class="alert alert-error"><i class="ti ti-alert-triangle"></i> ${err.message}</div>`;
       }
+
+      // Load user's Round 3 predictions for the "My Predicted" toggle (best-effort)
+      try {
+        const session = await DB.getSession();
+        if (session?.user) {
+          currentUser = session.user;
+          const preds = await DB.getUserPredictions(currentUser.id, 'round3');
+          predMap = {};
+          preds.forEach(p => {
+            try { predMap[p.question_key] = JSON.parse(p.value); }
+            catch { predMap[p.question_key] = p.value; }
+          });
+        }
+      } catch (_) {}
+      renderToggle();
 
       DB.subscribeToMatchResults(async () => {
         const fresh = await DB.getMatchResults().catch(() => []);

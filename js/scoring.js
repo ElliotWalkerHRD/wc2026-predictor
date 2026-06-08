@@ -216,3 +216,40 @@ const ScoringEngine = {
 };
 
 window.ScoringEngine = ScoringEngine;
+
+// ---- Predicted group standings ----
+// predMap: { 'm73': {home:N, away:N} } — only predicted matches; blank/NaN entries skipped.
+// Returns sorted rows identical to the official standings sort (Pts → GD → GF).
+function computePredGroup(groupKey, predMap) {
+  const stats = {};
+  GROUPS[groupKey].teams.forEach(code => {
+    stats[code] = { code, P: 0, W: 0, D: 0, L: 0, GF: 0, GA: 0, GD: 0, Pts: 0 };
+  });
+
+  GROUP_FIXTURES
+    .filter(f => f[3] === groupKey)
+    .forEach(f => {
+      const pred = predMap && predMap[`m${f[0]}`];
+      if (!pred) return;
+      const hs = parseInt(pred.home), as_ = parseInt(pred.away);
+      if (isNaN(hs) || isNaN(as_)) return;
+      const home = f[4], away = f[5];
+
+      stats[home].P++; stats[away].P++;
+      stats[home].GF += hs; stats[home].GA += as_;
+      stats[away].GF += as_; stats[away].GA += hs;
+
+      if (hs > as_) {
+        stats[home].W++; stats[home].Pts += 3; stats[away].L++;
+      } else if (hs < as_) {
+        stats[away].W++; stats[away].Pts += 3; stats[home].L++;
+      } else {
+        stats[home].D++; stats[home].Pts++;
+        stats[away].D++; stats[away].Pts++;
+      }
+    });
+
+  Object.values(stats).forEach(s => { s.GD = s.GF - s.GA; });
+  return Object.values(stats).sort((a, b) => b.Pts - a.Pts || b.GD - a.GD || b.GF - a.GF);
+}
+window.computePredGroup = computePredGroup;

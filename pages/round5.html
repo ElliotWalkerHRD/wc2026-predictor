@@ -196,9 +196,11 @@
               </div>
               <div class="ko-score-inputs">
                 <input type="number" id="h_${m.id}" class="score-num" min="0" max="20"
+                  inputmode="numeric" pattern="[0-9]*"
                   value="${homeVal}" placeholder="0" ${locked ? 'disabled' : ''}>
                 <span class="score-sep">–</span>
                 <input type="number" id="a_${m.id}" class="score-num" min="0" max="20"
+                  inputmode="numeric" pattern="[0-9]*"
                   value="${awayVal}" placeholder="0" ${locked ? 'disabled' : ''}>
               </div>
               <div class="ko-team away">
@@ -214,9 +216,11 @@
               ${!locked ? `
                 <div class="ko-score-inputs" style="justify-content:center;margin-top:0.625rem">
                   <input type="number" id="h_${m.id}" class="score-num" min="0" max="20"
+                    inputmode="numeric" pattern="[0-9]*"
                     value="${homeVal}" placeholder="–" style="opacity:0.5">
                   <span class="score-sep">–</span>
                   <input type="number" id="a_${m.id}" class="score-num" min="0" max="20"
+                    inputmode="numeric" pattern="[0-9]*"
                     value="${awayVal}" placeholder="–" style="opacity:0.5">
                 </div>
                 <small style="font-size:0.68rem;color:var(--grey-400)">You can enter score now or wait</small>

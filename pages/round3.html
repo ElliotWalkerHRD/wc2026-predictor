@@ -662,9 +662,11 @@
             </div>
             <div class="score-inputs">
               <input type="number" id="${idPrefix}h_${id}" class="score-num" min="0" max="20"
+                inputmode="numeric" pattern="[0-9]*"
                 value="${homeVal}" placeholder="0" ${matchLocked ? 'disabled' : ''}>
               <span class="score-sep">–</span>
               <input type="number" id="${idPrefix}a_${id}" class="score-num" min="0" max="20"
+                inputmode="numeric" pattern="[0-9]*"
                 value="${awayVal}" placeholder="0" ${matchLocked ? 'disabled' : ''}>
             </div>
             <div class="score-team away">

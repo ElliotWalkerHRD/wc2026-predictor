@@ -36,7 +36,7 @@
 
     /* Load picks bar */
     .load-picks-bar {
-      display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+      display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;
       margin-bottom: 1.25rem; padding: 0.65rem 1rem;
       background: var(--grey-100); border-radius: var(--radius-md); border: 1px solid var(--grey-200);
     }
@@ -65,16 +65,19 @@
     .fixture-row.fx-locked { opacity: 0.45; }
     .fixture-row:last-of-type { border-bottom: none; }
     .fx-date { font-size: 0.65rem; color: var(--grey-400); white-space: nowrap; }
-    .fx-home { display: flex; align-items: center; gap: 0.25rem; justify-content: flex-end; }
-    .fx-away { display: flex; align-items: center; gap: 0.25rem; }
-    .fx-home .team-flag, .fx-away .team-flag { width: 18px; height: 12px; object-fit: cover; border-radius: 2px; }
-    .fx-name { color: var(--grey-700); }
+    .fx-home { display: flex; align-items: center; gap: 0.25rem; justify-content: flex-end; min-width: 0; }
+    .fx-away { display: flex; align-items: center; gap: 0.25rem; min-width: 0; }
+    .fx-home .team-flag, .fx-away .team-flag { width: 18px; height: 12px; flex-shrink: 0; object-fit: cover; border-radius: 2px; }
+    .fx-name { color: var(--grey-700); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .fx-score { display: flex; align-items: center; gap: 0.2rem; }
     .fx-score-input {
       width: 32px; height: 28px; text-align: center; border: 1px solid var(--grey-300);
       border-radius: var(--radius-sm); font-size: 0.8rem; font-weight: 600; color: var(--ink);
       background: var(--white); padding: 0;
       -moz-appearance: textfield;
+    }
+    @media (max-width: 559px) {
+      .fx-score-input, .bm-score-input { min-height: 40px; min-width: 40px; }
     }
     .fx-score-input::-webkit-outer-spin-button,
     .fx-score-input::-webkit-inner-spin-button { -webkit-appearance: none; }
@@ -94,6 +97,7 @@
     .scen-standings tr.q1, .scen-standings tr.q2 { background: rgba(200,241,53,0.06); }
     .scen-standings tr.q3 { background: rgba(99,102,241,0.04); }
     .pos-num { display: inline-block; width: 14px; color: var(--grey-400); font-size: 0.65rem; }
+    .standing-team { display: inline-flex; align-items: center; gap: 0.25rem; vertical-align: middle; }
 
     /* Bracket */
     .bracket-round { margin-bottom: 2.5rem; }
@@ -104,7 +108,7 @@
     .bracket-match-card { border: 1px solid var(--grey-200); border-radius: var(--radius-lg); overflow: hidden; }
     .bracket-match-head {
       background: var(--grey-100); padding: 0.35rem 0.75rem;
-      display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+      display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;
       font-size: 0.65rem; color: var(--grey-500); font-weight: 600; letter-spacing: 0.04em;
     }
     .bm-row {
@@ -573,7 +577,7 @@ function miniStandingsHtml(g) {
   const rows = st.map((t, i) => {
     const cls = i < 2 ? (i === 0 ? 'q1' : 'q2') : i === 2 ? 'q3' : '';
     return `<tr class="${cls}">
-      <td class="tc"><span class="pos-num">${i+1}</span>${flagEl(t.code)} ${TEAMS[t.code]?.name || t.code}</td>
+      <td class="tc"><span class="pos-num">${i+1}</span><span class="standing-team">${flagEl(t.code)}<span>${TEAMS[t.code]?.name || t.code}</span></span></td>
       <td>${t.P}</td><td>${t.W}</td><td>${t.D}</td><td>${t.L}</td>
       <td>${t.GF}</td><td>${t.GA}</td><td>${t.GD}</td><td><strong>${t.Pts}</strong></td>
     </tr>`;

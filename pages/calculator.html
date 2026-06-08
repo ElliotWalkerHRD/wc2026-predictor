@@ -34,6 +34,14 @@
     }
     .clear-group-btn:hover { background: rgba(255,255,255,0.12); color: var(--white); }
 
+    /* Load picks bar */
+    .load-picks-bar {
+      display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+      margin-bottom: 1.25rem; padding: 0.65rem 1rem;
+      background: var(--grey-100); border-radius: var(--radius-md); border: 1px solid var(--grey-200);
+    }
+    .load-picks-bar span { font-size: 0.82rem; color: var(--grey-500); }
+
     /* Group stage grid */
     .groups-input-grid {
       display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 2rem;
@@ -552,7 +560,12 @@ function renderGroupsTab() {
       </div>`;
   }).join('');
 
-  return `<div class="groups-input-grid">${groups}</div>`;
+  return `
+    <div class="load-picks-bar">
+      <span>See the tables your Round 3 picks produce</span>
+      <button id="loadR3Btn" class="btn btn-ghost btn-sm"><i class="ti ti-download"></i> Load my Round 3 picks</button>
+    </div>
+    <div class="groups-input-grid">${groups}</div>`;
 }
 
 function miniStandingsHtml(g) {
@@ -900,6 +913,56 @@ function onWinnerChange(e) {
   recompute();
 }
 
+// ---- Load from real predictions ----
+async function loadRound3Picks() {
+  // If calculator already has group scores, confirm before overwriting
+  const hasData = GROUP_FIXTURES.some(f => {
+    const s = scoreMap[`m${f[0]}`];
+    return s && s.home != null && s.home !== '';
+  });
+  if (hasData) {
+    const ok = await showConfirm(
+      'Load Round 3 picks?',
+      'This will replace your current calculator scores with your saved Round 3 predictions. Your real predictions are not affected.',
+      'Yes, load picks'
+    );
+    if (!ok) return;
+  }
+
+  let picks;
+  try {
+    picks = await DB.getUserPredictions(_userId, 'round3');
+  } catch (e) {
+    Toast.error('Could not load predictions. Please try again.');
+    return;
+  }
+
+  if (!picks || picks.length === 0) {
+    Toast.info('No Round 3 predictions saved yet.');
+    return;
+  }
+
+  // Clear existing group scores then apply saved picks
+  GROUP_FIXTURES.forEach(f => { delete scoreMap[`m${f[0]}`]; });
+  let count = 0;
+  for (const p of picks) {
+    if (!p.question_key.startsWith('m')) continue;
+    const v = p.value;
+    if (v == null || v.home == null || v.away == null) continue;
+    scoreMap[p.question_key] = { home: parseInt(v.home), away: parseInt(v.away) };
+    count++;
+  }
+
+  if (count === 0) {
+    Toast.info('No group stage scores found in your Round 3 predictions.');
+    return;
+  }
+
+  saveScenario();
+  renderApp();
+  Toast.success(`Loaded ${count} score${count !== 1 ? 's' : ''} from your Round 3 predictions.`);
+}
+
 // ---- Clear helpers ----
 function clearGroupScores(g) {
   GROUP_FIXTURES.filter(f => f[3] === g).forEach(f => { delete scoreMap[`m${f[0]}`]; });
@@ -979,6 +1042,9 @@ function renderApp() {
 
   // Group stage input listeners
   root.querySelectorAll('.scen-input').forEach(i => i.addEventListener('input', onScoreInput));
+
+  // Load Round 3 picks into sandbox
+  root.querySelector('#loadR3Btn').addEventListener('click', loadRound3Picks);
 
   // Clear all
   root.querySelector('#clearAllBtn').addEventListener('click', clearAllScores);

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WC2026 — Scenario Predictor</title>
+  <title>WC2026 — Calculator</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
@@ -697,7 +697,7 @@ function populatePanelHtml(derived) {
     const statusLabel = status === 'locked' ? '<i class="ti ti-lock"></i> Locked'
       : status === 'nodata' ? '<i class="ti ti-minus"></i> No data'
       : '<i class="ti ti-check"></i> Open';
-    const tip = status === 'locked' ? 'This round is locked' : status === 'nodata' ? 'No scenario scores for this round' : '';
+    const tip = status === 'locked' ? 'This round is locked' : status === 'nodata' ? 'No calculator data for this round' : '';
     return `<button class="btn pop-btn${disabled ? '' : ''}" data-round="${r.id}"
       ${disabled ? 'disabled' : ''} title="${tip}">
       <span class="pop-btn-label">${r.label} – ${r.title}</span>
@@ -782,7 +782,7 @@ async function populateRound(roundId) {
   }
 
   if (predictions.length === 0) {
-    Toast.info(`No scenario data available for ${roundLabel}.`);
+    Toast.info(`No calculator data available for ${roundLabel}.`);
     return;
   }
 
@@ -794,7 +794,7 @@ async function populateRound(roundId) {
   if (overwrites.length > 0) {
     const ok = await showConfirm(
       `Replace ${overwrites.length} existing ${roundLabel} pick${overwrites.length !== 1 ? 's' : ''}?`,
-      `This will overwrite ${overwrites.length} of your current ${roundLabel} prediction${overwrites.length !== 1 ? 's' : ''} with values from your scenario. This can't be undone.`
+      `This will overwrite ${overwrites.length} of your current ${roundLabel} prediction${overwrites.length !== 1 ? 's' : ''} with values from your calculator. This can't be undone.`
     );
     if (!ok) return;
   }
@@ -810,7 +810,7 @@ async function populateRound(roundId) {
   }
 
   if (saved > 0) {
-    Toast.success(`${roundLabel} predictions updated from your scenario (${saved} pick${saved !== 1 ? 's' : ''}).`);
+    Toast.success(`${roundLabel} predictions updated from your calculator (${saved} pick${saved !== 1 ? 's' : ''}).`);
   } else {
     Toast.error(`Failed to save ${roundLabel} predictions.`);
   }
@@ -873,7 +873,7 @@ function renderApp() {
   const root = document.getElementById('scenario-root');
   root.innerHTML = `
     <div class="scenario-intro">
-      <h1><i class="ti ti-chart-treemap" style="color:var(--lime);font-size:1.4rem;vertical-align:-2px"></i> Scenario Predictor</h1>
+      <h1><i class="ti ti-chart-treemap" style="color:var(--lime);font-size:1.4rem;vertical-align:-2px"></i> Calculator</h1>
       <p>Enter hypothetical scores, see the bracket fill, and push results to your real predictions.</p>
     </div>
     <div class="scenario-tabs">
@@ -949,7 +949,7 @@ function attachPopulateListeners(el) {
     root.innerHTML = `
       <div style="text-align:center;padding:4rem 1rem">
         <i class="ti ti-lock" style="font-size:2.5rem;color:var(--grey-300);margin-bottom:1rem;display:block"></i>
-        <p style="color:var(--grey-500);margin-bottom:1.25rem">Sign in to use the Scenario Predictor.</p>
+        <p style="color:var(--grey-500);margin-bottom:1.25rem">Sign in to use the Calculator.</p>
         <a href="auth.html" class="btn btn-lime">Sign In</a>
       </div>`;
     return;

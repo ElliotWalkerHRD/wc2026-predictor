@@ -17,8 +17,8 @@
       gap: 1.25rem;
       margin-bottom: 3rem;
     }
-    @media (min-width: 600px)  { .groups-grid { grid-template-columns: 1fr 1fr; } }
-    @media (min-width: 1100px) { .groups-grid { grid-template-columns: 1fr 1fr 1fr; } }
+    @media (min-width: 800px)  { .groups-grid { grid-template-columns: 1fr 1fr; } }
+    @media (min-width: 1500px) { .groups-grid { grid-template-columns: 1fr 1fr 1fr; } }
 
     .group-card {
       background: var(--white);
@@ -54,7 +54,12 @@
       width: 100%;
       border-collapse: collapse;
       font-size: 0.8rem;
-      table-layout: fixed; /* prevents long names from pushing stat cols */
+      table-layout: fixed;
+    }
+    /* Same specificity as global rule but later in cascade — guarantees inset applies */
+    .group-card .standings-table {
+      width: calc(100% - 1.5rem);
+      margin: 0 0.75rem;
     }
     .standings-table th {
       padding: 0.35rem 0.5rem;
@@ -110,18 +115,12 @@
     }
     .team-name-abbr { display: none; }
 
-    /* Multi-col (600px+): hide GF/GA/GD at both 2-col and 3-col layouts.
-       At 3-col each card is only ~330px wide — 8 stat cols leave ~100px for the
-       team name which truncates badly. 5 stat cols give ~178px → names fit. */
-    @media (min-width: 600px) {
+    /* 2-col and 3-col (800px+): hide GF/GA/GD so team names get full width.
+       600–799px is 1-col — cards fill the full container, all 8 cols fit. */
+    @media (min-width: 800px) {
       .standings-table .col-gf,
       .standings-table .col-ga,
       .standings-table .col-gd { display: none; }
-    }
-    /* Narrow 2-col cards (600–799px): swap full name for 3-letter code */
-    @media (min-width: 600px) and (max-width: 799px) {
-      .team-name-full { display: none; }
-      .team-name-abbr { display: inline; }
     }
 
     .pts-cell { font-weight: 700; color: var(--ink); }

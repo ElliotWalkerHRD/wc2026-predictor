@@ -132,6 +132,93 @@
       color: var(--grey-400);
       font-size: 0.9rem;
     }
+
+    /* ---- Per-match predictions modal ---- */
+    .match-row[data-match-id] { cursor: pointer; }
+    .match-row[data-match-id]:hover { border-color: var(--grey-400); }
+
+    .mpred-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 1000;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      backdrop-filter: blur(2px);
+    }
+    @media (min-width: 560px) {
+      .mpred-overlay { align-items: center; padding: 1.5rem; }
+    }
+    .mpred-panel {
+      background: var(--white);
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      width: 100%;
+      max-height: 85vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 -4px 32px rgba(0,0,0,0.18);
+    }
+    @media (min-width: 560px) {
+      .mpred-panel { border-radius: var(--radius-lg); max-width: 480px; max-height: 80vh; }
+    }
+    .mpred-header {
+      position: relative;
+      padding: 1rem 3rem 0.875rem 1.25rem;
+      border-bottom: 1px solid var(--grey-200);
+      flex-shrink: 0;
+    }
+    .mpred-teams {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+      flex-wrap: wrap;
+    }
+    .mpred-meta { font-size: 0.72rem; color: var(--grey-500); }
+    .mpred-close {
+      position: absolute;
+      top: 0.875rem; right: 1rem;
+      background: none; border: none;
+      cursor: pointer; color: var(--grey-500);
+      padding: 0.25rem; border-radius: var(--radius-sm);
+      font-size: 1.1rem; line-height: 1;
+    }
+    .mpred-close:hover { background: var(--grey-100); }
+    .mpred-league-bar {
+      padding: 0.5rem 1.25rem;
+      border-bottom: 1px solid var(--grey-100);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .mpred-body { overflow-y: auto; flex: 1; padding: 0.5rem 0; min-height: 120px; }
+    .mpred-row {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.625rem 1.25rem;
+      border-bottom: 1px solid var(--grey-100);
+    }
+    .mpred-row:last-child { border-bottom: none; }
+    .mpred-you { background: rgba(200,241,53,0.1); }
+    .mpred-name { flex: 1; font-size: 0.875rem; font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .mpred-score { font-family: var(--font-serif); font-size: 1.05rem; color: var(--ink); min-width: 40px; text-align: center; flex-shrink: 0; }
+    .mpred-lock-note {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.875rem 1.25rem;
+      font-size: 0.8rem;
+      color: var(--grey-500);
+      background: var(--grey-100);
+      border-top: 1px solid var(--grey-200);
+      flex-shrink: 0;
+    }
   </style>
 </head>
 <body>
@@ -166,6 +253,8 @@
     </div>
   </main>
 
+  <div id="matchPredModal"></div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="../js/config.js?v=3"></script>
   <script src="../js/data.js?v=3"></script>
@@ -176,10 +265,13 @@
     DB.initSupabase();
     Nav.render('matches');
 
-    let allResults    = {};
-    let allPreds      = [];
-    let currentFilter = 'all';
-    let currentUserId = null;
+    let allResults       = {};
+    let allPreds         = [];
+    let currentFilter    = 'all';
+    let currentUserId    = null;
+    let myLeagues        = [];
+    let activePredLeague = 'global';
+    let memberCache      = {};
 
     async function load() {
       const session = await DB.getSession();
@@ -193,7 +285,179 @@
       matchResults.forEach(r => { allResults[r.match_id] = r; });
       allPreds = predictions;
 
+      if (currentUserId) {
+        DB.getMyLeagues(currentUserId).then(l => { myLeagues = l || []; }).catch(() => {});
+      }
+
       render();
+    }
+
+    // ---- Per-match kick-off time (UTC) ----
+    function getMatchKickoff(matchId) {
+      const gf = GROUP_FIXTURES.find(f => f[0] === matchId);
+      if (gf) return new Date(`${gf[1]}T${gf[2]}:00Z`);
+      for (const round of Object.values(KNOCKOUT_ROUNDS)) {
+        const m = round.matches?.find(m => m.id === matchId);
+        if (m?.date && m?.time) return new Date(`${m.date}T${m.time}:00Z`);
+      }
+      return null;
+    }
+
+    // ---- Match predictions modal ----
+    async function openMatchModal(matchId) {
+      const kickoff  = getMatchKickoff(matchId);
+      // FAIRNESS: only reveal others' predictions after the match has kicked off
+      const isLocked = kickoff ? Date.now() >= kickoff.getTime() : false;
+
+      let home = { name: 'TBD', code: null }, away = { name: 'TBD', code: null };
+      let matchLabel = `Match ${matchId}`, matchDate = '';
+      const gf = GROUP_FIXTURES.find(f => f[0] === matchId);
+      if (gf) {
+        home = getTeam(gf[4]); away = getTeam(gf[5]);
+        matchLabel = `Match ${matchId} · Group ${gf[3]}`;
+        matchDate  = gf[1];
+      } else {
+        for (const round of Object.values(KNOCKOUT_ROUNDS)) {
+          const m = round.matches?.find(m => m.id === matchId);
+          if (m) {
+            home      = m.home_team ? getTeam(m.home_team) : home;
+            away      = m.away_team ? getTeam(m.away_team) : away;
+            matchLabel = m.match_label || matchLabel;
+            matchDate  = m.date || '';
+            break;
+          }
+        }
+      }
+
+      const result    = allResults[matchId];
+      const hasResult = result && result.home_score !== null;
+
+      const privateLeagues = myLeagues.filter(l => !l.is_global);
+      const leagueOpts = [
+        `<option value="global">All Players</option>`,
+        ...privateLeagues.map(l => `<option value="${l.id}">${l.name}</option>`)
+      ].join('');
+      const leagueBarHtml = privateLeagues.length ? `
+        <div class="mpred-league-bar">
+          <i class="ti ti-users-group" style="color:var(--grey-400);flex-shrink:0"></i>
+          <select id="mpredLeaguePicker" class="form-control" style="flex:1;min-width:0;font-size:0.82rem;padding:0.25rem 0.5rem;height:auto">${leagueOpts}</select>
+        </div>` : '';
+
+      document.getElementById('matchPredModal').innerHTML = `
+        <div class="mpred-overlay" id="mpredOverlay">
+          <div class="mpred-panel">
+            <div class="mpred-header">
+              <div class="mpred-teams">
+                ${home.code ? teamFlagImg(home.code) : ''}<span>${home.name}</span>
+                <span style="color:var(--grey-400);font-weight:400;font-size:0.8rem">vs</span>
+                <span>${away.name}</span>${away.code ? teamFlagImg(away.code) : ''}
+              </div>
+              <div class="mpred-meta">${matchLabel}${matchDate ? ' · ' + formatDate(matchDate) : ''}${hasResult ? ` · <strong>${result.home_score}–${result.away_score}</strong>` : ''}</div>
+              <button class="mpred-close" onclick="closeMatchModal()"><i class="ti ti-x"></i></button>
+            </div>
+            ${leagueBarHtml}
+            <div id="mpredBody" class="mpred-body"><div class="spinner" style="margin:2rem auto;display:block;width:32px;height:32px"></div></div>
+          </div>
+        </div>`;
+
+      document.body.style.overflow = 'hidden';
+      document.getElementById('mpredOverlay').addEventListener('click', e => {
+        if (e.target.id === 'mpredOverlay') closeMatchModal();
+      });
+      if (privateLeagues.length) {
+        const picker = document.getElementById('mpredLeaguePicker');
+        picker.value = activePredLeague;
+        picker.addEventListener('change', e => {
+          activePredLeague = e.target.value;
+          loadMatchModalBody(matchId, isLocked);
+        });
+      }
+
+      await loadMatchModalBody(matchId, isLocked);
+    }
+
+    async function loadMatchModalBody(matchId, isLocked) {
+      const bodyEl = document.getElementById('mpredBody');
+      if (!bodyEl) return;
+      bodyEl.innerHTML = '<div class="spinner" style="margin:2rem auto;display:block;width:32px;height:32px"></div>';
+
+      // Current user's own prediction (always visible, regardless of lock)
+      const myPredRow = allPreds.find(p => p.user_id === currentUserId && p.question_key === `m${matchId}`);
+      let myVal = null;
+      if (myPredRow) { try { myVal = JSON.parse(myPredRow.value); } catch {} }
+
+      if (!isLocked) {
+        // Pre-kickoff: own prediction only + lock note
+        const myHtml = myVal
+          ? `<div class="mpred-row mpred-you">
+              ${renderAvatar(myPredRow.profiles, 'avatar', 'width:32px;height:32px;font-size:0.85rem')}
+              <span class="mpred-name">You <span class="you-badge">You</span></span>
+              <span class="mpred-score">${myVal.home}–${myVal.away}</span>
+            </div>`
+          : `<div class="mpred-row mpred-you" style="color:var(--grey-400)">
+              <i class="ti ti-circle-dashed" style="font-size:1.5rem;flex-shrink:0"></i>
+              <span class="mpred-name">You haven't predicted this match yet</span>
+            </div>`;
+        bodyEl.innerHTML = myHtml +
+          `<div class="mpred-lock-note"><i class="ti ti-lock"></i> Other predictions reveal at kick-off</div>`;
+        return;
+      }
+
+      // Post-kickoff: filter allPreds by league if needed, then render all
+      let memberIds = null;
+      if (activePredLeague !== 'global') {
+        if (!memberCache[activePredLeague]) {
+          memberCache[activePredLeague] = await DB.getLeagueMemberIds(activePredLeague).catch(() => []);
+        }
+        memberIds = memberCache[activePredLeague];
+      }
+
+      let matchPreds = allPreds.filter(p => p.question_key === `m${matchId}`);
+      if (memberIds) matchPreds = matchPreds.filter(p => memberIds.includes(p.user_id));
+
+      if (!matchPreds.length) {
+        bodyEl.innerHTML = `<div style="text-align:center;padding:2rem 1rem;color:var(--grey-400)">
+          <i class="ti ti-inbox" style="font-size:2rem;display:block;margin-bottom:0.75rem"></i>
+          No predictions for this match.</div>`;
+        return;
+      }
+
+      // Sort: current user first, then alphabetical
+      matchPreds.sort((a, b) => {
+        if (a.user_id === currentUserId) return -1;
+        if (b.user_id === currentUserId) return 1;
+        return (a.profiles?.display_name || '').localeCompare(b.profiles?.display_name || '');
+      });
+
+      const result    = allResults[matchId];
+      const hasResult = result && result.home_score !== null;
+
+      bodyEl.innerHTML = matchPreds.map(p => {
+        let val = null;
+        try { val = JSON.parse(p.value); } catch {}
+        const isYou = p.user_id === currentUserId;
+        let chipHtml = '';
+        if (hasResult && val !== null) {
+          const actH = result.home_score, actA = result.away_score;
+          if (val.home === actH && val.away === actA)
+            chipHtml = `<span class="pred-pill exact">Exact</span>`;
+          else if (Math.sign(val.home - val.away) === Math.sign(actH - actA))
+            chipHtml = `<span class="pred-pill result">Result</span>`;
+          else
+            chipHtml = `<span class="pred-pill wrong">Wrong</span>`;
+        }
+        return `<div class="mpred-row${isYou ? ' mpred-you' : ''}">
+          ${renderAvatar(p.profiles, 'avatar', 'width:32px;height:32px;font-size:0.85rem')}
+          <span class="mpred-name">${p.profiles?.display_name || 'Player'}${isYou ? ' <span class="you-badge">You</span>' : ''}</span>
+          <span class="mpred-score">${val !== null ? `${val.home}–${val.away}` : '—'}</span>
+          ${chipHtml}
+        </div>`;
+      }).join('');
+    }
+
+    function closeMatchModal() {
+      document.getElementById('matchPredModal').innerHTML = '';
+      document.body.style.overflow = '';
     }
 
     function buildPredMap() {
@@ -319,7 +583,7 @@
       }
 
       return `
-        <div class="match-row ${isLive ? 'live' : hasResult ? 'finished' : ''}">
+        <div class="match-row ${isLive ? 'live' : hasResult ? 'finished' : ''}" data-match-id="${id}">
           <div class="match-row-main">
             <div class="match-info">
               <div class="match-num">${label}</div>
@@ -353,6 +617,14 @@
         b.className = b.dataset.filter === currentFilter ? 'btn btn-lime btn-sm' : 'btn btn-outline btn-sm';
       });
       render();
+    });
+
+    // Click any match row to open the predictions modal
+    document.getElementById('matchCentreContent').addEventListener('click', e => {
+      if (e.target.closest('button, a, select')) return;
+      const row = e.target.closest('.match-row[data-match-id]');
+      if (!row) return;
+      openMatchModal(parseInt(row.dataset.matchId));
     });
 
     DB.subscribeToMatchResults(() => {

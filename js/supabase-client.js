@@ -146,14 +146,13 @@ async function getAllPredictions(round = null) {
   return data || [];
 }
 
-// Fetch all predictions for a single match, optionally scoped to a list of user IDs.
-// Lock enforcement is in the UI — only call this for matches past their kickoff time.
+// Fetch all predictions for a single match (any round), optionally scoped to a list of user IDs.
+// Lock enforcement is in the caller — only call this for matches past their kickoff time.
 async function getMatchPredictions(matchId, userIds = null) {
   const sb = initSupabase();
   let query = sb
     .from('predictions')
     .select('user_id, value, profiles(display_name, avatar_color, avatar_url)')
-    .eq('round', 'round3')
     .eq('question_key', `m${matchId}`);
   if (userIds && userIds.length) query = query.in('user_id', userIds);
   const { data, error } = await query;

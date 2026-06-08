@@ -203,6 +203,14 @@ input, select, textarea { font-family: inherit; }
   .nav-user { margin-left: 0; }
 }
 
+.nav-avatar-link {
+  display: flex;
+  border-radius: 50%;
+  flex-shrink: 0;
+  outline-offset: 2px;
+}
+.nav-avatar-link:focus-visible { outline: 2px solid var(--lime); }
+
 .avatar {
   width: 34px; height: 34px;
   border-radius: 50%;
@@ -1526,3 +1534,10 @@ select.form-control option {
   .standings-table .team-name-full { display: none; }
   .standings-table .team-name-abbr { display: inline; }
 }
+
+/* Standings table breathing room — applies globally across all instances.
+   :last-child specificity (0,1,2) beats per-page th/td rules (0,1,1), so it wins. */
+.standings-table th:last-child,
+.standings-table td:last-child { padding-right: 0.875rem; }
+/* Bottom gap so last table row doesn't touch the card border */
+.group-card { padding-bottom: 0.375rem; }

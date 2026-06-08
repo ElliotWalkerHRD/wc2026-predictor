@@ -69,7 +69,6 @@ const Nav = {
         <li><a href="${p}standings.html" ${activePage === 'standings' ? 'class="active"' : ''}><i class="ti ti-table"></i> Standings</a></li>
         <li><a href="${p}my-predictions.html" ${activePage === 'mypreds' ? 'class="active"' : ''}><i class="ti ti-list-check"></i> My Picks</a></li>
         <li><a href="${p}leagues.html" ${activePage === 'leagues' ? 'class="active"' : ''}><i class="ti ti-users-group"></i> Leagues</a></li>
-        <li><a href="${p}profile.html" ${activePage === 'profile' ? 'class="active"' : ''}><i class="ti ti-user-circle"></i> Profile</a></li>
         ${adminLink}
         ` : ''}
       </ul>
@@ -78,7 +77,7 @@ const Nav = {
 
       <div class="nav-user">
         ${session ? `
-          ${renderAvatar(profile, 'avatar', '', profile?.display_name || '')}
+          <a href="${p}profile.html" class="nav-avatar-link" title="Profile">${renderAvatar(profile, 'avatar', '', profile?.display_name || '')}</a>
           <span class="nav-username">${profile?.display_name || session.user.email}</span>
           <button class="btn btn-ghost btn-sm" id="signOutBtn">Sign out</button>
         ` : `

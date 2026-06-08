@@ -748,18 +748,29 @@ function showConfirm(title, body, okLabel = 'Confirm') {
     document.getElementById('confirmTitle').textContent = title;
     document.getElementById('confirmBody').textContent = body;
     document.getElementById('confirmOk').textContent = okLabel;
-    document.getElementById('confirmModal').classList.remove('hidden');
-    const ok = document.getElementById('confirmOk');
-    const cancel = document.getElementById('confirmCancel');
-    const cleanup = () => document.getElementById('confirmModal').classList.add('hidden');
-    const onOk = () => { cleanup(); ok.removeEventListener('click',onOk); cancel.removeEventListener('click',onCancel); resolve(true); };
-    const onCancel = () => { cleanup(); ok.removeEventListener('click',onOk); cancel.removeEventListener('click',onCancel); resolve(false); };
-    ok.addEventListener('click', onOk);
-    cancel.addEventListener('click', onCancel);
+    const modal = document.getElementById('confirmModal');
+    modal.classList.remove('hidden');
+
+    // AbortController removes all listeners atomically on first dismiss — no accumulation.
+    const ac = new AbortController();
+    const { signal } = ac;
+
+    function dismiss(result) {
+      modal.classList.add('hidden');
+      ac.abort();
+      resolve(result);
+    }
+
+    document.getElementById('confirmOk').addEventListener('click', () => dismiss(true), { signal });
+    document.getElementById('confirmCancel').addEventListener('click', () => dismiss(false), { signal });
+    modal.addEventListener('click', e => { if (e.target === modal) dismiss(false); }, { signal });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') dismiss(false); }, { signal });
   });
 }
 
 async function populateRound(roundId) {
+  // Belt-and-suspenders: bail if locked even if button state was wrong
+  if (DB.isRoundLocked(roundId)) return;
   const now = Date.now();
   const roundLabel = ROUND_CFG.find(r => r.id === roundId)?.title || roundId;
   let predictions = [];

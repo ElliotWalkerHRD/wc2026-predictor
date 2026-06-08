@@ -134,20 +134,14 @@
       const openRounds = ROUNDS_META.filter(r => !DB.isRoundLocked(r.id)).length;
       document.getElementById('roundsOpen').textContent = openRounds;
 
-      // Compute which lock time is "next" so we can distinguish Open vs Upcoming
       const _now = Date.now();
-      const _openTimes = ROUNDS_META
-        .map(r => DB.getRoundLockDate(r.id)?.getTime())
-        .filter(t => t && t > _now);
-      const nextLockTime = _openTimes.length ? Math.min(..._openTimes) : null;
 
       const grid = document.getElementById('roundsGrid');
       grid.innerHTML = ROUNDS_META.map((round, idx) => {
         const lockDate  = DB.getRoundLockDate(round.id);
         const lockTime  = lockDate?.getTime();
         const locked    = lockTime && lockTime <= _now;
-        const isOpen    = !locked && lockTime === nextLockTime;
-        const upcoming  = !locked && !isOpen;
+        const isOpen    = !locked;
         const submitted = submittedRounds.has(round.id);
         const preds     = allPreds.filter(p => p.round === round.id);
         const progress  = Math.min(100, Math.round((preds.length / round.questions) * 100));
@@ -164,21 +158,13 @@
                 <span class="lock-pill-status">Locked${hasScore ? ' &middot; Scored' : ''}</span>
               </div>
             </div>`;
-        } else if (isOpen) {
+        } else {
           lockPill = `
             <div class="lock-pill lock-pill--open${urgent ? ' urgent' : ''}">
               <i class="ti ti-lock-open"></i>
               <div>
                 <span class="lock-pill-status">Open</span>
                 <span class="lock-pill-detail">Locks in <span class="lock-cd" data-lock="${lockDate.toISOString()}"></span></span>
-              </div>
-            </div>`;
-        } else {
-          lockPill = `
-            <div class="lock-pill lock-pill--upcoming">
-              <i class="ti ti-lock"></i>
-              <div>
-                <span class="lock-pill-status">Opens later</span>
               </div>
             </div>`;
         }

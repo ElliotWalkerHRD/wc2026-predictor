@@ -111,13 +111,6 @@
       { id:'round8', icon:'ti-trophy',       title:'The Final',            desc:'One match to rule them all. 10pts exact score, 7pts correct result.', points:10, questions:1, page:'round8.html' },
     ];
 
-    const ROUND_TO_KO = { round4: 'round32', round5: 'round16', round6: 'quarterfinals', round7: 'semifinals', round8: 'final' };
-    function bracketReady(id) {
-      const key = ROUND_TO_KO[id];
-      if (!key) return true;
-      const ms = KNOCKOUT_ROUNDS[key]?.matches || [];
-      return ms.length > 0 && ms.every(m => m.home_team && m.away_team);
-    }
 
     async function load() {
       const session = await requireAuthFromPages();

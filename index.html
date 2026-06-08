@@ -484,7 +484,7 @@
       const cards = ROUNDS_HOME.map(r => {
         const lt   = DB.getRoundLockDate(r.id)?.getTime();
         const locked = lt && lt <= now;
-        const isOpen = !locked && lt > now;
+        const isOpen = !locked && bracketReady(r.id);
 
         const urgent = isOpen && (lt - now) < 86400000;
 

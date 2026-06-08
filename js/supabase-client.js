@@ -146,6 +146,21 @@ async function getAllPredictions(round = null) {
   return data || [];
 }
 
+// Fetch all predictions for a single match, optionally scoped to a list of user IDs.
+// Lock enforcement is in the UI — only call this for matches past their kickoff time.
+async function getMatchPredictions(matchId, userIds = null) {
+  const sb = initSupabase();
+  let query = sb
+    .from('predictions')
+    .select('user_id, value, profiles(display_name, avatar_color, avatar_url)')
+    .eq('round', 'round3')
+    .eq('question_key', `m${matchId}`);
+  if (userIds && userIds.length) query = query.in('user_id', userIds);
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+}
+
 // ---- Scores ----
 
 async function getScores() {
@@ -393,7 +408,7 @@ function getRoundLockDate(round) {
 window.DB = {
   signUp, signIn, signOut, getSession, getCurrentUser, onAuthChange,
   getProfile, upsertProfile, getProfiles, getAllProfiles, isAdmin,
-  savePrediction, getUserPredictions, getAllPredictions,
+  savePrediction, getUserPredictions, getAllPredictions, getMatchPredictions,
   getScores, getUserScore,
   getMatchResults, upsertMatchResult,
   validateInviteCode, getInviteCodes, createInviteCode,

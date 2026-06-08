@@ -46,6 +46,7 @@
       50%       { opacity: 0.82; box-shadow: 0 0 0 5px rgba(200,241,53,0); }
     }
     .lock-pill--open.urgent { animation: lockPulse 1.8s ease-in-out infinite; }
+    .round-card.not-yet { opacity: 0.6; cursor: default; pointer-events: none; }
   </style>
 </head>
 <body>
@@ -110,6 +111,14 @@
       { id:'round8', icon:'ti-trophy',       title:'The Final',            desc:'One match to rule them all. 10pts exact score, 7pts correct result.', points:10, questions:1, page:'round8.html' },
     ];
 
+    const ROUND_TO_KO = { round4: 'round32', round5: 'round16', round6: 'quarterfinals', round7: 'semifinals', round8: 'final' };
+    function bracketReady(id) {
+      const key = ROUND_TO_KO[id];
+      if (!key) return true;
+      const ms = KNOCKOUT_ROUNDS[key]?.matches || [];
+      return ms.length > 0 && ms.every(m => m.home_team && m.away_team);
+    }
+
     async function load() {
       const session = await requireAuthFromPages();
       if (!session) return;
@@ -140,8 +149,9 @@
       grid.innerHTML = ROUNDS_META.map((round, idx) => {
         const lockDate  = DB.getRoundLockDate(round.id);
         const lockTime  = lockDate?.getTime();
-        const locked    = lockTime && lockTime <= _now;
-        const isOpen    = !locked;
+        const locked     = lockTime && lockTime <= _now;
+        const bracketSet = bracketReady(round.id);
+        const isOpen     = !locked && bracketSet;
         const submitted = submittedRounds.has(round.id);
         const preds     = allPreds.filter(p => p.round === round.id);
         const progress  = Math.min(100, Math.round((preds.length / round.questions) * 100));
@@ -158,6 +168,14 @@
                 <span class="lock-pill-status">Locked${hasScore ? ' &middot; Scored' : ''}</span>
               </div>
             </div>`;
+        } else if (!bracketSet) {
+          lockPill = `
+            <div class="lock-pill lock-pill--upcoming">
+              <i class="ti ti-clock"></i>
+              <div>
+                <span class="lock-pill-status">Opens once the bracket is set</span>
+              </div>
+            </div>`;
         } else {
           lockPill = `
             <div class="lock-pill lock-pill--open${urgent ? ' urgent' : ''}">
@@ -169,7 +187,7 @@
             </div>`;
         }
 
-        const completedClass = locked ? 'locked' : (submitted && progress >= 100) ? 'complete' : '';
+        const completedClass = locked ? 'locked' : !bracketSet ? 'not-yet' : (submitted && progress >= 100) ? 'complete' : '';
 
         return `
           <a class="round-card ${completedClass}" href="${round.page}">

@@ -110,13 +110,15 @@
     }
     .team-name-abbr { display: none; }
 
-    /* 2-col grid (600–1099px): hide GF/GA/GD to free space for team name */
-    @media (min-width: 600px) and (max-width: 1099px) {
+    /* Multi-col (600px+): hide GF/GA/GD at both 2-col and 3-col layouts.
+       At 3-col each card is only ~330px wide — 8 stat cols leave ~100px for the
+       team name which truncates badly. 5 stat cols give ~178px → names fit. */
+    @media (min-width: 600px) {
       .standings-table .col-gf,
       .standings-table .col-ga,
       .standings-table .col-gd { display: none; }
     }
-    /* Narrowest 2-col cards (600–799px): swap full name for 3-letter code */
+    /* Narrow 2-col cards (600–799px): swap full name for 3-letter code */
     @media (min-width: 600px) and (max-width: 799px) {
       .team-name-full { display: none; }
       .team-name-abbr { display: inline; }

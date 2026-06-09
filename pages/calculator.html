@@ -709,7 +709,7 @@ function populatePanelHtml(derived) {
   const now = Date.now();
 
   function canPopulate(roundId) {
-    if (DB.isRoundLocked(roundId)) return 'locked';
+    if (DB.isRoundLocked(roundId) || !bracketReady(roundId)) return 'locked';
     if (roundId === 'round1') return derived.hasAnyScore ? 'open' : 'nodata';
     if (roundId === 'round2') {
       const hasQual = GROUP_KEYS.some(g => _qualifiers.groups[g].winner?.P > 0);
@@ -788,8 +788,8 @@ function showConfirm(title, body, okLabel = 'Confirm') {
 }
 
 async function populateRound(roundId) {
-  // Belt-and-suspenders: bail if locked even if button state was wrong
-  if (DB.isRoundLocked(roundId)) return;
+  // Belt-and-suspenders: bail if locked or bracket not yet set, even if button state was wrong
+  if (DB.isRoundLocked(roundId) || !bracketReady(roundId)) return;
   const now = Date.now();
   const roundLabel = ROUND_CFG.find(r => r.id === roundId)?.title || roundId;
   let predictions = [];
@@ -1077,7 +1077,7 @@ function attachPopulateListeners(el) {
   if (popAll && !popAll.disabled) {
     popAll.addEventListener('click', async () => {
       popAll.disabled = true;
-      const openRounds = ROUND_CFG.filter(r => !DB.isRoundLocked(r.id));
+      const openRounds = ROUND_CFG.filter(r => !DB.isRoundLocked(r.id) && bracketReady(r.id));
       for (const r of openRounds) await populateRound(r.id);
       recompute();
       const tabEl = document.getElementById('tab-populate');

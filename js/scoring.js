@@ -101,6 +101,15 @@ const ScoringEngine = {
       else { breakdown['1.11'] = 0; }
     }
 
+    // 1.12 Hardest group (5pts: predicted group matches the actual hardest group)
+    // "Hardest" = smallest points gap between 1st and 4th place.
+    // Tiebreak: higher GD of the 4th-place team; further tie: group letter (A before B etc.)
+    if (predictions['1.12'] && answers['1.12']) {
+      const scored = predictions['1.12'] === answers['1.12'];
+      points += scored ? 5 : 0;
+      breakdown['1.12'] = scored ? 5 : 0;
+    }
+
     return { points, breakdown };
   },
 

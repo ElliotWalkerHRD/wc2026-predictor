@@ -77,6 +77,24 @@
     }
 
     .recalc-icon { font-size: 2.5rem; color: var(--grey-400); margin-bottom: 1rem; }
+
+    /* ---- Auto-Score component styles ---- */
+    .as-card { background: var(--grey-50, #f9f9f9); border: 1px solid var(--grey-200); border-radius: var(--radius-md); padding: 1rem 1.15rem; margin-bottom: 1rem; }
+    .as-card-hd { font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: .06em; color: var(--grey-500); margin-bottom: 0.65rem; }
+    .as-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0; border-top: 1px solid var(--grey-100); font-size: 0.83rem; flex-wrap: wrap; }
+    .as-row:first-of-type { border-top: none; }
+    .as-qkey { font-family: var(--font-mono, monospace); font-size: 0.72rem; background: var(--grey-100); border-radius: 4px; padding: 0.1rem 0.35rem; white-space: nowrap; flex-shrink: 0; color: var(--grey-600); }
+    .as-qlabel { color: var(--grey-700); flex: 1; min-width: 160px; }
+    .as-chip { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.55rem; border-radius: 9999px; font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
+    .as-ok      { background: rgba(200,241,53,0.18); color: #5c7000; border: 1px solid rgba(200,241,53,0.45); }
+    .as-pending { background: var(--grey-100); color: var(--grey-400); border: 1px solid var(--grey-200); }
+    .as-input-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.35rem 0; border-top: 1px solid var(--grey-100); flex-wrap: wrap; font-size: 0.83rem; }
+    .as-input-row label { flex: 1; min-width: 160px; color: var(--grey-700); }
+    .as-input-row .form-control { max-width: 220px; }
+    .as-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .as-table th { text-align: left; font-weight: 600; font-size: 0.72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--grey-500); padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--grey-200); }
+    .as-table td { padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--grey-100); vertical-align: middle; }
+    @media (max-width: 600px) { .as-input-row .form-control { max-width: 100%; width: 100%; } }
   </style>
 </head>
 <body>
@@ -196,7 +214,18 @@
               </div>
               <button class="btn btn-outline mt-2" id="overrideBtn"><i class="ti ti-check"></i> Apply Override</button>
             </div>
+
           </div>
+          <hr style="margin:2rem 0;border:none;border-top:1px solid var(--grey-200)">
+          <h3 style="font-family:var(--font-serif);font-size:1.25rem;margin:0 0 0.4rem">Auto-Score Rounds 1 &amp; 2</h3>
+          <p style="font-size:0.83rem;color:var(--grey-500);margin:0 0 1.25rem;max-width:540px">
+            Derives Q1.8, Q1.9, Q1.11, Q1.12, Q1.1–3, and all Round 2 answers from match results.
+            Name questions (Q1.4, Q1.6) use normalised fuzzy matching with an admin review step —
+            scores are <strong>never written</strong> until you confirm the matches.
+          </p>
+          <button class="btn btn-outline" id="asLoadBtn"><i class="ti ti-database"></i> Load data &amp; compute answers</button>
+          <div id="asAnswerPanel" class="hidden" style="margin-top:1.5rem;max-width:680px"></div>
+          <div id="asReviewPanel" class="hidden" style="margin-top:1.5rem"></div>
         </div>
       </div>
     </div>
@@ -453,6 +482,553 @@
 
       Toast.success('Score override applied');
     });
+
+    // =====================================================================
+    // AUTO-SCORE R1 & R2
+    // Derives answers from match_results; admin reviews name-question matches
+    // before any points are written.
+    // =====================================================================
+
+    let _asResults = null, _asComputed = null;
+    let _asAllPreds = null, _asScores = null;
+    let _asAdminAnswers = null, _asPreviewData = null;
+    let _asNameMatches = {}, _asUserPreds1 = {}, _asUserPreds2 = {};
+
+    // Normalise a player name to ASCII lowercase for fuzzy comparison.
+    function asNormName(s) {
+      if (!s) return '';
+      return String(s).toLowerCase()
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/[‘’ʼ'\-]/g, ' ')
+        .replace(/[^a-z0-9\s]/g, '')
+        .replace(/\s+/g, ' ').trim();
+    }
+
+    // Return true if 'guess' likely refers to the same player as 'answer'.
+    // Matches on: full normalised string, or surname (last token, min 3 chars) contained in the other.
+    function asAutoMatch(guess, answer) {
+      const g = asNormName(guess), a = asNormName(answer);
+      if (!g || !a) return false;
+      if (g === a) return true;
+      const aSur = a.split(' ').pop(), gSur = g.split(' ').pop();
+      if (aSur.length >= 3 && (g === aSur || g.includes(aSur))) return true;
+      if (gSur.length >= 3 && (a === gSur || a.includes(gSur))) return true;
+      return false;
+    }
+
+    // Derive answers from match_results.
+    // Returns { r1, r2, r2Complete, allGroupDone, finishedCount }
+    function asComputeAnswers(results) {
+      const rMap = {};
+      results.forEach(r => { rMap[r.match_id] = r; });
+
+      const smAll = {};
+      results.forEach(r => {
+        if (r.status === 'FINISHED')
+          smAll[`m${r.match_id}`] = { home: r.home_score, away: r.away_score };
+      });
+
+      const r1 = {}, r2 = {};
+      const finishedCount = GROUP_FIXTURES.filter(([id]) => rMap[id]?.status === 'FINISHED').length;
+      const allGroupDone = finishedCount === 72;
+
+      const hosts = new Set(['USA','CAN','MEX']), watched = ['ENG','FRA','BRA','ARG'];
+      let totalGoals = 0, hostGoals = 0;
+      const nGoals = Object.fromEntries(watched.map(c => [c, 0]));
+
+      GROUP_FIXTURES.forEach(([id,,,, hc, ac]) => {
+        const r = rMap[id];
+        if (!r || r.status !== 'FINISHED') return;
+        totalGoals += r.home_score + r.away_score;
+        if (hosts.has(hc)) hostGoals += r.home_score;
+        if (hosts.has(ac)) hostGoals += r.away_score;
+        if (nGoals[hc] !== undefined) nGoals[hc] += r.home_score;
+        if (nGoals[ac] !== undefined) nGoals[ac] += r.away_score;
+      });
+
+      if (allGroupDone) {
+        r1['1.8']  = hostGoals;
+        r1['1.11'] = totalGoals;
+        r1['1.9']  = watched.reduce((b, c) => nGoals[c] > nGoals[b] ? c : b);
+
+        // Q1.12: smallest 1st-4th points gap; tiebreak: higher 4th-place GD; then group letter.
+        let hg = null, minGap = Infinity;
+        const gSt = {};
+        for (const g of Object.keys(GROUPS)) {
+          const st = computePredGroup(g, smAll);
+          gSt[g] = st;
+          if (st.length < 4 || st[3].P === 0) continue;
+          const gap = st[0].Pts - st[3].Pts;
+          const prevFourth = hg ? gSt[hg][3] : null;
+          if (gap < minGap || (gap === minGap && st[3].GD > (prevFourth?.GD ?? -Infinity))) {
+            minGap = gap; hg = g;
+          }
+        }
+        if (hg) { r1['1.12'] = hg; r1['_1.12_gap'] = minGap; }
+      }
+
+      // R2: per-group as results arrive
+      const r2Complete = {};
+      for (const g of Object.keys(GROUPS)) {
+        const gFx = GROUP_FIXTURES.filter(f => f[3] === g);
+        const done = gFx.every(([id]) => rMap[id]?.status === 'FINISHED');
+        r2Complete[g] = done;
+        if (!done) continue;
+        const gSm = {};
+        gFx.forEach(([id]) => { const r = rMap[id]; if (r) gSm[`m${id}`] = { home: r.home_score, away: r.away_score }; });
+        const st = computePredGroup(g, gSm);
+        if (st[0]) r2[`2.w.${g}`] = st[0].code;
+        if (st[1]) r2[`2.r.${g}`] = st[1].code;
+      }
+
+      // Q1.1/Q1.2 from Final; Q1.3 from semi-finals
+      const finalM = KNOCKOUT_ROUNDS.final?.matches?.[0];
+      const finalR = rMap[104];
+      if (finalM?.home_team && finalM?.away_team && finalR?.status === 'FINISHED') {
+        const [h, a] = [finalR.home_score, finalR.away_score];
+        if (h !== a) {
+          r1['1.1'] = h > a ? finalM.home_team : finalM.away_team;
+          r1['1.2'] = h > a ? finalM.away_team : finalM.home_team;
+        }
+      }
+
+      const beaten = [];
+      for (const sm of (KNOCKOUT_ROUNDS.semifinals?.matches || [])) {
+        const sr = rMap[sm.id];
+        if (!sm.home_team || !sm.away_team || sr?.status !== 'FINISHED') continue;
+        const [h, a] = [sr.home_score, sr.away_score];
+        if (h !== a) beaten.push(h > a ? sm.away_team : sm.home_team);
+      }
+      if (beaten.length === 2) r1['1.3'] = beaten;
+
+      return { r1, r2, r2Complete, allGroupDone, finishedCount };
+    }
+
+    // Score a single user's R1 predictions.
+    // Name questions scored via admin-confirmed nameMatches map, not string compare.
+    function asScoreUser_R1(preds, computed, adminAnswers, nameMatches) {
+      const allAns = { ...computed.r1, ...adminAnswers };
+      const engAns = { ...allAns };
+      delete engAns['1.4']; delete engAns['1.6']; delete engAns['_1.12_gap'];
+
+      const { breakdown: bd } = ScoringEngine.calculateRound1(preds, engAns);
+
+      if (allAns['1.4'] != null && preds['1.4']) {
+        const hit = (nameMatches['1.4'] ?? {})[String(preds['1.4']).trim()] === true;
+        bd['1.4'] = hit ? 10 : 0;
+      }
+      if (allAns['1.6'] != null && preds['1.6']) {
+        const hit = (nameMatches['1.6'] ?? {})[String(preds['1.6']).trim()] === true;
+        bd['1.6'] = hit ? 10 : 0;
+      }
+
+      const points = Object.values(bd).reduce((s, v) => s + v, 0);
+      return { points, breakdown: bd };
+    }
+
+    // Step 1: load all data, compute auto-derived answers.
+    async function asLoad() {
+      const btn = document.getElementById('asLoadBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="ti ti-loader"></i> Loading&hellip;';
+      try {
+        const [results, preds1, preds2, scores] = await Promise.all([
+          DB.getMatchResults(),
+          DB.getAllPredictions('round1'),
+          DB.getAllPredictions('round2'),
+          DB.getScores(),
+        ]);
+        _asResults = results;
+        _asAllPreds = { round1: preds1, round2: preds2 };
+        _asScores = scores;
+        _asComputed = asComputeAnswers(results);
+        _asNameMatches = {};
+
+        _asUserPreds1 = {}; _asUserPreds2 = {};
+        preds1.forEach(p => {
+          if (!_asUserPreds1[p.user_id]) _asUserPreds1[p.user_id] = {};
+          try { _asUserPreds1[p.user_id][p.question_key] = JSON.parse(p.value); }
+          catch { _asUserPreds1[p.user_id][p.question_key] = p.value; }
+        });
+        preds2.forEach(p => {
+          if (!_asUserPreds2[p.user_id]) _asUserPreds2[p.user_id] = {};
+          try { _asUserPreds2[p.user_id][p.question_key] = JSON.parse(p.value); }
+          catch { _asUserPreds2[p.user_id][p.question_key] = p.value; }
+        });
+
+        asRenderAnswerPanel();
+        document.getElementById('asAnswerPanel').classList.remove('hidden');
+        btn.style.display = 'none';
+      } catch (err) {
+        Toast.error('Load failed: ' + err.message);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ti ti-database"></i> Load data &amp; compute answers';
+      }
+    }
+
+    // Step 2: render computed-answers + admin-input panel.
+    function asRenderAnswerPanel() {
+      const c = _asComputed;
+      const panel = document.getElementById('asAnswerPanel');
+
+      const chip = (val, label) => val != null
+        ? `<span class="as-chip as-ok"><i class="ti ti-check"></i> ${label ?? val}</span>`
+        : '<span class="as-chip as-pending">pending</span>';
+
+      const teamOpts = '<option value="">— select —</option>' +
+        Object.values(TEAMS).sort((a,b) => a.name.localeCompare(b.name))
+          .map(t => `<option value="${t.code}">${t.flag} ${t.name}</option>`).join('');
+
+      const r2Done = Object.values(c.r2Complete).filter(Boolean).length;
+      const hasWinner = c.r1['1.1'] != null;
+      const hasSemis  = Array.isArray(c.r1['1.3']) && c.r1['1.3'].length === 2;
+
+      const computedCard = `
+        <div class="as-card">
+          <div class="as-card-hd">
+            Computed from match results
+            <small style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--grey-500)"> — ${c.finishedCount}/72 group fixtures finished</small>
+          </div>
+          ${[
+            ['Q1.8',  'Host nations (USA/CAN/MEX) combined group goals', c.r1['1.8']],
+            ['Q1.9',  'Top-scoring nation (ENG/FRA/BRA/ARG) in groups',
+              c.r1['1.9'] ? `${TEAMS[c.r1['1.9']]?.flag} ${TEAMS[c.r1['1.9']]?.name}` : null],
+            ['Q1.11', 'Total group stage goals', c.r1['1.11']],
+            ['Q1.12', 'Hardest group (smallest 1st↔4th pts gap; tiebreak: 4th-place GD)',
+              c.r1['1.12'] ? `Group ${c.r1['1.12']} (${c.r1['_1.12_gap']}pt gap)` : null],
+          ].map(([k, lbl, v]) => `
+            <div class="as-row">
+              <span class="as-qkey">${k}</span>
+              <span class="as-qlabel">${lbl}</span>
+              <span style="margin-left:auto;flex-shrink:0">${chip(v)}</span>
+            </div>
+          `).join('')}
+          <div class="as-row">
+            <span class="as-qkey">Q1.1–3</span>
+            <span class="as-qlabel">Winner / Runner-up / Beaten semis (from bracket result)</span>
+            <span style="margin-left:auto;flex-shrink:0">
+              ${hasWinner && hasSemis
+                ? chip(1, `${TEAMS[c.r1['1.1']]?.flag} ${TEAMS[c.r1['1.1']]?.name} &amp; others — auto`)
+                : '<span class="as-chip as-pending">bracket not seeded — enter below</span>'}
+            </span>
+          </div>
+          <div class="as-row">
+            <span class="as-qkey">R2</span>
+            <span class="as-qlabel">Group winners &amp; runners-up (all 12 groups)</span>
+            <span style="margin-left:auto;flex-shrink:0">
+              ${chip(r2Done > 0 ? 1 : null, r2Done === 12 ? 'all 12 groups complete' : `${r2Done}/12 groups`)}
+            </span>
+          </div>
+        </div>`;
+
+      const bracketInputs = !hasWinner ? `
+        <div class="as-input-row">
+          <span class="as-qkey">Q1.1</span><label>Winner</label>
+          <select id="asQ11" class="form-control">${teamOpts}</select>
+        </div>
+        <div class="as-input-row">
+          <span class="as-qkey">Q1.2</span><label>Runner-up</label>
+          <select id="asQ12" class="form-control">${teamOpts}</select>
+        </div>` : '';
+
+      const semiInputs = !hasSemis ? `
+        <div class="as-input-row">
+          <span class="as-qkey">Q1.3a</span><label>Beaten semi-finalist 1</label>
+          <select id="asQ13a" class="form-control">${teamOpts}</select>
+        </div>
+        <div class="as-input-row">
+          <span class="as-qkey">Q1.3b</span><label>Beaten semi-finalist 2</label>
+          <select id="asQ13b" class="form-control">${teamOpts}</select>
+        </div>` : '';
+
+      panel.innerHTML = `
+        ${computedCard}
+        <div class="as-card">
+          <div class="as-card-hd">Admin answers</div>
+          ${bracketInputs}${semiInputs}
+          <div class="as-input-row">
+            <span class="as-qkey">Q1.4</span><label>England top scorer (name)</label>
+            <input type="text" id="asQ14" class="form-control" placeholder="e.g. Saka">
+          </div>
+          <div class="as-input-row">
+            <span class="as-qkey">Q1.5</span><label>England top scorer goals</label>
+            <input type="number" id="asQ15" class="form-control" placeholder="0" min="0">
+          </div>
+          <div class="as-input-row">
+            <span class="as-qkey">Q1.6</span><label>Golden Boot winner (name)</label>
+            <input type="text" id="asQ16" class="form-control" placeholder="e.g. Mbappé">
+          </div>
+          <div class="as-input-row">
+            <span class="as-qkey">Q1.7</span><label>Golden Boot goals</label>
+            <input type="number" id="asQ17" class="form-control" placeholder="0" min="0">
+          </div>
+          <div class="as-input-row">
+            <span class="as-qkey">Q1.10</span><label>Red cards in group stage</label>
+            <input type="number" id="asQ110" class="form-control" placeholder="0" min="0">
+          </div>
+        </div>
+        <button class="btn btn-lime" id="asPreviewBtn" style="margin-top:1.25rem">
+          <i class="ti ti-eye"></i> Preview scoring &amp; review name matches
+        </button>`;
+
+      document.getElementById('asPreviewBtn').addEventListener('click', asPreview);
+    }
+
+    // Step 3: read admin inputs, run fuzzy matching, build review panel.
+    async function asPreview() {
+      const btn = document.getElementById('asPreviewBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="ti ti-loader"></i> Computing&hellip;';
+
+      const c = _asComputed;
+      const admin = {};
+
+      if (c.r1['1.1']) {
+        admin['1.1'] = c.r1['1.1']; admin['1.2'] = c.r1['1.2'];
+      } else {
+        const v1 = document.getElementById('asQ11')?.value;  if (v1) admin['1.1'] = v1;
+        const v2 = document.getElementById('asQ12')?.value;  if (v2) admin['1.2'] = v2;
+      }
+      if (c.r1['1.3']) {
+        admin['1.3'] = c.r1['1.3'];
+      } else {
+        const a = document.getElementById('asQ13a')?.value;
+        const b = document.getElementById('asQ13b')?.value;
+        if (a && b) admin['1.3'] = [a, b];
+      }
+      const q14  = document.getElementById('asQ14')?.value.trim();    if (q14)        admin['1.4']  = q14;
+      const q15  = document.getElementById('asQ15')?.value;           if (q15 !== '') admin['1.5']  = parseInt(q15);
+      const q16  = document.getElementById('asQ16')?.value.trim();    if (q16)        admin['1.6']  = q16;
+      const q17  = document.getElementById('asQ17')?.value;           if (q17 !== '') admin['1.7']  = parseInt(q17);
+      const q110 = document.getElementById('asQ110')?.value;          if (q110 !== '') admin['1.10'] = parseInt(q110);
+
+      _asAdminAnswers = admin;
+
+      const gm14 = new Map(), gm16 = new Map();
+      (_asAllPreds.round1 || []).forEach(p => {
+        let v; try { v = JSON.parse(p.value); } catch { v = p.value; }
+        const s = String(v || '').trim(); if (!s) return;
+        if (p.question_key === '1.4') gm14.set(s, (gm14.get(s) || 0) + 1);
+        if (p.question_key === '1.6') gm16.set(s, (gm16.get(s) || 0) + 1);
+      });
+
+      _asNameMatches['1.4'] = {};
+      for (const [g] of gm14) _asNameMatches['1.4'][g] = admin['1.4'] ? asAutoMatch(g, admin['1.4']) : false;
+      _asNameMatches['1.6'] = {};
+      for (const [g] of gm16) _asNameMatches['1.6'][g] = admin['1.6'] ? asAutoMatch(g, admin['1.6']) : false;
+
+      _asPreviewData = { admin, gm14, gm16 };
+
+      asRenderReviewPanel();
+      document.getElementById('asReviewPanel').classList.remove('hidden');
+      document.getElementById('asReviewPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ti ti-eye"></i> Preview scoring &amp; review name matches';
+    }
+
+    // Step 4: render name-match review tables and live score preview.
+    function asRenderReviewPanel() {
+      const panel = document.getElementById('asReviewPanel');
+      const { admin, gm14, gm16 } = _asPreviewData;
+
+      function nameCard(qKey, label, guessMap, answer) {
+        if (!answer) return `
+          <div class="as-card">
+            <div class="as-card-hd">${qKey}: ${label}</div>
+            <div class="as-row" style="color:var(--grey-400);font-style:italic">No answer entered — will not be scored.</div>
+          </div>`;
+        if (guessMap.size === 0) return `
+          <div class="as-card">
+            <div class="as-card-hd">${qKey}: ${label} — answer: <strong>${answer}</strong></div>
+            <div class="as-row" style="color:var(--grey-400);font-style:italic">No player guesses found.</div>
+          </div>`;
+
+        const rows = [...guessMap.entries()].sort((a,b) => b[1]-a[1]).map(([guess, count]) => {
+          const matched = _asNameMatches[qKey][guess];
+          return `<tr>
+            <td>${guess}</td>
+            <td class="text-muted" style="font-size:0.73rem">${asNormName(guess)}</td>
+            <td style="text-align:center">${count}</td>
+            <td style="text-align:center">
+              <button class="btn btn-sm ${matched ? 'btn-lime' : 'btn-ghost'} as-nm-toggle"
+                data-q="${qKey}" data-guess="${guess.replace(/"/g,'&quot;').replace(/'/g,'&#39;')}">
+                ${matched ? '<i class="ti ti-check"></i> Match' : '<i class="ti ti-x"></i> No match'}
+              </button>
+            </td>
+          </tr>`;
+        }).join('');
+
+        return `
+          <div class="as-card">
+            <div class="as-card-hd">
+              ${qKey}: ${label} — correct answer: <strong>${answer}</strong>
+              &rarr; normalised: <em style="font-weight:400">${asNormName(answer)}</em>
+            </div>
+            <div style="overflow-x:auto">
+              <table class="as-table">
+                <thead><tr>
+                  <th>Player's guess</th><th>Normalised</th>
+                  <th style="text-align:center">Count</th><th style="text-align:center">Status</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+              </table>
+            </div>
+          </div>`;
+      }
+
+      panel.innerHTML = `
+        <h4 style="font-weight:700;margin:0 0 0.5rem">Name match review</h4>
+        <p style="font-size:0.82rem;color:var(--grey-500);margin:0 0 1rem">
+          Toggle any auto-matched guess that is wrong. The score preview below updates immediately.
+          <strong>No scores are written until you click Commit.</strong>
+        </p>
+        ${nameCard('Q1.4', "England top scorer", gm14, admin['1.4'])}
+        ${nameCard('Q1.6', 'Golden Boot winner', gm16, admin['1.6'])}
+
+        <h4 style="font-weight:700;margin:1.25rem 0 0.5rem">Score preview</h4>
+        <p style="font-size:0.82rem;color:var(--grey-500);margin:0 0 0.75rem">Updates live as you toggle matches above.</p>
+        <div style="overflow-x:auto">
+          <table class="as-table">
+            <thead><tr>
+              <th>Player</th>
+              <th style="text-align:right">R1 now</th><th style="text-align:right">R1 new</th><th style="text-align:right">R1 &Delta;</th>
+              <th style="text-align:right">R2 now</th><th style="text-align:right">R2 new</th><th style="text-align:right">R2 &Delta;</th>
+            </tr></thead>
+            <tbody id="asPreviewTbody"></tbody>
+          </table>
+        </div>
+        <div style="margin-top:1.25rem;display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap">
+          <button class="btn btn-lime" id="asCommitBtn">
+            <i class="ti ti-database-import"></i> Commit scores
+          </button>
+          <span style="font-size:0.78rem;color:var(--grey-400)">
+            Writes round1_points and round2_points for every player shown above.
+          </span>
+        </div>`;
+
+      panel.querySelectorAll('.as-nm-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const q = btn.dataset.q, guess = btn.dataset.guess;
+          _asNameMatches[q][guess] = !_asNameMatches[q][guess];
+          const now = _asNameMatches[q][guess];
+          btn.className = `btn btn-sm ${now ? 'btn-lime' : 'btn-ghost'} as-nm-toggle`;
+          btn.innerHTML = now
+            ? '<i class="ti ti-check"></i> Match'
+            : '<i class="ti ti-x"></i> No match';
+          asRefreshPreviewTable();
+        });
+      });
+
+      document.getElementById('asCommitBtn').addEventListener('click', asCommit);
+      asRefreshPreviewTable();
+    }
+
+    // Recompute and repaint the score preview table body.
+    function asRefreshPreviewTable() {
+      const tbody = document.getElementById('asPreviewTbody');
+      if (!tbody) return;
+
+      const nameMap = {};
+      _asScores.forEach(s => { if (s.profiles?.display_name) nameMap[s.user_id] = s.profiles.display_name; });
+      (_asAllPreds.round1 || []).concat(_asAllPreds.round2 || []).forEach(p => {
+        if (!nameMap[p.user_id] && p.profiles?.display_name) nameMap[p.user_id] = p.profiles.display_name;
+      });
+
+      const existMap = {};
+      _asScores.forEach(s => { existMap[s.user_id] = s; });
+
+      const allUids = new Set([...Object.keys(_asUserPreds1), ...Object.keys(_asUserPreds2)]);
+      const rows = [];
+
+      for (const uid of allUids) {
+        const p1 = _asUserPreds1[uid] || {}, p2 = _asUserPreds2[uid] || {};
+        const exist = existMap[uid] || {};
+        const r1 = asScoreUser_R1(p1, _asComputed, _asAdminAnswers || {}, _asNameMatches);
+        const r2 = ScoringEngine.calculateRound2(p2, _asComputed.r2);
+        rows.push({
+          name:  nameMap[uid] || uid.substring(0,8) + '…',
+          r1Old: exist.round1_points ?? null,
+          r1New: r1.points,
+          r2Old: exist.round2_points ?? null,
+          r2New: r2.points,
+        });
+      }
+
+      rows.sort((a,b) => (b.r1New + b.r2New) - (a.r1New + a.r2New));
+
+      const dCell = (old, nw) => {
+        if (old == null) return '<td></td>';
+        const d = nw - old;
+        const s = d > 0 ? `<span style="color:#5c7000">+${d}</span>`
+                : d < 0 ? `<span style="color:#ef4444">${d}</span>`
+                :          '<span style="color:var(--grey-400)">±0</span>';
+        return `<td style="text-align:right">${s}</td>`;
+      };
+
+      tbody.innerHTML = rows.map(r => `<tr>
+        <td>${r.name}</td>
+        <td style="text-align:right;color:var(--grey-400)">${r.r1Old ?? '—'}</td>
+        <td style="text-align:right"><strong>${r.r1New}</strong></td>
+        ${dCell(r.r1Old, r.r1New)}
+        <td style="text-align:right;color:var(--grey-400)">${r.r2Old ?? '—'}</td>
+        <td style="text-align:right"><strong>${r.r2New}</strong></td>
+        ${dCell(r.r2Old, r.r2New)}
+      </tr>`).join('');
+    }
+
+    // Step 5: write committed scores to the scores table.
+    // Mirrors the manual-override pattern: preserve other rounds, recalculate total.
+    async function asCommit() {
+      const btn = document.getElementById('asCommitBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="ti ti-loader"></i> Committing&hellip;';
+
+      const sb = DB.initSupabase();
+      const existMap = {};
+      _asScores.forEach(s => { existMap[s.user_id] = s; });
+
+      const ROUNDS = ['round1','round2','round3','round4','round5','round6','round7','round8'];
+      const allUids = [...new Set([...Object.keys(_asUserPreds1), ...Object.keys(_asUserPreds2)])];
+      let saved = 0, failed = 0;
+
+      for (const uid of allUids) {
+        const p1 = _asUserPreds1[uid] || {}, p2 = _asUserPreds2[uid] || {};
+        const r1 = asScoreUser_R1(p1, _asComputed, _asAdminAnswers || {}, _asNameMatches);
+        const r2 = ScoringEngine.calculateRound2(p2, _asComputed.r2);
+        const exist = existMap[uid];
+
+        const update = { round1_points: r1.points, round2_points: r2.points };
+        if (exist) {
+          update.total_points = ROUNDS.reduce((sum, rnd) => {
+            if (rnd === 'round1') return sum + r1.points;
+            if (rnd === 'round2') return sum + r2.points;
+            return sum + (exist[rnd + '_points'] || 0);
+          }, 0);
+          try { await sb.from('scores').update(update).eq('user_id', uid); saved++; }
+          catch (e) { console.error('score update failed', uid, e); failed++; }
+        } else {
+          update.user_id = uid;
+          update.total_points = r1.points + r2.points;
+          try { await sb.from('scores').upsert(update, { onConflict: 'user_id' }); saved++; }
+          catch (e) { console.error('score upsert failed', uid, e); failed++; }
+        }
+      }
+
+      if (failed === 0) {
+        Toast.success(`R1 & R2 scores committed for ${saved} player${saved !== 1 ? 's' : ''}.`);
+      } else {
+        Toast.error(`Committed ${saved}, failed ${failed}. See browser console.`);
+      }
+
+      try { _asScores = await DB.getScores(); asRefreshPreviewTable(); } catch {}
+
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ti ti-database-import"></i> Commit scores';
+    }
+
+    document.getElementById('asLoadBtn').addEventListener('click', asLoad);
+
 
     init();
   </script>

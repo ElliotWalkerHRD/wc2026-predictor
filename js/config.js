@@ -16,8 +16,8 @@ const CONFIG = {
   // --- Round lock times (ISO 8601 UTC) ---
   // Set these to just before each round's first kickoff
   ROUND_LOCKS: {
-    round1: '2026-06-11T21:00:00Z', // Pre-tournament — locks at first kickoff
-    round2: '2026-06-11T21:00:00Z', // Group winners — locks at first kickoff
+    round1: '2026-06-11T19:00:00Z', // Pre-tournament — locks at first kickoff
+    round2: '2026-06-11T19:00:00Z', // Group winners — locks at first kickoff
     round3: '2026-06-27T22:00:00Z', // Group stage scores — final group match kickoff
     round4: '2026-06-28T22:00:00Z', // Round of 32 — locks before first R32 game
     round5: '2026-07-04T18:00:00Z', // Round of 16

@@ -1,14 +1,14 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WC2026 — Round 2: Group Winners</title>
+  <title>WC2026 â€” Round 2: Group Winners</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
-  <link rel="stylesheet" href="../css/style.css?v=7">
+  <link rel="stylesheet" href="../css/style.css?v=8">
   <style>
     .answers-panel {
       margin-top: 0.875rem;
@@ -79,9 +79,9 @@
         <div class="info-row"><span>Correct group runner-up</span><span class="pts">10 pts</span></div>
         <div class="info-row"><span>Team finishes top 2, wrong position</span><span class="pts">5 pts</span></div>
         <div class="info-row"><span>Bonus: predict all 12 group winners correctly</span><span class="pts">+10 pts</span></div>
-        <div class="info-row"><span>Bonus: predict 10–11 group winners correctly</span><span class="pts">+5 pts</span></div>
+        <div class="info-row"><span>Bonus: predict 10â€“11 group winners correctly</span><span class="pts">+5 pts</span></div>
         <div class="info-row"><span>Bonus: predict all 24 qualifiers</span><span class="pts">+10 pts</span></div>
-        <div class="info-row"><span>Bonus: predict 20–23 qualifiers</span><span class="pts">+5 pts</span></div>
+        <div class="info-row"><span>Bonus: predict 20â€“23 qualifiers</span><span class="pts">+5 pts</span></div>
       </div>
 
       <div class="group-predict-grid" id="groupGrid">
@@ -101,11 +101,11 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="../js/config.js?v=4"></script>
-  <script src="../js/data.js?v=4"></script>
-  <script src="../js/supabase-client.js?v=6"></script>
-  <script src="../js/scoring.js?v=4"></script>
-  <script src="../js/ui.js?v=4"></script>
+  <script src="../js/config.js?v=8"></script>
+  <script src="../js/data.js?v=8"></script>
+  <script src="../js/supabase-client.js?v=8"></script>
+  <script src="../js/scoring.js?v=8"></script>
+  <script src="../js/ui.js?v=8"></script>
   <script>
     DB.initSupabase();
     Nav.render('predictions');
@@ -134,7 +134,7 @@
       myLeagues = await DB.getMyLeagues(userId).catch(() => []);
 
       // getRoundAnswers enforces lock at query level:
-      // pre-lock → own row only; post-lock → all players' rows
+      // pre-lock â†’ own row only; post-lock â†’ all players' rows
       allAnswers = await DB.getRoundAnswers('round2', { currentUserId: userId, isLocked: locked }).catch(() => []);
 
       allAnswers.forEach(p => {
@@ -175,7 +175,7 @@
     function resolveTeamVal(rawVal) {
       let val;
       try { val = JSON.parse(rawVal); } catch { val = rawVal; }
-      if (!val) return '—';
+      if (!val) return 'â€”';
       const t = getTeam(val);
       return t ? `${t.flag} ${t.name}` : val;
     }
@@ -183,7 +183,7 @@
     function renderGroupPicksPanel(groupLetter) {
       const memberIds = (activeLeague !== 'global' && memberCache[activeLeague])
         ? new Set(memberCache[activeLeague]) : null;
-      // Build per-user map: userId → { profiles, winner, runner }
+      // Build per-user map: userId â†’ { profiles, winner, runner }
       const byUser = {};
       allAnswers.forEach(a => {
         if (memberIds && !memberIds.has(a.user_id)) return;
@@ -208,8 +208,8 @@
       const rows = entries.map(([uid, data]) => {
         const isYou = uid === userId;
         const name  = data.profiles?.display_name || 'Player';
-        const winner = data.winner ? resolveTeamVal(data.winner) : '—';
-        const runner = data.runner ? resolveTeamVal(data.runner) : '—';
+        const winner = data.winner ? resolveTeamVal(data.winner) : 'â€”';
+        const runner = data.runner ? resolveTeamVal(data.runner) : 'â€”';
         return `<div class="answer-row${isYou ? ' you' : ''}">
           ${renderAvatar(data.profiles, 'avatar', 'width:26px;height:26px;font-size:0.75rem;flex-shrink:0')}
           <span class="answer-name">${name}${isYou ? ' <span class="you-badge">You</span>' : ''}</span>

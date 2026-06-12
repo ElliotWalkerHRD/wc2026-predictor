@@ -1,14 +1,14 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WC2026 — Calculator</title>
+  <title>WC2026 â€” Calculator</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
-  <link rel="stylesheet" href="../css/style.css?v=7">
+  <link rel="stylesheet" href="../css/style.css?v=8">
   <style>
     /* Tabs */
     .scenario-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--grey-200); margin-bottom: 1.5rem; overflow-x: auto; }
@@ -193,7 +193,7 @@
 
   <div style="display:flex;gap:0.75rem;align-items:flex-start;background:var(--grey-100);border-radius:var(--radius-md);padding:0.85rem 1rem;margin-bottom:1.75rem;font-size:0.85rem;color:var(--grey-600);line-height:1.55">
     <i class="ti ti-info-circle" style="font-size:1.1rem;color:var(--grey-400);flex-shrink:0;margin-top:0.15rem"></i>
-    <span>Enter scores for any group stage match and the bracket fills automatically — see who qualifies, how the knockouts play out, and who could reach the Final. When you're happy with a scenario, open the <strong style="color:var(--ink)">Populate Picks</strong> tab to push it into your real predictions for any open rounds.</span>
+    <span>Enter scores for any group stage match and the bracket fills automatically â€” see who qualifies, how the knockouts play out, and who could reach the Final. When you're happy with a scenario, open the <strong style="color:var(--ink)">Populate Picks</strong> tab to push it into your real predictions for any open rounds.</span>
   </div>
 
   <div id="scenario-root">
@@ -226,7 +226,7 @@
 
 // ---- State ----
 let _userId = null;
-let scoreMap = {};      // matchId key → { home, away, winner? }
+let scoreMap = {};      // matchId key â†’ { home, away, winner? }
 let _qualifiers = null; // computed from group scores
 let _bracket = null;    // computed bracket teams per match
 
@@ -286,7 +286,7 @@ function computeGroup(groupKey, sm) {
 // ---- Core: qualifiers + 3rd-place bipartite matching ----
 // Each R32 "3rd place" slot specifies eligible source groups.
 // We use augmenting-path matching to assign the 8 best 3rd-place teams
-// to slots respecting eligibility — equivalent to the official FIFA lookup table.
+// to slots respecting eligibility â€” equivalent to the official FIFA lookup table.
 const THIRD_ELIGIBILITY = {
   74: new Set(['A','B','C','D','F']),
   77: new Set(['C','D','F','G','H']),
@@ -299,11 +299,11 @@ const THIRD_ELIGIBILITY = {
 };
 
 function matchThirdPlace(qualGroups) {
-  // qualGroups: array of 8 group codes (ordered best→worst)
+  // qualGroups: array of 8 group codes (ordered bestâ†’worst)
   // Returns: { slotId: groupCode } or {} if no perfect matching found
   const slotIds = Object.keys(THIRD_ELIGIBILITY).map(Number);
-  const matchSlot = {};  // slotId → groupCode
-  const matchGroup = {}; // groupCode → slotId
+  const matchSlot = {};  // slotId â†’ groupCode
+  const matchGroup = {}; // groupCode â†’ slotId
 
   function augment(group, seen) {
     for (const slot of slotIds) {
@@ -546,10 +546,10 @@ function renderGroupsTab() {
           </span>
           <span class="fx-score">
             <input type="number" class="fx-score-input scen-input" data-mid="${id}" data-side="home"
-              value="${s.home ?? ''}" min="0" max="99"${locked ? ' disabled' : ''} placeholder="–">
+              value="${s.home ?? ''}" min="0" max="99"${locked ? ' disabled' : ''} placeholder="â€“">
             <span class="fx-score-sep">:</span>
             <input type="number" class="fx-score-input scen-input" data-mid="${id}" data-side="away"
-              value="${s.away ?? ''}" min="0" max="99"${locked ? ' disabled' : ''} placeholder="–">
+              value="${s.away ?? ''}" min="0" max="99"${locked ? ' disabled' : ''} placeholder="â€“">
           </span>
           <span class="fx-away">
             <span class="fx-name">${TEAMS[ac]?.name || ac}</span>${flagEl(ac)}
@@ -650,10 +650,10 @@ function bracketMatchCard(m) {
         <div class="bm-team home${hAdv || hWinsTied ? ' bm-advancing' : ''}">${teamDisplay(hCode)}</div>
         <div class="bm-score-area">
           <input type="number" class="bm-score-input scen-input" data-mid="${m.id}" data-side="home"
-            value="${hv}" min="0" max="99"${!hasTeams?' disabled':''} placeholder="–">
+            value="${hv}" min="0" max="99"${!hasTeams?' disabled':''} placeholder="â€“">
           <span style="color:var(--grey-400);font-weight:700;font-size:0.75rem">:</span>
           <input type="number" class="bm-score-input scen-input" data-mid="${m.id}" data-side="away"
-            value="${av}" min="0" max="99"${!hasTeams?' disabled':''} placeholder="–">
+            value="${av}" min="0" max="99"${!hasTeams?' disabled':''} placeholder="â€“">
         </div>
         <div class="bm-team away${aAdv || aWinsTied ? ' bm-advancing' : ''}">${teamDisplay(aCode)}</div>
       </div>
@@ -674,13 +674,13 @@ function renderPopulateTab() {
 
 function derivedAnswersHtml(d) {
   const q = _qualifiers;
-  const tTeam = code => code ? `${flagEl(code)} <strong>${TEAMS[code]?.name || code}</strong>` : '<span class="dim" style="color:var(--grey-400);font-style:italic">—</span>';
+  const tTeam = code => code ? `${flagEl(code)} <strong>${TEAMS[code]?.name || code}</strong>` : '<span class="dim" style="color:var(--grey-400);font-style:italic">â€”</span>';
   const tNum = n => `<strong>${n}</strong>`;
 
   const groupRows = GROUP_KEYS.map(g => {
     const w = q.groups[g].winner, r = q.groups[g].runnerUp;
-    const wName = w?.P > 0 ? `${flagEl(w.code)} ${TEAMS[w.code]?.name || w.code}` : '<span style="color:var(--grey-400)">—</span>';
-    const rName = r?.P > 0 ? `${flagEl(r.code)} ${TEAMS[r.code]?.name || r.code}` : '<span style="color:var(--grey-400)">—</span>';
+    const wName = w?.P > 0 ? `${flagEl(w.code)} ${TEAMS[w.code]?.name || w.code}` : '<span style="color:var(--grey-400)">â€”</span>';
+    const rName = r?.P > 0 ? `${flagEl(r.code)} ${TEAMS[r.code]?.name || r.code}` : '<span style="color:var(--grey-400)">â€”</span>';
     return `<div class="derived-row">
       <span class="derived-key">Group ${g}</span>
       <span class="derived-val" style="gap:0.6rem">${wName} <span style="color:var(--grey-400);font-size:0.72rem">/ 2nd:</span> ${rName}</span>
@@ -693,11 +693,11 @@ function derivedAnswersHtml(d) {
   const r1Rows = [
     ['1.1 Winner',              d.winner   ? tTeam(d.winner)   : '<span class="dim">Complete bracket to derive</span>'],
     ['1.2 Runner-up',           d.runnerUp ? tTeam(d.runnerUp) : '<span class="dim">Complete bracket to derive</span>'],
-    ['1.3 Semi-finalists',      d.semis.length ? d.semis.map(tTeam).join(' <span style="color:var(--grey-400)">·</span> ') : '<span class="dim">Complete bracket to derive</span>'],
-    ['1.8 Host goals (USA/CAN/MEX)', d.hasAnyScore ? tNum(d.hostGoals) : '<span class="dim">—</span>'],
-    ['1.9 Top nation (ENG/FRA/BRA/ARG)', topN ? `${tTeam(topN)} <span style="color:var(--grey-500);font-size:0.75rem">(${topNGoals} goals)</span>` : '<span class="dim">—</span>'],
-    ['1.11 Total group goals',  d.hasAnyScore ? tNum(d.totalGoals) : '<span class="dim">—</span>'],
-    ['1.12 Hardest group',      d.hardestGroup ? `<strong>Group ${d.hardestGroup}</strong> <span style="color:var(--grey-500);font-size:0.75rem">(${d.minGap}pt gap 1st↔4th)</span>` : '<span class="dim">—</span>'],
+    ['1.3 Semi-finalists',      d.semis.length ? d.semis.map(tTeam).join(' <span style="color:var(--grey-400)">Â·</span> ') : '<span class="dim">Complete bracket to derive</span>'],
+    ['1.8 Host goals (USA/CAN/MEX)', d.hasAnyScore ? tNum(d.hostGoals) : '<span class="dim">â€”</span>'],
+    ['1.9 Top nation (ENG/FRA/BRA/ARG)', topN ? `${tTeam(topN)} <span style="color:var(--grey-500);font-size:0.75rem">(${topNGoals} goals)</span>` : '<span class="dim">â€”</span>'],
+    ['1.11 Total group goals',  d.hasAnyScore ? tNum(d.totalGoals) : '<span class="dim">â€”</span>'],
+    ['1.12 Hardest group',      d.hardestGroup ? `<strong>Group ${d.hardestGroup}</strong> <span style="color:var(--grey-500);font-size:0.75rem">(${d.minGap}pt gap 1stâ†”4th)</span>` : '<span class="dim">â€”</span>'],
   ].map(([k,v]) => `<div class="derived-row"><span class="derived-key">${k}</span><span class="derived-val">${v}</span></div>`).join('');
 
   return `
@@ -744,7 +744,7 @@ function populatePanelHtml(derived) {
     const tip = status === 'locked' ? 'This round is locked' : status === 'nodata' ? 'No calculator data for this round' : '';
     return `<button class="btn pop-btn${disabled ? '' : ''}" data-round="${r.id}"
       ${disabled ? 'disabled' : ''} title="${tip}">
-      <span class="pop-btn-label">${r.label} – ${r.title}</span>
+      <span class="pop-btn-label">${r.label} â€“ ${r.title}</span>
       <span class="pop-btn-status ${status}">${statusLabel}</span>
     </button>`;
   }).join('');
@@ -776,7 +776,7 @@ function showConfirm(title, body, okLabel = 'Confirm') {
     const modal = document.getElementById('confirmModal');
     modal.classList.remove('hidden');
 
-    // AbortController removes all listeners atomically on first dismiss — no accumulation.
+    // AbortController removes all listeners atomically on first dismiss â€” no accumulation.
     const ac = new AbortController();
     const { signal } = ac;
 
@@ -900,7 +900,7 @@ function onScoreInput(e) {
     // Recompute and update bracket if on bracket tab
     recompute();
   } else {
-    // Knockout match — clear debounce and re-render bracket after brief delay
+    // Knockout match â€” clear debounce and re-render bracket after brief delay
     clearTimeout(_debounceTimer);
     _debounceTimer = setTimeout(() => {
       recompute();

@@ -1,14 +1,14 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WC2026 — Match Centre</title>
+  <title>WC2026 â€” Match Centre</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
-  <link rel="stylesheet" href="../css/style.css?v=7">
+  <link rel="stylesheet" href="../css/style.css?v=8">
   <style>
     .round-section { margin-bottom: 2.5rem; }
 
@@ -256,11 +256,11 @@
   <div id="matchPredModal"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="../js/config.js?v=4"></script>
-  <script src="../js/data.js?v=4"></script>
-  <script src="../js/supabase-client.js?v=5"></script>
-  <script src="../js/scoring.js?v=4"></script>
-  <script src="../js/ui.js?v=4"></script>
+  <script src="../js/config.js?v=8"></script>
+  <script src="../js/data.js?v=8"></script>
+  <script src="../js/supabase-client.js?v=8"></script>
+  <script src="../js/scoring.js?v=8"></script>
+  <script src="../js/ui.js?v=8"></script>
   <script>
     DB.initSupabase();
     Nav.render('matches');
@@ -311,7 +311,7 @@
         .map(p => ({ ...p, profiles: ownProfile }));
 
       // allPreds: all-user data for locked matches + own-only for pre-kickoff
-      // Others' pre-kickoff predictions are never fetched — enforcement is at query level above
+      // Others' pre-kickoff predictions are never fetched â€” enforcement is at query level above
       allPreds = [...lockedPreds, ...ownPreKickoffPreds];
 
       if (currentUserId) {
@@ -372,7 +372,7 @@
       const gf = GROUP_FIXTURES.find(f => f[0] === matchId);
       if (gf) {
         home = getTeam(gf[4]); away = getTeam(gf[5]);
-        matchLabel = `Match ${matchId} · Group ${gf[3]}`;
+        matchLabel = `Match ${matchId} Â· Group ${gf[3]}`;
         matchDate  = gf[1];
       } else {
         for (const round of Object.values(KNOCKOUT_ROUNDS)) {
@@ -410,7 +410,7 @@
                 <span style="color:var(--grey-400);font-weight:400;font-size:0.8rem">vs</span>
                 <span>${away.name}</span>${away.code ? teamFlagImg(away.code) : ''}
               </div>
-              <div class="mpred-meta">${matchLabel}${matchDate ? ' · ' + formatDate(matchDate) : ''}${hasResult ? ` · <strong>${result.home_score}–${result.away_score}</strong>` : ''}</div>
+              <div class="mpred-meta">${matchLabel}${matchDate ? ' Â· ' + formatDate(matchDate) : ''}${hasResult ? ` Â· <strong>${result.home_score}â€“${result.away_score}</strong>` : ''}</div>
               <button class="mpred-close" onclick="closeMatchModal()"><i class="ti ti-x"></i></button>
             </div>
             ${leagueBarHtml}
@@ -450,7 +450,7 @@
           ? `<div class="mpred-row mpred-you">
               ${renderAvatar(myPredRow.profiles, 'avatar', 'width:32px;height:32px;font-size:0.85rem')}
               <span class="mpred-name">You <span class="you-badge">You</span></span>
-              <span class="mpred-score">${myVal.home}–${myVal.away}</span>
+              <span class="mpred-score">${myVal.home}â€“${myVal.away}</span>
             </div>`
           : `<div class="mpred-row mpred-you" style="color:var(--grey-400)">
               <i class="ti ti-circle-dashed" style="font-size:1.5rem;flex-shrink:0"></i>
@@ -507,7 +507,7 @@
         return `<div class="mpred-row${isYou ? ' mpred-you' : ''}">
           ${renderAvatar(p.profiles, 'avatar', 'width:32px;height:32px;font-size:0.85rem')}
           <span class="mpred-name">${p.profiles?.display_name || 'Player'}${isYou ? ' <span class="you-badge">You</span>' : ''}</span>
-          <span class="mpred-score">${val !== null ? `${val.home}–${val.away}` : '—'}</span>
+          <span class="mpred-score">${val !== null ? `${val.home}â€“${val.away}` : 'â€”'}</span>
           ${chipHtml}
         </div>`;
       }).join('');
@@ -602,13 +602,13 @@
       const home = getTeam(homeCode);
       const away = getTeam(awayCode);
       const result = results[id];
-      return buildMatchRowHtml(id, date, home, away, result, predMap[id] || [], `Match ${id} · Group ${group}`, venue, city, 7, 5);
+      return buildMatchRowHtml(id, date, home, away, result, predMap[id] || [], `Match ${id} Â· Group ${group}`, venue, city, 7, 5);
     }
 
     function buildKoMatchRow(m, predMap, results) {
       const result = results[m.id];
-      const home = m.home_team ? getTeam(m.home_team) : { flag: '🏳️', name: 'TBD', code: 'TBD' };
-      const away = m.away_team ? getTeam(m.away_team) : { flag: '🏳️', name: 'TBD', code: 'TBD' };
+      const home = m.home_team ? getTeam(m.home_team) : { flag: 'ðŸ³ï¸', name: 'TBD', code: 'TBD' };
+      const away = m.away_team ? getTeam(m.away_team) : { flag: 'ðŸ³ï¸', name: 'TBD', code: 'TBD' };
       const exactPts = m.id === 104 ? 10 : 7;
       const resultPts = m.id === 104 ? 7 : 5;
       return buildMatchRowHtml(m.id, m.date, home, away, result, predMap[m.id] || [], m.match_label, '', '', exactPts, resultPts);
@@ -623,16 +623,16 @@
 
       if (isLive) {
         statusBadge = `<div class="live-badge"><div class="live-dot-sm"></div>LIVE</div>`;
-        scoreLine = `<div class="match-scoreline">${result.home_score} – ${result.away_score}</div>`;
+        scoreLine = `<div class="match-scoreline">${result.home_score} â€“ ${result.away_score}</div>`;
       } else if (hasResult) {
         statusBadge = `<span class="finished-badge">Final</span>`;
-        scoreLine = `<div class="match-scoreline">${result.home_score} – ${result.away_score}</div>`;
+        scoreLine = `<div class="match-scoreline">${result.home_score} â€“ ${result.away_score}</div>`;
       }
 
       let predsHtml = '';
       if (preds.length > 0) {
         const pills = preds.map(p => {
-          const predText = `${p.home}–${p.away}`;
+          const predText = `${p.home}â€“${p.away}`;
           let cls = '';
           if (hasResult) {
             const actH = result.home_score, actA = result.away_score;

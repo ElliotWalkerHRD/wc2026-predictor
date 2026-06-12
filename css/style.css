@@ -546,7 +546,7 @@ select.form-control option {
   transform: translateY(-2px);
 }
 
-.round-card.locked  { opacity: 0.55; cursor: default; pointer-events: none; }
+.round-card.locked  { opacity: 0.7; }
 .round-card.complete { border-color: var(--green); }
 
 .round-card .round-num-bg {

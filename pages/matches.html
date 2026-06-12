@@ -315,10 +315,39 @@
       allPreds = [...lockedPreds, ...ownPreKickoffPreds];
 
       if (currentUserId) {
-        DB.getMyLeagues(currentUserId).then(l => { myLeagues = l || []; }).catch(() => {});
+        myLeagues = await DB.getMyLeagues(currentUserId).catch(() => []);
       }
 
       render();
+      renderLeagueFilter();
+    }
+
+    function renderLeagueFilter() {
+      const privateLeagues = myLeagues.filter(l => !l.is_global);
+      if (!privateLeagues.length) return;
+      const bar = document.querySelector('.filter-bar');
+      if (!bar || document.getElementById('inlineLeagueGroup')) return;
+      const group = document.createElement('div');
+      group.id = 'inlineLeagueGroup';
+      group.style.cssText = 'display:flex;align-items:center;gap:0.5rem;margin-left:auto';
+      group.innerHTML = `
+        <i class="ti ti-users-group" style="color:var(--grey-400);font-size:0.9rem"></i>
+        <select id="inlineLeaguePicker" class="form-control" style="font-size:0.82rem;padding:0.25rem 0.6rem;height:auto;min-width:150px">
+          <option value="global">All Players</option>
+          ${privateLeagues.map(l => `<option value="${l.id}">${l.name}</option>`).join('')}
+        </select>`;
+      bar.appendChild(group);
+      document.getElementById('inlineLeaguePicker').value = activePredLeague;
+      document.getElementById('inlineLeaguePicker').addEventListener('change', async e => {
+        activePredLeague = e.target.value;
+        if (activePredLeague !== 'global' && !memberCache[activePredLeague]) {
+          memberCache[activePredLeague] = await DB.getLeagueMemberIds(activePredLeague).catch(() => []);
+        }
+        // Sync modal picker if open
+        const modalPicker = document.getElementById('mpredLeaguePicker');
+        if (modalPicker) modalPicker.value = activePredLeague;
+        render();
+      });
     }
 
     // ---- Per-match kick-off time (UTC) ----
@@ -490,9 +519,15 @@
     }
 
     function buildPredMap() {
+      // Apply league filter if active
+      const memberIds = (activePredLeague !== 'global' && memberCache[activePredLeague])
+        ? new Set(memberCache[activePredLeague])
+        : null;
+
       const map = {};
       allPreds.forEach(p => {
         if (!p.question_key.startsWith('m')) return;
+        if (memberIds && !memberIds.has(p.user_id)) return;
         const matchId = parseInt(p.question_key.slice(1));
         if (isNaN(matchId)) return;
         let val;

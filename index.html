@@ -274,6 +274,111 @@
       margin: 0 auto 1.75rem;
       font-size: 0.95rem;
     }
+
+    /* ---- How to play ---- */
+    .how-to-play {
+      border: 1px solid var(--grey-300);
+      border-radius: var(--radius-lg);
+      background: var(--white);
+      box-shadow: var(--shadow-sm);
+      margin-top: 2rem;
+    }
+
+    .how-to-play > summary {
+      list-style: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.25rem;
+      user-select: none;
+      border-radius: var(--radius-lg);
+      transition: background 0.15s;
+    }
+
+    .how-to-play > summary:hover { background: var(--grey-100); }
+    .how-to-play[open] > summary { border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+    .how-to-play > summary::-webkit-details-marker { display: none; }
+
+    .htp-summary-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .htp-chevron { color: var(--grey-400); transition: transform 0.2s; }
+    .how-to-play[open] .htp-chevron { transform: rotate(180deg); }
+
+    .htp-body {
+      border-top: 1px solid var(--grey-300);
+      padding: 1.5rem 1.25rem 1.25rem;
+    }
+
+    .htp-grid { display: grid; grid-template-columns: 1fr; gap: 1.75rem; }
+    @media (min-width: 640px) { .htp-grid { grid-template-columns: 1fr 1fr; gap: 2.5rem; } }
+
+    .htp-col-heading {
+      font-family: var(--font-serif);
+      font-size: 1.1rem;
+      margin-bottom: 0.875rem;
+    }
+
+    .htp-score-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.875rem; }
+
+    .htp-score-row {
+      display: flex;
+      align-items: baseline;
+      gap: 0.625rem;
+      font-size: 0.84rem;
+      color: var(--grey-700);
+      line-height: 1.4;
+    }
+
+    .htp-pts {
+      flex-shrink: 0;
+      font-weight: 700;
+      font-size: 0.73rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 9999px;
+      white-space: nowrap;
+    }
+
+    .htp-pts--exact   { background: rgba(200,241,53,0.3);  color: #4d6200; }
+    .htp-pts--result  { background: rgba(200,241,53,0.12); color: #637a10; }
+    .htp-pts--zero    { background: var(--grey-100); color: var(--grey-500); }
+    .htp-pts--default { background: var(--grey-100); color: var(--grey-500); }
+
+    .htp-note {
+      font-size: 0.8rem;
+      color: var(--grey-500);
+      margin-top: 0.5rem;
+      line-height: 1.55;
+    }
+
+    .htp-rounds {
+      padding-left: 1.25rem;
+      margin: 0 0 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+    }
+
+    .htp-rounds li { font-size: 0.84rem; color: var(--grey-700); line-height: 1.45; }
+    .htp-rounds li::marker { color: var(--grey-400); }
+
+    .htp-footer {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      margin-top: 1.25rem;
+      padding-top: 1.125rem;
+      border-top: 1px solid var(--grey-300);
+      font-size: 0.82rem;
+      color: var(--grey-500);
+      line-height: 1.5;
+    }
   </style>
 </head>
 <body>
@@ -387,7 +492,60 @@
         </div>
       </section>
 
-      <hr class="divider">
+      <!-- How to play -->
+      <details class="how-to-play">
+        <summary>
+          <span class="htp-summary-label"><i class="ti ti-help-circle"></i> How to play</span>
+          <i class="ti ti-chevron-down htp-chevron"></i>
+        </summary>
+        <div class="htp-body">
+          <div class="htp-grid">
+            <div>
+              <h3 class="htp-col-heading">Scoring</h3>
+              <div class="htp-score-list">
+                <div class="htp-score-row">
+                  <span class="htp-pts htp-pts--exact">7 pts</span>
+                  Exact score — you called both numbers right
+                </div>
+                <div class="htp-score-row">
+                  <span class="htp-pts htp-pts--result">5 pts</span>
+                  Correct result — right winner or draw, wrong score
+                </div>
+                <div class="htp-score-row">
+                  <span class="htp-pts htp-pts--zero">0 pts</span>
+                  Wrong result
+                </div>
+                <div class="htp-score-row">
+                  <span class="htp-pts htp-pts--default">4&ndash;4</span>
+                  No prediction submitted &mdash; scored as 4-4 by default
+                </div>
+              </div>
+              <p class="htp-note">The <strong>Final</strong> is worth more: 10 pts exact &middot; 7 pts correct result.</p>
+              <p class="htp-note">Rounds 1 &amp; 2 use custom questions judged by the commissioner with their own point values.</p>
+            </div>
+            <div>
+              <h3 class="htp-col-heading">The 8 Rounds</h3>
+              <ol class="htp-rounds">
+                <li><strong>Pre-Tournament</strong> &mdash; trivia &amp; tournament predictions, commissioner-judged</li>
+                <li><strong>Group Winners</strong> &mdash; pick the teams topping each group, commissioner-judged</li>
+                <li><strong>Group Stage</strong> &mdash; predict all 72 match scores before the tournament begins</li>
+                <li><strong>Round of 32</strong> &mdash; 16 knockout matches</li>
+                <li><strong>Round of 16</strong> &mdash; 8 matches</li>
+                <li><strong>Quarter Finals</strong> &mdash; 4 matches</li>
+                <li><strong>Semi Finals</strong> &mdash; 2 matches</li>
+                <li><strong>The Final</strong> &mdash; 1 match; highest points available</li>
+              </ol>
+              <p class="htp-note">Each round locks before its first kick-off. Picks can&rsquo;t be changed after the deadline.</p>
+            </div>
+          </div>
+          <div class="htp-footer">
+            <i class="ti ti-users"></i>
+            <span>You can join multiple leagues &mdash; each has its own leaderboard. <em>Global</em> always shows the full standings.</span>
+          </div>
+        </div>
+      </details>
+
+      <hr class="divider" style="margin-top:2rem">
 
       <!-- Round lock status grid -->
       <div id="roundsLockSection"></div>

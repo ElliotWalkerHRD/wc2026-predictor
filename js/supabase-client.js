@@ -150,6 +150,24 @@ async function getAllPredictions(round = null, questionKeys = null) {
   return data || [];
 }
 
+// Fetch all players' answers for a round with lock enforcement at the query level.
+// isLocked: false → only currentUserId's own rows; others' data never leaves the server.
+// isLocked: true  → all players' rows with profile join.
+async function getRoundAnswers(round, { currentUserId = null, isLocked = false } = {}) {
+  if (!isLocked && !currentUserId) return [];
+  const sb = initSupabase();
+  let query = sb.from('predictions')
+    .select('user_id, question_key, value, profiles(display_name, avatar_color, avatar_url)')
+    .eq('round', round);
+  if (!isLocked) {
+    // Pre-lock: restrict to own row at query level — not just UI
+    query = query.eq('user_id', currentUserId);
+  }
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+}
+
 // Fetch predictions for a single match with kick-off enforcement at the query level.
 // isLocked: true  → return all predictions (optionally scoped to userIds)
 // isLocked: false → return ONLY the currentUserId's own row; others' data is never sent over
@@ -452,7 +470,7 @@ function getRoundLockDate(round) {
 window.DB = {
   signUp, signIn, signOut, getSession, getCurrentUser, onAuthChange,
   getProfile, upsertProfile, getProfiles, getAllProfiles, isAdmin,
-  savePrediction, getUserPredictions, getAllPredictions, getMatchPredictions,
+  savePrediction, getUserPredictions, getAllPredictions, getRoundAnswers, getMatchPredictions,
   getScores, getUserScore,
   getMatchResults, upsertMatchResult,
   validateInviteCode, getInviteCodes, createInviteCode,

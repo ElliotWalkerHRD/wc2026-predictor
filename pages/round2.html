@@ -9,6 +9,51 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
   <link rel="stylesheet" href="../css/style.css?v=6">
+  <style>
+    .answers-panel {
+      margin-top: 0.875rem;
+      border-top: 1px solid var(--grey-300);
+      padding-top: 0.75rem;
+    }
+    .answers-panel-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--grey-400);
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+    .answers-list { display: flex; flex-direction: column; gap: 0.2rem; }
+    .answer-row {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      padding: 0.35rem 0.5rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.83rem;
+    }
+    .answer-row.you { background: rgba(200,241,53,0.1); }
+    .answer-name {
+      flex: 1;
+      font-weight: 500;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .answer-val {
+      font-weight: 600;
+      color: var(--grey-700);
+      text-align: right;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 220px;
+    }
+  </style>
 </head>
 <body>
   <nav class="nav" id="main-nav"></nav>
@@ -58,7 +103,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="../js/config.js?v=4"></script>
   <script src="../js/data.js?v=4"></script>
-  <script src="../js/supabase-client.js?v=5"></script>
+  <script src="../js/supabase-client.js?v=6"></script>
   <script src="../js/scoring.js?v=4"></script>
   <script src="../js/ui.js?v=4"></script>
   <script>
@@ -82,16 +127,69 @@
         document.getElementById('stickySave').style.display = 'block';
       }
 
-      const preds = await DB.getUserPredictions(userId, 'round2').catch(() => []);
-      preds.forEach(p => {
-        try { saved[p.question_key] = JSON.parse(p.value); }
-        catch { saved[p.question_key] = p.value; }
+      // getRoundAnswers enforces lock at query level:
+      // pre-lock → own row only; post-lock → all players' rows
+      const allAnswers = await DB.getRoundAnswers('round2', { currentUserId: userId, isLocked: locked }).catch(() => []);
+
+      allAnswers.forEach(p => {
+        if (p.user_id === userId) {
+          try { saved[p.question_key] = JSON.parse(p.value); }
+          catch { saved[p.question_key] = p.value; }
+        }
       });
 
-      renderGroups();
+      renderGroups(allAnswers);
     }
 
-    function renderGroups() {
+    function resolveTeamVal(rawVal) {
+      let val;
+      try { val = JSON.parse(rawVal); } catch { val = rawVal; }
+      if (!val) return '—';
+      const t = getTeam(val);
+      return t ? `${t.flag} ${t.name}` : val;
+    }
+
+    function renderGroupPicksPanel(groupLetter, allAnswers) {
+      // Build per-user map: userId → { profiles, winner, runner }
+      const byUser = {};
+      allAnswers.forEach(a => {
+        if (a.question_key === `2.w.${groupLetter}`) {
+          if (!byUser[a.user_id]) byUser[a.user_id] = { profiles: a.profiles };
+          byUser[a.user_id].winner = a.value;
+        } else if (a.question_key === `2.r.${groupLetter}`) {
+          if (!byUser[a.user_id]) byUser[a.user_id] = { profiles: a.profiles };
+          byUser[a.user_id].runner = a.value;
+        }
+      });
+
+      const entries = Object.entries(byUser);
+      if (!entries.length) return '';
+
+      entries.sort(([aId], [bId]) => {
+        if (aId === userId) return -1;
+        if (bId === userId) return 1;
+        return (byUser[aId].profiles?.display_name || '').localeCompare(byUser[bId].profiles?.display_name || '');
+      });
+
+      const rows = entries.map(([uid, data]) => {
+        const isYou = uid === userId;
+        const name  = data.profiles?.display_name || 'Player';
+        const winner = data.winner ? resolveTeamVal(data.winner) : '—';
+        const runner = data.runner ? resolveTeamVal(data.runner) : '—';
+        return `<div class="answer-row${isYou ? ' you' : ''}">
+          ${renderAvatar(data.profiles, 'avatar', 'width:26px;height:26px;font-size:0.75rem;flex-shrink:0')}
+          <span class="answer-name">${name}${isYou ? ' <span class="you-badge">You</span>' : ''}</span>
+          <span class="answer-val">${winner} &middot; ${runner}</span>
+        </div>`;
+      }).join('');
+
+      return `<div class="answers-panel">
+        <div class="answers-panel-label"><i class="ti ti-users"></i> All picks (${entries.length})</div>
+        <div class="answers-list">${rows}</div>
+      </div>`;
+    }
+
+    function renderGroups(allAnswers = []) {
       const grid = document.getElementById('groupGrid');
       grid.innerHTML = Object.entries(GROUPS).map(([groupLetter, groupData]) => {
         const teams = groupData.teams.map(code => getTeam(code));
@@ -116,6 +214,8 @@
           `<span class="group-team-pill">${teamFlagImg(t.code)} ${t.name}</span>`
         ).join('');
 
+        const allPicksPanel = locked ? renderGroupPicksPanel(groupLetter, allAnswers) : '';
+
         return `
           <div class="group-card">
             <div class="group-card-header">
@@ -133,6 +233,7 @@
                 ${runnerSel}
               </div>
             </div>
+            ${allPicksPanel}
           </div>
         `;
       }).join('');

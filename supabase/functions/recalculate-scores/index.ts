@@ -69,54 +69,114 @@ serve(async (req) => {
   } catch (_) {}
 
   try {
-    // 1. Fetch all match results
+    // 1. Fetch all match results (max 104 matches; explicit limit guards PostgREST default cap)
     const { data: matchResults } = await supabaseAdmin
-      .from("match_results").select("*");
+      .from("match_results").select("*").limit(200);
 
     const resultMap: Record<number, any> = {};
     (matchResults || []).forEach((r: any) => { resultMap[r.match_id] = r; });
 
-    // 2. Fetch all predictions
-    let predsQuery = supabaseAdmin.from("predictions").select("*");
-    if (targetUserId) predsQuery = predsQuery.eq("user_id", targetUserId);
-    const { data: allPredictions } = await predsQuery;
+    console.log(`[recalculate-scores] match_results fetched: ${matchResults?.length ?? 0}`);
 
-    // 3. Group predictions by user
-    const userPreds: Record<string, Record<string, any[]>> = {};
+    // 2. Fetch all predictions via pagination — PostgREST max-rows caps any single
+    //    request at 1000 rows regardless of .limit(); paginate to get everything.
+    const PAGE_SIZE = 1000;
+    const allPredictions: any[] = [];
+    for (let from = 0; ; from += PAGE_SIZE) {
+      let q = supabaseAdmin
+        .from("predictions")
+        .select("*")
+        .range(from, from + PAGE_SIZE - 1);
+      if (targetUserId) q = q.eq("user_id", targetUserId);
+      const { data: page, error: pageErr } = await q;
+      if (pageErr) throw pageErr;
+      if (!page || page.length === 0) break;
+      allPredictions.push(...page);
+      if (page.length < PAGE_SIZE) break;
+    }
+
+    console.log(`[recalculate-scores] predictions fetched: ${allPredictions.length}${targetUserId ? ` (filtered to user ${targetUserId})` : ""}`);
+
+    // 3. Group predictions by user indexed by matchId, and build match→round map from existing data
+    const userPreds: Record<string, Record<string, Record<number, any>>> = {};
+    const matchRoundMap: Record<number, string> = {};
     (allPredictions || []).forEach((p: any) => {
+      if (!p.question_key.startsWith("m")) return;
+      const matchId = parseInt(p.question_key.slice(1));
+      if (isNaN(matchId)) return;
+      if (!matchRoundMap[matchId]) matchRoundMap[matchId] = p.round;
       if (!userPreds[p.user_id]) userPreds[p.user_id] = {};
-      if (!userPreds[p.user_id][p.round]) userPreds[p.user_id][p.round] = [];
-      userPreds[p.user_id][p.round].push(p);
+      if (!userPreds[p.user_id][p.round]) userPreds[p.user_id][p.round] = {};
+      userPreds[p.user_id][p.round][matchId] = p;
     });
 
-    // 4. Calculate scores per user
-    const scoreUpdates: any[] = [];
+    // Fetch all profiles so zero-prediction players still get a scores row
+    const allProfiles: any[] = [];
+    if (!targetUserId) {
+      for (let from = 0; ; from += PAGE_SIZE) {
+        const { data: page, error: pageErr } = await supabaseAdmin
+          .from("profiles").select("id").range(from, from + PAGE_SIZE - 1);
+        if (pageErr) throw pageErr;
+        if (!page || page.length === 0) break;
+        allProfiles.push(...page);
+        if (page.length < PAGE_SIZE) break;
+      }
+    } else {
+      allProfiles.push({ id: targetUserId });
+    }
 
-    for (const [userId, roundPreds] of Object.entries(userPreds)) {
+    const allUserIds = new Set<string>([
+      ...Object.keys(userPreds),
+      ...allProfiles.map((p: any) => p.id),
+    ]);
+
+    console.log(`[recalculate-scores] users to score: ${allUserIds.size} (${Object.keys(userPreds).length} with predictions, ${allProfiles.length} profiles fetched)`);
+
+    // Pre-index matches-with-results by round
+    const matchesByRound: Record<string, number[]> = {};
+    for (const [matchIdStr, result] of Object.entries(resultMap)) {
+      const matchId = parseInt(matchIdStr);
+      const round = matchRoundMap[matchId];
+      if (!round) continue;
+      if (result.home_score === null || result.away_score === null) continue;
+      if (!matchesByRound[round]) matchesByRound[round] = [];
+      matchesByRound[round].push(matchId);
+    }
+
+    // 4. Calculate scores per user; default 4-4 for any match with a result but no prediction
+    const scoreUpdates: any[] = [];
+    let totalDefaultFills = 0;
+
+    for (const userId of allUserIds) {
+      const roundPreds = userPreds[userId] || {};
       const scores: Record<string, number> = {
         round1: 0, round2: 0, round3: 0, round4: 0,
         round5: 0, round6: 0, round7: 0, round8: 0
       };
 
-      // Score rounds 3-8 (match score predictions)
       for (const round of ["round3", "round4", "round5", "round6", "round7", "round8"]) {
-        const preds = roundPreds[round] || [];
+        const exactP         = EXACT_PTS[round as keyof typeof EXACT_PTS];
+        const resultP        = RESULT_PTS[round as keyof typeof RESULT_PTS];
+        const submittedPreds = roundPreds[round] || {};
         let pts = 0;
-        const exactP  = EXACT_PTS[round as keyof typeof EXACT_PTS];
-        const resultP = RESULT_PTS[round as keyof typeof RESULT_PTS];
 
-        for (const pred of preds) {
-          if (!pred.question_key.startsWith("m")) continue;
-          const matchId = parseInt(pred.question_key.slice(1));
-          const result  = resultMap[matchId];
-          if (!result || result.home_score === null) continue;
+        for (const matchId of (matchesByRound[round] || [])) {
+          const result = resultMap[matchId];
+          const actH = result.home_score, actA = result.away_score;
 
-          let val: any;
-          try { val = JSON.parse(pred.value); } catch { continue; }
+          let predH: number, predA: number;
 
-          const predH = parseInt(val.home), predA = parseInt(val.away);
-          const actH  = result.home_score,  actA  = result.away_score;
-          if (isNaN(predH) || isNaN(predA)) continue;
+          if (submittedPreds[matchId]) {
+            let val: any;
+            try { val = JSON.parse(submittedPreds[matchId].value); } catch { continue; }
+            predH = parseInt(val.home);
+            predA = parseInt(val.away);
+            if (isNaN(predH) || isNaN(predA)) continue;
+          } else {
+            // No submitted prediction — treat as 4-4 (rare scoreline, almost never earns points)
+            predH = 4; predA = 4;
+            totalDefaultFills++;
+          }
 
           if (predH === actH && predA === actA) {
             pts += exactP;
@@ -127,9 +187,7 @@ serve(async (req) => {
         scores[round] = pts;
       }
 
-      // Rounds 1 & 2 need the answer sheet — skip auto-scoring
-      // They're scored manually by admin or via separate logic
-      // Preserve existing r1/r2 scores if they exist
+      // Preserve existing r1/r2 scores
       const { data: existingScore } = await supabaseAdmin
         .from("scores").select("round1_points,round2_points").eq("user_id", userId).single();
 
@@ -153,6 +211,10 @@ serve(async (req) => {
       });
     }
 
+    console.log(`[recalculate-scores] default 4-4 fills: ${totalDefaultFills}`);
+
+    console.log(`[recalculate-scores] score rows to write: ${scoreUpdates.length}`);
+
     // 5. Upsert all score rows
     if (scoreUpdates.length > 0) {
       const { error } = await supabaseAdmin
@@ -163,7 +225,14 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, usersUpdated: scoreUpdates.length }),
+      JSON.stringify({
+        success: true,
+        version: "v3-default-fill",
+        matchResultsLoaded: matchResults?.length ?? 0,
+        predictionsLoaded: allPredictions?.length ?? 0,
+        usersUpdated: scoreUpdates.length,
+        defaultFills: totalDefaultFills,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 

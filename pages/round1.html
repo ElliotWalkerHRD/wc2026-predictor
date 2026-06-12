@@ -8,7 +8,52 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
-  <link rel="stylesheet" href="../css/style.css?v=5">
+  <link rel="stylesheet" href="../css/style.css?v=7">
+  <style>
+    .answers-panel {
+      margin-top: 1rem;
+      border-top: 1px solid var(--grey-300);
+      padding-top: 0.75rem;
+    }
+    .answers-panel-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--grey-400);
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+    .answers-list { display: flex; flex-direction: column; gap: 0.2rem; }
+    .answer-row {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      padding: 0.35rem 0.5rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.83rem;
+    }
+    .answer-row.you { background: rgba(200,241,53,0.1); }
+    .answer-name {
+      flex: 1;
+      font-weight: 500;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .answer-val {
+      font-weight: 600;
+      color: var(--grey-700);
+      text-align: right;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 180px;
+    }
+  </style>
 </head>
 <body>
   <nav class="nav" id="main-nav"></nav>
@@ -47,7 +92,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="../js/config.js?v=4"></script>
   <script src="../js/data.js?v=4"></script>
-  <script src="../js/supabase-client.js?v=4"></script>
+  <script src="../js/supabase-client.js?v=6"></script>
   <script src="../js/scoring.js?v=4"></script>
   <script src="../js/ui.js?v=4"></script>
   <script>
@@ -73,12 +118,17 @@
     let userId = null;
     let saved  = {};
     let locked = false;
+    let myLeagues    = [];
+    let activeLeague = 'global';
+    let memberCache  = {};
+    let allAnswers   = [];
 
     async function load() {
       const session = await requireAuthFromPages();
       if (!session) return;
       userId = session.user.id;
 
+      await DB.initRoundOverrides();
       locked = DB.isRoundLocked('round1');
       if (locked) {
         document.getElementById('lockedBanner').classList.remove('hidden');
@@ -86,13 +136,87 @@
         document.getElementById('stickySave').style.display = 'block';
       }
 
-      const preds = await DB.getUserPredictions(userId, 'round1').catch(() => []);
-      preds.forEach(p => {
-        try { saved[p.question_key] = JSON.parse(p.value); }
-        catch { saved[p.question_key] = p.value; }
+      myLeagues = await DB.getMyLeagues(userId).catch(() => []);
+
+      // getRoundAnswers enforces lock at query level:
+      // pre-lock → own row only; post-lock → all players' rows
+      allAnswers = await DB.getRoundAnswers('round1', { currentUserId: userId, isLocked: locked }).catch(() => []);
+
+      allAnswers.forEach(p => {
+        if (p.user_id === userId) {
+          try { saved[p.question_key] = JSON.parse(p.value); }
+          catch { saved[p.question_key] = p.value; }
+        }
       });
 
+      if (locked) renderLeagueFilter();
       renderQuestions();
+    }
+
+    function renderLeagueFilter() {
+      const privateLeagues = myLeagues.filter(l => !l.is_global);
+      if (!privateLeagues.length) return;
+      if (document.getElementById('r1LeagueFilter')) return;
+      const wrap = document.getElementById('questionsWrap');
+      const bar = document.createElement('div');
+      bar.id = 'r1LeagueFilter';
+      bar.style.cssText = 'display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem';
+      bar.innerHTML = `
+        <i class="ti ti-users-group" style="color:var(--grey-400);font-size:0.9rem"></i>
+        <select id="r1LeaguePicker" class="form-control" style="font-size:0.82rem;padding:0.25rem 0.6rem;height:auto;min-width:150px;max-width:220px">
+          <option value="global">All Players</option>
+          ${privateLeagues.map(l => `<option value="${l.id}">${l.name}</option>`).join('')}
+        </select>`;
+      wrap.parentNode.insertBefore(bar, wrap);
+      document.getElementById('r1LeaguePicker').addEventListener('change', async e => {
+        activeLeague = e.target.value;
+        if (activeLeague !== 'global' && !memberCache[activeLeague]) {
+          memberCache[activeLeague] = await DB.getLeagueMemberIds(activeLeague).catch(() => []);
+        }
+        renderQuestions();
+      });
+    }
+
+    function displayR1Answer(q, rawVal) {
+      let val;
+      try { val = JSON.parse(rawVal); } catch { val = rawVal; }
+      if (val === null || val === undefined || val === '') return '—';
+      if (q.type === 'team-select' || q.type === 'team-select-subset') {
+        const t = getTeam(val);
+        return t ? `${t.flag} ${t.name}` : val;
+      }
+      if (q.type === 'group-select') return `Group ${val}`;
+      return String(val);
+    }
+
+    function renderAnswersPanel(q) {
+      const memberIds = (activeLeague !== 'global' && memberCache[activeLeague])
+        ? new Set(memberCache[activeLeague]) : null;
+      const qAnswers = allAnswers.filter(a => {
+        if (a.question_key !== q.key) return false;
+        if (memberIds && !memberIds.has(a.user_id)) return false;
+        return true;
+      });
+      if (!qAnswers.length) return '';
+      qAnswers.sort((a, b) => {
+        if (a.user_id === userId) return -1;
+        if (b.user_id === userId) return 1;
+        return (a.profiles?.display_name || '').localeCompare(b.profiles?.display_name || '');
+      });
+      const rows = qAnswers.map(a => {
+        const isYou = a.user_id === userId;
+        const name = a.profiles?.display_name || 'Player';
+        const answer = displayR1Answer(q, a.value);
+        return `<div class="answer-row${isYou ? ' you' : ''}">
+          ${renderAvatar(a.profiles, 'avatar', 'width:26px;height:26px;font-size:0.75rem;flex-shrink:0')}
+          <span class="answer-name">${name}${isYou ? ' <span class="you-badge">You</span>' : ''}</span>
+          <span class="answer-val">${answer}</span>
+        </div>`;
+      }).join('');
+      return `<div class="answers-panel">
+        <div class="answers-panel-label"><i class="ti ti-users"></i> All answers (${qAnswers.length})</div>
+        <div class="answers-list">${rows}</div>
+      </div>`;
     }
 
     function renderQuestions() {
@@ -122,12 +246,15 @@
 
         if (locked) input = input.replace('class="form-control"', 'class="form-control" disabled');
 
+        const answersPanel = locked ? renderAnswersPanel(q) : '';
+
         return `
           <div class="question-card">
             <div class="question-num">${q.num}</div>
             <div class="question-text">${q.text}</div>
             <div class="question-pts"><i class="ti ti-medal"></i> ${q.pts}</div>
             ${input}
+            ${answersPanel}
           </div>
         `;
       }).join('');

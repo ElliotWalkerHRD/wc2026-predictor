@@ -546,7 +546,7 @@ select.form-control option {
   transform: translateY(-2px);
 }
 
-.round-card.locked  { opacity: 0.55; cursor: default; pointer-events: none; }
+.round-card.locked  { opacity: 0.7; }
 .round-card.complete { border-color: var(--green); }
 
 .round-card .round-num-bg {
@@ -751,6 +751,24 @@ select.form-control option {
     grid-template-columns: 1fr 1.1fr 1fr;
     align-items: end;
   }
+}
+
+/* Mobile: compact 3-column row, correct rank order (DOM is [2nd,1st,3rd]) */
+@media (max-width: 559px) {
+  .podium-grid {
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0.5rem;
+    align-items: start;
+  }
+  .podium-card.rank-1 { order: 1; transform: none; }
+  .podium-card.rank-2 { order: 2; }
+  .podium-card.rank-3 { order: 3; }
+  .podium-card        { padding: 0.75rem 0.4rem; }
+  .podium-avatar      { width: 36px; height: 36px; font-size: 0.9rem; margin-bottom: 0.5rem; }
+  .podium-position    { font-size: 0.65rem; margin-bottom: 0.4rem; }
+  .podium-name        { font-size: 0.75rem; margin-bottom: 0.25rem; }
+  .podium-pts         { font-size: 1.5rem; }
+  .podium-pts-label   { font-size: 0.6rem; }
 }
 
 .podium-card {

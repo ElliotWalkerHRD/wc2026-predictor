@@ -5,6 +5,7 @@
 // Supabase is loaded via CDN in each HTML page
 // Initialize client once CONFIG is available
 let supabaseClient = null;
+let _roundOverrides = {}; // populated by initRoundOverrides(); keyed by round, values: 'none'|'open'|'locked'
 
 function initSupabase() {
   if (supabaseClient) return supabaseClient;
@@ -144,6 +145,24 @@ async function getAllPredictions(round = null, questionKeys = null) {
   // When questionKeys supplied, restrict to those match question_keys only —
   // used to fetch all-user data only for already-kicked-off matches.
   if (questionKeys && questionKeys.length) query = query.in('question_key', questionKeys);
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+}
+
+// Fetch all players' answers for a round with lock enforcement at the query level.
+// isLocked: false → only currentUserId's own rows; others' data never leaves the server.
+// isLocked: true  → all players' rows with profile join.
+async function getRoundAnswers(round, { currentUserId = null, isLocked = false } = {}) {
+  if (!isLocked && !currentUserId) return [];
+  const sb = initSupabase();
+  let query = sb.from('predictions')
+    .select('user_id, question_key, value, profiles(display_name, avatar_color, avatar_url)')
+    .eq('round', round);
+  if (!isLocked) {
+    // Pre-lock: restrict to own row at query level — not just UI
+    query = query.eq('user_id', currentUserId);
+  }
   const { data, error } = await query;
   if (error) throw error;
   return data || [];
@@ -407,7 +426,37 @@ async function recalculateScores(userId = null) {
 
 // ---- Round lock check ----
 
+// Load admin overrides from DB into the module-level cache.
+// Call once per page before any isRoundLocked() calls.
+// Fails silently — missing table or network error falls back to time-based locking.
+async function initRoundOverrides() {
+  try {
+    const sb = initSupabase();
+    const { data } = await sb.from('round_overrides').select('round,override');
+    _roundOverrides = {};
+    (data || []).forEach(r => { _roundOverrides[r.round] = r.override; });
+  } catch (_) {
+    _roundOverrides = {};
+  }
+}
+
+// Upsert an override for a single round (admin only).
+// override: 'none' | 'open' | 'locked'
+async function setRoundOverride(round, override) {
+  const sb = initSupabase();
+  const { error } = await sb
+    .from('round_overrides')
+    .upsert({ round, override, updated_at: new Date().toISOString() }, { onConflict: 'round' });
+  if (error) throw error;
+  _roundOverrides[round] = override; // keep local cache in sync
+}
+
 function isRoundLocked(round) {
+  // Admin override takes precedence over time-based lock
+  const ov = _roundOverrides[round];
+  if (ov === 'open')   return false;
+  if (ov === 'locked') return true;
+  // Default: time-based
   const lockTime = CONFIG.ROUND_LOCKS[round];
   if (!lockTime) return false;
   return new Date() >= new Date(lockTime);
@@ -421,12 +470,13 @@ function getRoundLockDate(round) {
 window.DB = {
   signUp, signIn, signOut, getSession, getCurrentUser, onAuthChange,
   getProfile, upsertProfile, getProfiles, getAllProfiles, isAdmin,
-  savePrediction, getUserPredictions, getAllPredictions, getMatchPredictions,
+  savePrediction, getUserPredictions, getAllPredictions, getRoundAnswers, getMatchPredictions,
   getScores, getUserScore,
   getMatchResults, upsertMatchResult,
   validateInviteCode, getInviteCodes, createInviteCode,
   subscribeToLeaderboard, subscribeToMatchResults,
   recalculateScores, isRoundLocked, getRoundLockDate,
+  initRoundOverrides, setRoundOverride,
   getMyLeagues, createLeague, joinLeague, leaveLeague, getLeagueMemberIds, validateLeagueCode,
   uploadAvatar, removeAvatar,
   initSupabase

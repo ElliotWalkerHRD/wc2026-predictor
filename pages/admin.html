@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
-  <link rel="stylesheet" href="../css/style.css?v=5">
+  <link rel="stylesheet" href="../css/style.css?v=7">
   <style>
     .admin-panel { display: none; }
     .admin-panel.active { display: block; }
@@ -120,6 +120,7 @@
           <button class="tab-btn active" data-tab="results"><i class="ti ti-ball-football"></i> Match Results</button>
           <button class="tab-btn" data-tab="users"><i class="ti ti-users"></i> Users</button>
           <button class="tab-btn" data-tab="scoring"><i class="ti ti-calculator"></i> Scoring</button>
+          <button class="tab-btn" data-tab="roundlocks"><i class="ti ti-lock"></i> Round Locks</button>
         </div>
 
         <!-- Results Panel -->
@@ -227,6 +228,22 @@
           <div id="asAnswerPanel" class="hidden" style="margin-top:1.5rem;max-width:680px"></div>
           <div id="asReviewPanel" class="hidden" style="margin-top:1.5rem"></div>
         </div>
+        <!-- Round Locks Panel -->
+        <div class="admin-panel" id="panel-roundlocks">
+          <div style="max-width:640px">
+            <h2 style="font-family:var(--font-serif);font-size:1.35rem;margin-bottom:0.5rem">Round Lock Overrides</h2>
+            <p style="color:var(--grey-500);font-size:0.875rem;margin-bottom:1.5rem">
+              Override the time-based lock for any round.
+              <strong>Force Open</strong> keeps predictions editable even after the lock time.
+              <strong>Force Locked</strong> closes a round early.
+              <strong>Normal</strong> removes the override and restores time-based locking.
+            </p>
+            <div id="roundLocksGrid" style="display:grid;gap:0.75rem">
+              <div class="loading-overlay"><div class="spinner" style="margin:0 auto"></div></div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   </main>
@@ -234,7 +251,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="../js/config.js?v=4"></script>
   <script src="../js/data.js?v=4"></script>
-  <script src="../js/supabase-client.js?v=4"></script>
+  <script src="../js/supabase-client.js?v=5"></script>
   <script src="../js/scoring.js?v=4"></script>
   <script src="../js/ui.js?v=4"></script>
   <script>
@@ -243,6 +260,79 @@
 
     let allUsersData = [];
     let resultFilter = 'all';
+
+    // ---- ROUND LOCKS ----
+
+    const ROUND_LOCK_LABELS = {
+      round1: 'R1 — Pre-tournament',
+      round2: 'R2 — Group winners',
+      round3: 'R3 — Group stage scores',
+      round4: 'R4 — Round of 32',
+      round5: 'R5 — Round of 16',
+      round6: 'R6 — Quarter-finals',
+      round7: 'R7 — Semi-finals',
+      round8: 'R8 — Final',
+    };
+
+    async function loadRoundLocksPanel() {
+      const grid = document.getElementById('roundLocksGrid');
+      grid.innerHTML = '<div style="text-align:center;padding:1.5rem"><div class="spinner" style="margin:0 auto"></div></div>';
+
+      const sb = DB.initSupabase();
+      let overrides = {};
+      try {
+        const { data } = await sb.from('round_overrides').select('round,override');
+        (data || []).forEach(r => { overrides[r.round] = r.override; });
+      } catch (_) {}
+
+      const rounds = ['round1','round2','round3','round4','round5','round6','round7','round8'];
+      const now = new Date();
+
+      grid.innerHTML = rounds.map(r => {
+        const lockTime = CONFIG.ROUND_LOCKS[r];
+        const timeLocked = lockTime ? now >= new Date(lockTime) : false;
+        const ov = overrides[r] || 'none';
+
+        const timeBadgeColor = timeLocked ? '#b91c1c' : '#15803d';
+        const timeBadgeText  = timeLocked
+          ? `Time-locked since ${lockTime ? new Date(lockTime).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'UTC'}) + ' UTC' : '—'}`
+          : `Time-open until ${lockTime ? new Date(lockTime).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'UTC'}) + ' UTC' : '—'}`;
+
+        const effectiveBadge = ov === 'open'
+          ? '<span style="font-size:0.72rem;font-weight:700;color:#15803d;background:rgba(21,128,61,0.1);padding:0.15rem 0.5rem;border-radius:9999px">FORCED OPEN</span>'
+          : ov === 'locked'
+          ? '<span style="font-size:0.72rem;font-weight:700;color:#b91c1c;background:rgba(185,28,28,0.1);padding:0.15rem 0.5rem;border-radius:9999px">FORCED LOCKED</span>'
+          : '';
+
+        return `
+          <div class="card" style="padding:1rem 1.125rem">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem">
+              <div>
+                <div style="font-weight:600;margin-bottom:0.2rem">${ROUND_LOCK_LABELS[r]}</div>
+                <div style="font-size:0.78rem;color:${timeBadgeColor};margin-bottom:0.2rem">${timeBadgeText}</div>
+                ${effectiveBadge}
+              </div>
+              <div style="display:flex;gap:0.4rem;flex-shrink:0">
+                <button class="btn btn-sm ${ov === 'open'   ? 'btn-lime' : 'btn-outline'}" onclick="applyRoundOverride('${r}','open',  this)"><i class="ti ti-lock-open"></i> Force Open</button>
+                <button class="btn btn-sm ${ov === 'none'   ? 'btn-lime' : 'btn-outline'}" onclick="applyRoundOverride('${r}','none',  this)">Normal</button>
+                <button class="btn btn-sm ${ov === 'locked' ? 'btn-lime' : 'btn-outline'}" onclick="applyRoundOverride('${r}','locked',this)"><i class="ti ti-lock"></i> Force Lock</button>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    async function applyRoundOverride(round, override, btn) {
+      const row = btn.closest('.card');
+      row.querySelectorAll('button').forEach(b => { b.disabled = true; });
+      try {
+        await DB.setRoundOverride(round, override);
+        await loadRoundLocksPanel();
+      } catch (err) {
+        alert('Error saving override: ' + err.message);
+        row.querySelectorAll('button').forEach(b => { b.disabled = false; });
+      }
+    }
 
     async function init() {
       const session = await requireAuthFromPages();
@@ -270,6 +360,7 @@
         document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
         btn.classList.add('active');
         document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+        if (btn.dataset.tab === 'roundlocks') loadRoundLocksPanel();
       });
 
       await Promise.all([loadResultsPanel(), loadUsers()]);

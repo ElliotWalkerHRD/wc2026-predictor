@@ -120,14 +120,32 @@ CREATE TABLE IF NOT EXISTS public.match_results (
 
 
 -- ============================================================
+--  TABLE: round_overrides
+--  Admin-set per-round lock overrides. Takes precedence over
+--  the time-based CONFIG.ROUND_LOCKS check on the client.
+--  At most 8 rows (one per round). Default state = no rows =
+--  normal time-based locking.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.round_overrides (
+  round       TEXT PRIMARY KEY
+                CHECK (round IN ('round1','round2','round3','round4',
+                                 'round5','round6','round7','round8')),
+  override    TEXT NOT NULL DEFAULT 'none'
+                CHECK (override IN ('none','open','locked')),
+  updated_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+
+-- ============================================================
 --  ROW LEVEL SECURITY
 -- ============================================================
 
-ALTER TABLE public.profiles      ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.invite_codes  ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.predictions   ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.scores        ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.match_results ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.profiles        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.invite_codes    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.predictions     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.scores          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.match_results   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.round_overrides ENABLE ROW LEVEL SECURITY;
 
 
 -- ---- profiles ----
@@ -197,6 +215,18 @@ CREATE POLICY "match_results: admin write"
   );
 
 
+-- ---- round_overrides ----
+-- Everyone can read overrides (client-side lock check needs it)
+CREATE POLICY "round_overrides: public read"
+  ON public.round_overrides FOR SELECT USING (TRUE);
+
+-- Only admins can write overrides
+CREATE POLICY "round_overrides: admin write"
+  ON public.round_overrides FOR ALL USING (
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = TRUE)
+  );
+
+
 -- ============================================================
 --  HELPER FUNCTION: Set first registered user as admin
 --  Call this manually after your own account is created:
@@ -245,3 +275,5 @@ GRANT INSERT, UPDATE, DELETE ON public.predictions TO authenticated;
 GRANT INSERT, UPDATE, DELETE ON public.scores TO authenticated;
 GRANT INSERT, UPDATE, DELETE ON public.match_results TO authenticated;
 GRANT INSERT, UPDATE, DELETE ON public.invite_codes TO authenticated;
+GRANT SELECT ON public.round_overrides TO anon, authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.round_overrides TO authenticated;

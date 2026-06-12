@@ -98,7 +98,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="../js/config.js?v=4"></script>
   <script src="../js/data.js?v=4"></script>
-  <script src="../js/supabase-client.js?v=4"></script>
+  <script src="../js/supabase-client.js?v=5"></script>
   <script src="../js/scoring.js?v=4"></script>
   <script src="../js/ui.js?v=4"></script>
   <script>
@@ -138,6 +138,7 @@
         document.getElementById('yourRank').textContent = rank > 0 ? `#${rank}` : '—';
       } catch (_) {}
 
+      await DB.initRoundOverrides();
       const openRounds = ROUNDS_META.filter(r => !DB.isRoundLocked(r.id)).length;
       document.getElementById('roundsOpen').textContent = openRounds;
 

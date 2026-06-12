@@ -5,6 +5,7 @@
 // Supabase is loaded via CDN in each HTML page
 // Initialize client once CONFIG is available
 let supabaseClient = null;
+let _roundOverrides = {}; // populated by initRoundOverrides(); keyed by round, values: 'none'|'open'|'locked'
 
 function initSupabase() {
   if (supabaseClient) return supabaseClient;
@@ -407,7 +408,37 @@ async function recalculateScores(userId = null) {
 
 // ---- Round lock check ----
 
+// Load admin overrides from DB into the module-level cache.
+// Call once per page before any isRoundLocked() calls.
+// Fails silently — missing table or network error falls back to time-based locking.
+async function initRoundOverrides() {
+  try {
+    const sb = initSupabase();
+    const { data } = await sb.from('round_overrides').select('round,override');
+    _roundOverrides = {};
+    (data || []).forEach(r => { _roundOverrides[r.round] = r.override; });
+  } catch (_) {
+    _roundOverrides = {};
+  }
+}
+
+// Upsert an override for a single round (admin only).
+// override: 'none' | 'open' | 'locked'
+async function setRoundOverride(round, override) {
+  const sb = initSupabase();
+  const { error } = await sb
+    .from('round_overrides')
+    .upsert({ round, override, updated_at: new Date().toISOString() }, { onConflict: 'round' });
+  if (error) throw error;
+  _roundOverrides[round] = override; // keep local cache in sync
+}
+
 function isRoundLocked(round) {
+  // Admin override takes precedence over time-based lock
+  const ov = _roundOverrides[round];
+  if (ov === 'open')   return false;
+  if (ov === 'locked') return true;
+  // Default: time-based
   const lockTime = CONFIG.ROUND_LOCKS[round];
   if (!lockTime) return false;
   return new Date() >= new Date(lockTime);
@@ -427,6 +458,7 @@ window.DB = {
   validateInviteCode, getInviteCodes, createInviteCode,
   subscribeToLeaderboard, subscribeToMatchResults,
   recalculateScores, isRoundLocked, getRoundLockDate,
+  initRoundOverrides, setRoundOverride,
   getMyLeagues, createLeague, joinLeague, leaveLeague, getLeagueMemberIds, validateLeagueCode,
   uploadAvatar, removeAvatar,
   initSupabase

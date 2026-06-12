@@ -69,17 +69,33 @@ serve(async (req) => {
   } catch (_) {}
 
   try {
-    // 1. Fetch all match results
+    // 1. Fetch all match results (max 104 matches; explicit limit guards PostgREST default cap)
     const { data: matchResults } = await supabaseAdmin
-      .from("match_results").select("*");
+      .from("match_results").select("*").limit(200);
 
     const resultMap: Record<number, any> = {};
     (matchResults || []).forEach((r: any) => { resultMap[r.match_id] = r; });
 
-    // 2. Fetch all predictions
-    let predsQuery = supabaseAdmin.from("predictions").select("*");
-    if (targetUserId) predsQuery = predsQuery.eq("user_id", targetUserId);
-    const { data: allPredictions } = await predsQuery;
+    console.log(`[recalculate-scores] match_results fetched: ${matchResults?.length ?? 0}`);
+
+    // 2. Fetch all predictions via pagination — PostgREST max-rows caps any single
+    //    request at 1000 rows regardless of .limit(); paginate to get everything.
+    const PAGE_SIZE = 1000;
+    const allPredictions: any[] = [];
+    for (let from = 0; ; from += PAGE_SIZE) {
+      let q = supabaseAdmin
+        .from("predictions")
+        .select("*")
+        .range(from, from + PAGE_SIZE - 1);
+      if (targetUserId) q = q.eq("user_id", targetUserId);
+      const { data: page, error: pageErr } = await q;
+      if (pageErr) throw pageErr;
+      if (!page || page.length === 0) break;
+      allPredictions.push(...page);
+      if (page.length < PAGE_SIZE) break;
+    }
+
+    console.log(`[recalculate-scores] predictions fetched: ${allPredictions.length}${targetUserId ? ` (filtered to user ${targetUserId})` : ""}`);
 
     // 3. Group predictions by user
     const userPreds: Record<string, Record<string, any[]>> = {};
@@ -88,6 +104,8 @@ serve(async (req) => {
       if (!userPreds[p.user_id][p.round]) userPreds[p.user_id][p.round] = [];
       userPreds[p.user_id][p.round].push(p);
     });
+
+    console.log(`[recalculate-scores] distinct users found in predictions: ${Object.keys(userPreds).length}`);
 
     // 4. Calculate scores per user
     const scoreUpdates: any[] = [];
@@ -153,6 +171,8 @@ serve(async (req) => {
       });
     }
 
+    console.log(`[recalculate-scores] score rows to write: ${scoreUpdates.length}`);
+
     // 5. Upsert all score rows
     if (scoreUpdates.length > 0) {
       const { error } = await supabaseAdmin
@@ -163,7 +183,13 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, usersUpdated: scoreUpdates.length }),
+      JSON.stringify({
+        success: true,
+        version: "v2-unlimited",
+        matchResultsLoaded: matchResults?.length ?? 0,
+        predictionsLoaded: allPredictions?.length ?? 0,
+        usersUpdated: scoreUpdates.length,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 

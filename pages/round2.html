@@ -58,7 +58,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="../js/config.js?v=4"></script>
   <script src="../js/data.js?v=4"></script>
-  <script src="../js/supabase-client.js?v=4"></script>
+  <script src="../js/supabase-client.js?v=5"></script>
   <script src="../js/scoring.js?v=4"></script>
   <script src="../js/ui.js?v=4"></script>
   <script>
@@ -74,6 +74,7 @@
       if (!session) return;
       userId = session.user.id;
 
+      await DB.initRoundOverrides();
       locked = DB.isRoundLocked('round2');
       if (locked) {
         document.getElementById('lockedBanner').classList.remove('hidden');

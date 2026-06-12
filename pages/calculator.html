@@ -1110,6 +1110,7 @@ function attachPopulateListeners(el) {
   }
 
   _userId = session.user.id;
+  await DB.initRoundOverrides();
   scoreMap = loadScenario();
   recompute();
   renderApp();

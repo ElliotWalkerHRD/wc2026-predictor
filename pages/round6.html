@@ -1,14 +1,14 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WC2026 â€” Knockout Predictions</title>
+  <title>WC2026 — Knockout Predictions</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
-  <link rel="stylesheet" href="../css/style.css?v=8">
+  <link rel="stylesheet" href="../css/style.css?v=7">
   <style>
     .ko-card-top {
       display: flex;
@@ -109,11 +109,11 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="../js/config.js?v=8"></script>
-  <script src="../js/data.js?v=8"></script>
-  <script src="../js/supabase-client.js?v=8"></script>
-  <script src="../js/scoring.js?v=8"></script>
-  <script src="../js/ui.js?v=8"></script>
+  <script src="../js/config.js?v=4"></script>
+  <script src="../js/data.js?v=4"></script>
+  <script src="../js/supabase-client.js?v=5"></script>
+  <script src="../js/scoring.js?v=4"></script>
+  <script src="../js/ui.js?v=4"></script>
   <script>
     DB.initSupabase();
     Nav.render('predictions');
@@ -199,7 +199,7 @@
                 <input type="number" id="h_${m.id}" class="score-num" min="0" max="20"
                   inputmode="numeric" pattern="[0-9]*"
                   value="${homeVal}" placeholder="0" ${locked ? 'disabled' : ''}>
-                <span class="score-sep">â€“</span>
+                <span class="score-sep">–</span>
                 <input type="number" id="a_${m.id}" class="score-num" min="0" max="20"
                   inputmode="numeric" pattern="[0-9]*"
                   value="${awayVal}" placeholder="0" ${locked ? 'disabled' : ''}>
@@ -213,16 +213,16 @@
         } else {
           teamRowHtml = `
             <div class="tbd-notice">
-              <i class="ti ti-clock"></i> Teams TBD â€” ${m.note || 'Drawn once qualified'}
+              <i class="ti ti-clock"></i> Teams TBD — ${m.note || 'Drawn once qualified'}
               ${!locked ? `
                 <div class="ko-score-inputs" style="justify-content:center;margin-top:0.625rem">
                   <input type="number" id="h_${m.id}" class="score-num" min="0" max="20"
                     inputmode="numeric" pattern="[0-9]*"
-                    value="${homeVal}" placeholder="â€“" style="opacity:0.5">
-                  <span class="score-sep">â€“</span>
+                    value="${homeVal}" placeholder="–" style="opacity:0.5">
+                  <span class="score-sep">–</span>
                   <input type="number" id="a_${m.id}" class="score-num" min="0" max="20"
                     inputmode="numeric" pattern="[0-9]*"
-                    value="${awayVal}" placeholder="â€“" style="opacity:0.5">
+                    value="${awayVal}" placeholder="–" style="opacity:0.5">
                 </div>
                 <small style="font-size:0.68rem;color:var(--grey-400)">You can enter score now or wait</small>
               ` : ''}
@@ -241,14 +241,14 @@
           }
           resultHtml = `
             <div class="ko-result">
-              Result: <strong>${actH}â€“${actA}</strong>
+              Result: <strong>${actH}–${actA}</strong>
               ${pts > 0
                 ? `<span style="color:var(--green);margin-left:0.4rem">+${pts} pts &middot; ${label}</span>`
                 : `<span style="color:var(--red);margin-left:0.4rem">${label}</span>`}
             </div>
           `;
         } else if (hasResult) {
-          resultHtml = `<div class="ko-result">Result: <strong>${result.home_score}â€“${result.away_score}</strong></div>`;
+          resultHtml = `<div class="ko-result">Result: <strong>${result.home_score}–${result.away_score}</strong></div>`;
         }
 
         return `

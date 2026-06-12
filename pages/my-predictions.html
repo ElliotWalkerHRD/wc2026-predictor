@@ -1,14 +1,14 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WC2026 â€” My Predictions</title>
+  <title>WC2026 — My Predictions</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
-  <link rel="stylesheet" href="../css/style.css?v=8">
+  <link rel="stylesheet" href="../css/style.css?v=7">
   <style>
     .round-tabs {
       display: flex;
@@ -233,19 +233,19 @@
 
       <div class="stats-strip mb-4" id="summaryStrip">
         <div class="stat-box">
-          <div class="stat-value" id="sumTotal">â€”</div>
+          <div class="stat-value" id="sumTotal">—</div>
           <div class="stat-label">Total Points</div>
         </div>
         <div class="stat-box">
-          <div class="stat-value" id="sumRank">â€”</div>
+          <div class="stat-value" id="sumRank">—</div>
           <div class="stat-label">Rank</div>
         </div>
         <div class="stat-box">
-          <div class="stat-value" id="sumCorrect">â€”</div>
+          <div class="stat-value" id="sumCorrect">—</div>
           <div class="stat-label">Correct Results</div>
         </div>
         <div class="stat-box">
-          <div class="stat-value" id="sumExact">â€”</div>
+          <div class="stat-value" id="sumExact">—</div>
           <div class="stat-label">Exact Scores</div>
         </div>
       </div>
@@ -260,11 +260,11 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="../js/config.js?v=8"></script>
-  <script src="../js/data.js?v=8"></script>
-  <script src="../js/supabase-client.js?v=8"></script>
-  <script src="../js/scoring.js?v=8"></script>
-  <script src="../js/ui.js?v=8"></script>
+  <script src="../js/config.js?v=4"></script>
+  <script src="../js/data.js?v=4"></script>
+  <script src="../js/supabase-client.js?v=5"></script>
+  <script src="../js/scoring.js?v=4"></script>
+  <script src="../js/ui.js?v=4"></script>
   <script>
     DB.initSupabase();
     Nav.render('mypreds');
@@ -300,7 +300,7 @@
       if (userScore) {
         document.getElementById('sumTotal').textContent = userScore.total_points || 0;
         const rank = scores.findIndex(s => s.user_id === userId) + 1;
-        document.getElementById('sumRank').textContent = rank > 0 ? `#${rank}` : 'â€”';
+        document.getElementById('sumRank').textContent = rank > 0 ? `#${rank}` : '—';
       }
 
       let totalCorrect = 0, totalExact = 0;
@@ -390,7 +390,7 @@
       const totalBar = `
         <div class="round-total-bar">
           <span class="round-total-label"><i class="ti ti-chart-bar" style="margin-right:0.35rem"></i>Round Points</span>
-          <span class="round-total-pts">${pts !== undefined && pts !== null ? pts : 'â€”'}</span>
+          <span class="round-total-pts">${pts !== undefined && pts !== null ? pts : '—'}</span>
         </div>
       `;
 
@@ -468,10 +468,10 @@
               <div class="pred-question">Group ${g}</div>
               <div class="pred-answer">
                 <i class="ti ti-trophy" style="color:var(--lime-dark);font-size:0.9rem"></i>
-                ${winner ? `${teamFlagImg(gPreds.w)} ${winner.name}` : 'â€”'}
+                ${winner ? `${teamFlagImg(gPreds.w)} ${winner.name}` : '—'}
                 &nbsp;&middot;&nbsp;
                 <i class="ti ti-medal" style="color:var(--grey-400);font-size:0.9rem"></i>
-                ${runner ? `${teamFlagImg(gPreds.r)} ${runner.name}` : 'â€”'}
+                ${runner ? `${teamFlagImg(gPreds.r)} ${runner.name}` : '—'}
               </div>
             </div>
             <div class="pred-pts">
@@ -531,9 +531,9 @@
               <span>${teamFlagImg(awayTeam.code)} ${awayTeam.name}</span>
             </div>
             <div class="match-pred-score ${scoreClass}">
-              ${val.home} â€“ ${val.away}
+              ${val.home} – ${val.away}
               ${hasResult ? `<div style="font-size:0.65rem;margin-top:0.15rem">${indicator}</div>` : ''}
-              ${hasResult ? `<div style="font-size:0.65rem;color:var(--grey-400)">Actual: ${result.home_score}â€“${result.away_score}</div>` : ''}
+              ${hasResult ? `<div style="font-size:0.65rem;color:var(--grey-400)">Actual: ${result.home_score}–${result.away_score}</div>` : ''}
             </div>
             <div class="pred-pts" style="min-width:40px">
               <div class="pts-number ${pts > 0 ? 'positive' : 'zero'}">${hasResult ? pts : '?'}</div>
@@ -658,7 +658,7 @@
       return `
         <div style="margin-bottom:1rem;padding:0.75rem 1rem;background:var(--grey-50,#f9f9f9);border:1px solid var(--grey-200);border-radius:var(--radius-md);font-size:0.8rem;color:var(--grey-600)">
           <i class="ti ti-info-circle" style="margin-right:0.35rem;color:var(--grey-400)"></i>
-          Based on your ${predictedCount} / ${totalMatches} predicted scores. Read-only â€” edit predictions in <a href="round3.html" style="color:var(--ink);font-weight:600">Group Scores</a>.
+          Based on your ${predictedCount} / ${totalMatches} predicted scores. Read-only — edit predictions in <a href="round3.html" style="color:var(--ink);font-weight:600">Group Scores</a>.
         </div>
         <div class="pred-tables-grid">${groupCards}</div>
         <div class="legend" style="margin-top:0.25rem">

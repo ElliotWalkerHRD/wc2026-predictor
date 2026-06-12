@@ -118,6 +118,10 @@
     let userId = null;
     let saved  = {};
     let locked = false;
+    let myLeagues    = [];
+    let activeLeague = 'global';
+    let memberCache  = {};
+    let allAnswers   = [];
 
     async function load() {
       const session = await requireAuthFromPages();
@@ -132,9 +136,11 @@
         document.getElementById('stickySave').style.display = 'block';
       }
 
+      myLeagues = await DB.getMyLeagues(userId).catch(() => []);
+
       // getRoundAnswers enforces lock at query level:
       // pre-lock → own row only; post-lock → all players' rows
-      const allAnswers = await DB.getRoundAnswers('round1', { currentUserId: userId, isLocked: locked }).catch(() => []);
+      allAnswers = await DB.getRoundAnswers('round1', { currentUserId: userId, isLocked: locked }).catch(() => []);
 
       allAnswers.forEach(p => {
         if (p.user_id === userId) {
@@ -143,7 +149,32 @@
         }
       });
 
-      renderQuestions(allAnswers);
+      if (locked) renderLeagueFilter();
+      renderQuestions();
+    }
+
+    function renderLeagueFilter() {
+      const privateLeagues = myLeagues.filter(l => !l.is_global);
+      if (!privateLeagues.length) return;
+      if (document.getElementById('r1LeagueFilter')) return;
+      const wrap = document.getElementById('questionsWrap');
+      const bar = document.createElement('div');
+      bar.id = 'r1LeagueFilter';
+      bar.style.cssText = 'display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem';
+      bar.innerHTML = `
+        <i class="ti ti-users-group" style="color:var(--grey-400);font-size:0.9rem"></i>
+        <select id="r1LeaguePicker" class="form-control" style="font-size:0.82rem;padding:0.25rem 0.6rem;height:auto;min-width:150px;max-width:220px">
+          <option value="global">All Players</option>
+          ${privateLeagues.map(l => `<option value="${l.id}">${l.name}</option>`).join('')}
+        </select>`;
+      wrap.parentNode.insertBefore(bar, wrap);
+      document.getElementById('r1LeaguePicker').addEventListener('change', async e => {
+        activeLeague = e.target.value;
+        if (activeLeague !== 'global' && !memberCache[activeLeague]) {
+          memberCache[activeLeague] = await DB.getLeagueMemberIds(activeLeague).catch(() => []);
+        }
+        renderQuestions();
+      });
     }
 
     function displayR1Answer(q, rawVal) {
@@ -158,8 +189,14 @@
       return String(val);
     }
 
-    function renderAnswersPanel(q, allAnswers) {
-      const qAnswers = allAnswers.filter(a => a.question_key === q.key);
+    function renderAnswersPanel(q) {
+      const memberIds = (activeLeague !== 'global' && memberCache[activeLeague])
+        ? new Set(memberCache[activeLeague]) : null;
+      const qAnswers = allAnswers.filter(a => {
+        if (a.question_key !== q.key) return false;
+        if (memberIds && !memberIds.has(a.user_id)) return false;
+        return true;
+      });
       if (!qAnswers.length) return '';
       qAnswers.sort((a, b) => {
         if (a.user_id === userId) return -1;
@@ -182,7 +219,7 @@
       </div>`;
     }
 
-    function renderQuestions(allAnswers = []) {
+    function renderQuestions() {
       const wrap = document.getElementById('questionsWrap');
       wrap.innerHTML = QUESTIONS.map(q => {
         const val = saved[q.key] || '';
@@ -209,7 +246,7 @@
 
         if (locked) input = input.replace('class="form-control"', 'class="form-control" disabled');
 
-        const answersPanel = locked ? renderAnswersPanel(q, allAnswers) : '';
+        const answersPanel = locked ? renderAnswersPanel(q) : '';
 
         return `
           <div class="question-card">

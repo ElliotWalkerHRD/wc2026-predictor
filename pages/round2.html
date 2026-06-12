@@ -113,6 +113,10 @@
     let userId = null;
     let saved  = {};
     let locked = false;
+    let myLeagues    = [];
+    let activeLeague = 'global';
+    let memberCache  = {};
+    let allAnswers   = [];
 
     async function load() {
       const session = await requireAuthFromPages();
@@ -127,9 +131,11 @@
         document.getElementById('stickySave').style.display = 'block';
       }
 
+      myLeagues = await DB.getMyLeagues(userId).catch(() => []);
+
       // getRoundAnswers enforces lock at query level:
       // pre-lock → own row only; post-lock → all players' rows
-      const allAnswers = await DB.getRoundAnswers('round2', { currentUserId: userId, isLocked: locked }).catch(() => []);
+      allAnswers = await DB.getRoundAnswers('round2', { currentUserId: userId, isLocked: locked }).catch(() => []);
 
       allAnswers.forEach(p => {
         if (p.user_id === userId) {
@@ -138,7 +144,32 @@
         }
       });
 
-      renderGroups(allAnswers);
+      if (locked) renderLeagueFilter();
+      renderGroups();
+    }
+
+    function renderLeagueFilter() {
+      const privateLeagues = myLeagues.filter(l => !l.is_global);
+      if (!privateLeagues.length) return;
+      if (document.getElementById('r2LeagueFilter')) return;
+      const grid = document.getElementById('groupGrid');
+      const bar = document.createElement('div');
+      bar.id = 'r2LeagueFilter';
+      bar.style.cssText = 'display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem';
+      bar.innerHTML = `
+        <i class="ti ti-users-group" style="color:var(--grey-400);font-size:0.9rem"></i>
+        <select id="r2LeaguePicker" class="form-control" style="font-size:0.82rem;padding:0.25rem 0.6rem;height:auto;min-width:150px;max-width:220px">
+          <option value="global">All Players</option>
+          ${privateLeagues.map(l => `<option value="${l.id}">${l.name}</option>`).join('')}
+        </select>`;
+      grid.parentNode.insertBefore(bar, grid);
+      document.getElementById('r2LeaguePicker').addEventListener('change', async e => {
+        activeLeague = e.target.value;
+        if (activeLeague !== 'global' && !memberCache[activeLeague]) {
+          memberCache[activeLeague] = await DB.getLeagueMemberIds(activeLeague).catch(() => []);
+        }
+        renderGroups();
+      });
     }
 
     function resolveTeamVal(rawVal) {
@@ -149,10 +180,13 @@
       return t ? `${t.flag} ${t.name}` : val;
     }
 
-    function renderGroupPicksPanel(groupLetter, allAnswers) {
+    function renderGroupPicksPanel(groupLetter) {
+      const memberIds = (activeLeague !== 'global' && memberCache[activeLeague])
+        ? new Set(memberCache[activeLeague]) : null;
       // Build per-user map: userId → { profiles, winner, runner }
       const byUser = {};
       allAnswers.forEach(a => {
+        if (memberIds && !memberIds.has(a.user_id)) return;
         if (a.question_key === `2.w.${groupLetter}`) {
           if (!byUser[a.user_id]) byUser[a.user_id] = { profiles: a.profiles };
           byUser[a.user_id].winner = a.value;
@@ -189,7 +223,7 @@
       </div>`;
     }
 
-    function renderGroups(allAnswers = []) {
+    function renderGroups() {
       const grid = document.getElementById('groupGrid');
       grid.innerHTML = Object.entries(GROUPS).map(([groupLetter, groupData]) => {
         const teams = groupData.teams.map(code => getTeam(code));
@@ -214,7 +248,7 @@
           `<span class="group-team-pill">${teamFlagImg(t.code)} ${t.name}</span>`
         ).join('');
 
-        const allPicksPanel = locked ? renderGroupPicksPanel(groupLetter, allAnswers) : '';
+        const allPicksPanel = locked ? renderGroupPicksPanel(groupLetter) : '';
 
         return `
           <div class="group-card">

@@ -219,6 +219,7 @@
       border-top: 1px solid var(--grey-200);
       flex-shrink: 0;
     }
+    .filter-divider { width: 1px; background: var(--grey-300); align-self: stretch; flex-shrink: 0; margin: 0 0.125rem; }
   </style>
 </head>
 <body>
@@ -244,6 +245,10 @@
         <button class="btn btn-outline btn-sm" data-filter="qf">QF</button>
         <button class="btn btn-outline btn-sm" data-filter="sf">SF</button>
         <button class="btn btn-outline btn-sm" data-filter="final">Final</button>
+        <span class="filter-divider"></span>
+        <button class="btn btn-lime btn-sm" data-sort="round"><i class="ti ti-layout-list"></i> By round</button>
+        <button class="btn btn-outline btn-sm" data-sort="kickoff"><i class="ti ti-sort-ascending-2"></i> By kickoff</button>
+        <button class="btn btn-outline btn-sm" id="jumpCurrentBtn"><i class="ti ti-player-skip-forward"></i> Jump to current</button>
       </div>
 
       <div id="matchCentreContent">
@@ -272,6 +277,7 @@
     let myLeagues        = [];
     let activePredLeague = 'global';
     let memberCache      = {};
+    let currentSort      = 'round';
 
     async function load() {
       const session = await DB.getSession();
@@ -546,6 +552,67 @@
     function render() {
       const predMap = buildPredMap();
       const content = document.getElementById('matchCentreContent');
+
+      if (currentSort === 'kickoff') {
+        const flat = [];
+
+        if (currentFilter === 'all' || currentFilter === 'group') {
+          GROUP_FIXTURES.forEach(m => flat.push({
+            kickoff: getMatchKickoff(m[0]), date: m[1],
+            html: buildGroupMatchRow(m, predMap, allResults)
+          }));
+        }
+
+        const koMap = {
+          r32:   KNOCKOUT_ROUNDS.round32,
+          r16:   KNOCKOUT_ROUNDS.round16,
+          qf:    KNOCKOUT_ROUNDS.quarterfinals,
+          sf:    KNOCKOUT_ROUNDS.semifinals,
+          final: KNOCKOUT_ROUNDS.final,
+        };
+        const koSources = currentFilter === 'all'
+          ? Object.values(koMap)
+          : (koMap[currentFilter] ? [koMap[currentFilter]] : []);
+        koSources.forEach(ko => (ko.matches || []).forEach(m => flat.push({
+          kickoff: getMatchKickoff(m.id), date: m.date || '',
+          html: buildKoMatchRow(m, predMap, allResults)
+        })));
+
+        if (!flat.length) {
+          content.innerHTML = '<div class="no-matches"><i class="ti ti-circle-x" style="font-size:2rem;display:block;margin-bottom:1rem"></i>No matches for selected filter.</div>';
+          return;
+        }
+
+        flat.sort((a, b) => {
+          const ta = a.kickoff ? a.kickoff.getTime() : Infinity;
+          const tb = b.kickoff ? b.kickoff.getTime() : Infinity;
+          return ta - tb;
+        });
+
+        const byDate = {};
+        const dateOrder = [];
+        flat.forEach(f => {
+          const key = f.date || '';
+          if (!byDate[key]) { byDate[key] = []; dateOrder.push(key); }
+          byDate[key].push(f.html);
+        });
+
+        content.innerHTML = dateOrder.map(d => {
+          const htmls = byDate[d];
+          const label = d
+            ? new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
+            : 'TBD';
+          return `<div class="round-section">
+            <div class="round-section-header">
+              <span class="round-section-title"><i class="ti ti-calendar"></i> ${label}</span>
+              <span class="match-count">${htmls.length} match${htmls.length !== 1 ? 'es' : ''}</span>
+            </div>
+            <div class="match-list">${htmls.join('')}</div>
+          </div>`;
+        }).join('');
+        return;
+      }
+
       const sections = [];
 
       if (currentFilter === 'all' || currentFilter === 'group') {
@@ -689,6 +756,46 @@
       const row = e.target.closest('.match-row[data-match-id]');
       if (!row) return;
       openMatchModal(parseInt(row.dataset.matchId));
+    });
+
+    function jumpToCurrent() {
+      const now = Date.now();
+      const rows = [...document.querySelectorAll('.match-row[data-match-id]')];
+      if (!rows.length) return;
+
+      // Priority 1: any live match
+      let target = rows.find(r => {
+        const res = allResults[parseInt(r.dataset.matchId)];
+        return res?.status === 'IN_PLAY' || res?.status === 'PAUSED';
+      });
+
+      if (!target) {
+        // Priority 2: earliest upcoming match (kickoff >= now)
+        const sorted = rows
+          .map(r => ({ el: r, kickoff: getMatchKickoff(parseInt(r.dataset.matchId)) }))
+          .sort((a, b) => {
+            const ta = a.kickoff ? a.kickoff.getTime() : Infinity;
+            const tb = b.kickoff ? b.kickoff.getTime() : Infinity;
+            return ta - tb;
+          });
+        const upcoming = sorted.find(c => c.kickoff && c.kickoff.getTime() >= now);
+        target = (upcoming || sorted[sorted.length - 1])?.el;
+      }
+
+      target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    document.querySelector('.filter-bar').addEventListener('click', e => {
+      const sortBtn = e.target.closest('[data-sort]');
+      if (sortBtn) {
+        currentSort = sortBtn.dataset.sort;
+        document.querySelectorAll('[data-sort]').forEach(b => {
+          b.className = b.dataset.sort === currentSort ? 'btn btn-lime btn-sm' : 'btn btn-outline btn-sm';
+        });
+        render();
+        return;
+      }
+      if (e.target.closest('#jumpCurrentBtn')) jumpToCurrent();
     });
 
     DB.subscribeToMatchResults(() => {

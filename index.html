@@ -641,17 +641,18 @@
 
       const cards = ROUNDS_HOME.map(r => {
         const lt   = DB.getRoundLockDate(r.id)?.getTime();
-        const locked = lt && lt <= now;
+        const locked = DB.isRoundLocked(r.id);
+        const forceOpen = !locked && lt && lt <= now;
         const isOpen = !locked && bracketReady(r.id);
 
-        const urgent = isOpen && (lt - now) < 86400000;
+        const urgent = isOpen && !forceOpen && lt && (lt - now) < 86400000;
 
         let badge, cdLine = '';
         if (locked) {
           badge = `<span class="lock-badge lock-badge--locked"><i class="ti ti-lock"></i> Locked</span>`;
         } else if (isOpen) {
           badge = `<span class="lock-badge lock-badge--open${urgent ? ' urgent' : ''}"><i class="ti ti-lock-open"></i> Open</span>`;
-          cdLine = `<span class="lock-badge-cd home-cd" data-lock="${new Date(lt).toISOString()}"></span>`;
+          cdLine = forceOpen ? '' : `<span class="lock-badge-cd home-cd" data-lock="${new Date(lt).toISOString()}"></span>`;
         } else {
           badge = `<span class="lock-badge lock-badge--upcoming"><i class="ti ti-lock"></i> Opens later</span>`;
         }
@@ -691,7 +692,7 @@
       window.addEventListener('pagehide', () => clearInterval(_cdGrid));
     }
 
-    renderRoundLockGrid();
+    DB.initRoundOverrides().then(renderRoundLockGrid);
   </script>
 </body>
 </html>

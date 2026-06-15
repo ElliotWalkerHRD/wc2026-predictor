@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WC2026 â€” Admin</title>
+  <title>WC2026 — Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
@@ -112,7 +112,7 @@
     <div class="container" style="padding-top:2rem;padding-bottom:4rem">
 
       <div id="adminAccessDenied" class="alert alert-error hidden">
-        <i class="ti ti-ban"></i> Access denied â€” admin only.
+        <i class="ti ti-ban"></i> Access denied — admin only.
       </div>
 
       <div id="adminContent" class="hidden">
@@ -220,8 +220,8 @@
           <hr style="margin:2rem 0;border:none;border-top:1px solid var(--grey-200)">
           <h3 style="font-family:var(--font-serif);font-size:1.25rem;margin:0 0 0.4rem">Auto-Score Rounds 1 &amp; 2</h3>
           <p style="font-size:0.83rem;color:var(--grey-500);margin:0 0 1.25rem;max-width:540px">
-            Derives Q1.8, Q1.9, Q1.11, Q1.12, Q1.1â€“3, and all Round 2 answers from match results.
-            Name questions (Q1.4, Q1.6) use normalised fuzzy matching with an admin review step â€”
+            Derives Q1.8, Q1.9, Q1.11, Q1.12, Q1.1–3, and all Round 2 answers from match results.
+            Name questions (Q1.4, Q1.6) use normalised fuzzy matching with an admin review step —
             scores are <strong>never written</strong> until you confirm the matches.
           </p>
           <button class="btn btn-outline" id="asLoadBtn"><i class="ti ti-database"></i> Load data &amp; compute answers</button>
@@ -264,14 +264,14 @@
     // ---- ROUND LOCKS ----
 
     const ROUND_LOCK_LABELS = {
-      round1: 'R1 â€” Pre-tournament',
-      round2: 'R2 â€” Group winners',
-      round3: 'R3 â€” Group stage scores',
-      round4: 'R4 â€” Round of 32',
-      round5: 'R5 â€” Round of 16',
-      round6: 'R6 â€” Quarter-finals',
-      round7: 'R7 â€” Semi-finals',
-      round8: 'R8 â€” Final',
+      round1: 'R1 — Pre-tournament',
+      round2: 'R2 — Group winners',
+      round3: 'R3 — Group stage scores',
+      round4: 'R4 — Round of 32',
+      round5: 'R5 — Round of 16',
+      round6: 'R6 — Quarter-finals',
+      round7: 'R7 — Semi-finals',
+      round8: 'R8 — Final',
     };
 
     async function loadRoundLocksPanel() {
@@ -295,8 +295,8 @@
 
         const timeBadgeColor = timeLocked ? '#b91c1c' : '#15803d';
         const timeBadgeText  = timeLocked
-          ? `Time-locked since ${lockTime ? new Date(lockTime).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'UTC'}) + ' UTC' : 'â€”'}`
-          : `Time-open until ${lockTime ? new Date(lockTime).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'UTC'}) + ' UTC' : 'â€”'}`;
+          ? `Time-locked since ${lockTime ? new Date(lockTime).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'UTC'}) + ' UTC' : '—'}`
+          : `Time-open until ${lockTime ? new Date(lockTime).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'UTC'}) + ' UTC' : '—'}`;
 
         const effectiveBadge = ov === 'open'
           ? '<span style="font-size:0.72rem;font-weight:700;color:#15803d;background:rgba(21,128,61,0.1);padding:0.15rem 0.5rem;border-radius:9999px">FORCED OPEN</span>'
@@ -407,9 +407,9 @@
               <span>${teamFlagImg(awayCode)} ${away.name}</span>
             </div>
             <div class="result-inputs">
-              <input type="number" id="rh_${id}" class="result-num" min="0" max="20" value="${hScore}" placeholder="â€“">
-              <span style="font-size:1.2rem;color:var(--grey-400)">â€“</span>
-              <input type="number" id="ra_${id}" class="result-num" min="0" max="20" value="${aScore}" placeholder="â€“">
+              <input type="number" id="rh_${id}" class="result-num" min="0" max="20" value="${hScore}" placeholder="–">
+              <span style="font-size:1.2rem;color:var(--grey-400)">–</span>
+              <input type="number" id="ra_${id}" class="result-num" min="0" max="20" value="${aScore}" placeholder="–">
             </div>
           </div>
         `;
@@ -464,7 +464,7 @@
           html += `<div class="alert alert-info" style="margin-top:0.5rem">
             <i class="ti ti-info-circle"></i>
             <strong>${data.unmapped.length} API match${data.unmapped.length !== 1 ? 'es' : ''} could not be mapped</strong>
-            â€” add missing aliases in the Edge Function if needed:<br>
+            — add missing aliases in the Edge Function if needed:<br>
             <pre style="margin:0.4rem 0 0;font-size:0.7rem;white-space:pre-wrap;opacity:0.85">${data.unmapped.join('\n')}</pre>
           </div>`;
         }
@@ -501,11 +501,11 @@
             <td>
               <div style="display:flex;align-items:center;gap:0.6rem">
                 ${renderAvatar(p, 'avatar', 'width:28px;height:28px;font-size:0.75rem')}
-                <span style="font-weight:600">${p.display_name || 'â€”'}</span>
+                <span style="font-weight:600">${p.display_name || '—'}</span>
               </div>
             </td>
-            <td class="text-muted text-sm">${p.email || 'â€”'}</td>
-            <td class="text-muted text-sm">${p.created_at ? new Date(p.created_at).toLocaleDateString() : 'â€”'}</td>
+            <td class="text-muted text-sm">${p.email || '—'}</td>
+            <td class="text-muted text-sm">${p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}</td>
             <td style="font-family:var(--font-serif);font-size:1.1rem">${scoreMap[p.id] || 0}</td>
             <td>${p.is_admin ? '<span class="chip chip-ink">Admin</span>' : '<span class="chip chip-grey">Player</span>'}</td>
             <td>
@@ -589,8 +589,8 @@
     function asNormName(s) {
       if (!s) return '';
       return String(s).toLowerCase()
-        .normalize('NFD').replace(/[Ì€-Í¯]/g, '')
-        .replace(/[â€˜â€™Ê¼'\-]/g, ' ')
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/[‘’ʼ'\-]/g, ' ')
         .replace(/[^a-z0-9\s]/g, '')
         .replace(/\s+/g, ' ').trim();
     }
@@ -766,7 +766,7 @@
         ? `<span class="as-chip as-ok"><i class="ti ti-check"></i> ${label ?? val}</span>`
         : '<span class="as-chip as-pending">pending</span>';
 
-      const teamOpts = '<option value="">â€” select â€”</option>' +
+      const teamOpts = '<option value="">— select —</option>' +
         Object.values(TEAMS).sort((a,b) => a.name.localeCompare(b.name))
           .map(t => `<option value="${t.code}">${t.flag} ${t.name}</option>`).join('');
 
@@ -778,14 +778,14 @@
         <div class="as-card">
           <div class="as-card-hd">
             Computed from match results
-            <small style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--grey-500)"> â€” ${c.finishedCount}/72 group fixtures finished</small>
+            <small style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--grey-500)"> — ${c.finishedCount}/72 group fixtures finished</small>
           </div>
           ${[
             ['Q1.8',  'Host nations (USA/CAN/MEX) combined group goals', c.r1['1.8']],
             ['Q1.9',  'Top-scoring nation (ENG/FRA/BRA/ARG) in groups',
               c.r1['1.9'] ? `${TEAMS[c.r1['1.9']]?.flag} ${TEAMS[c.r1['1.9']]?.name}` : null],
             ['Q1.11', 'Total group stage goals', c.r1['1.11']],
-            ['Q1.12', 'Hardest group (smallest 1stâ†”4th pts gap; tiebreak: 4th-place GD)',
+            ['Q1.12', 'Hardest group (smallest 1st↔4th pts gap; tiebreak: 4th-place GD)',
               c.r1['1.12'] ? `Group ${c.r1['1.12']} (${c.r1['_1.12_gap']}pt gap)` : null],
           ].map(([k, lbl, v]) => `
             <div class="as-row">
@@ -795,12 +795,12 @@
             </div>
           `).join('')}
           <div class="as-row">
-            <span class="as-qkey">Q1.1â€“3</span>
+            <span class="as-qkey">Q1.1–3</span>
             <span class="as-qlabel">Winner / Runner-up / Beaten semis (from bracket result)</span>
             <span style="margin-left:auto;flex-shrink:0">
               ${hasWinner && hasSemis
-                ? chip(1, `${TEAMS[c.r1['1.1']]?.flag} ${TEAMS[c.r1['1.1']]?.name} &amp; others â€” auto`)
-                : '<span class="as-chip as-pending">bracket not seeded â€” enter below</span>'}
+                ? chip(1, `${TEAMS[c.r1['1.1']]?.flag} ${TEAMS[c.r1['1.1']]?.name} &amp; others — auto`)
+                : '<span class="as-chip as-pending">bracket not seeded — enter below</span>'}
             </span>
           </div>
           <div class="as-row">
@@ -847,7 +847,7 @@
           </div>
           <div class="as-input-row">
             <span class="as-qkey">Q1.6</span><label>Golden Boot winner (name)</label>
-            <input type="text" id="asQ16" class="form-control" placeholder="e.g. MbappÃ©">
+            <input type="text" id="asQ16" class="form-control" placeholder="e.g. Mbappé">
           </div>
           <div class="as-input-row">
             <span class="as-qkey">Q1.7</span><label>Golden Boot goals</label>
@@ -927,11 +927,11 @@
         if (!answer) return `
           <div class="as-card">
             <div class="as-card-hd">${qKey}: ${label}</div>
-            <div class="as-row" style="color:var(--grey-400);font-style:italic">No answer entered â€” will not be scored.</div>
+            <div class="as-row" style="color:var(--grey-400);font-style:italic">No answer entered — will not be scored.</div>
           </div>`;
         if (guessMap.size === 0) return `
           <div class="as-card">
-            <div class="as-card-hd">${qKey}: ${label} â€” answer: <strong>${answer}</strong></div>
+            <div class="as-card-hd">${qKey}: ${label} — answer: <strong>${answer}</strong></div>
             <div class="as-row" style="color:var(--grey-400);font-style:italic">No player guesses found.</div>
           </div>`;
 
@@ -953,7 +953,7 @@
         return `
           <div class="as-card">
             <div class="as-card-hd">
-              ${qKey}: ${label} â€” correct answer: <strong>${answer}</strong>
+              ${qKey}: ${label} — correct answer: <strong>${answer}</strong>
               &rarr; normalised: <em style="font-weight:400">${asNormName(answer)}</em>
             </div>
             <div style="overflow-x:auto">
@@ -1038,7 +1038,7 @@
         const r1 = asScoreUser_R1(p1, _asComputed, _asAdminAnswers || {}, _asNameMatches);
         const r2 = ScoringEngine.calculateRound2(p2, _asComputed.r2);
         rows.push({
-          name:  nameMap[uid] || uid.substring(0,8) + 'â€¦',
+          name:  nameMap[uid] || uid.substring(0,8) + '…',
           r1Old: exist.round1_points ?? null,
           r1New: r1.points,
           r2Old: exist.round2_points ?? null,
@@ -1053,16 +1053,16 @@
         const d = nw - old;
         const s = d > 0 ? `<span style="color:#5c7000">+${d}</span>`
                 : d < 0 ? `<span style="color:#ef4444">${d}</span>`
-                :          '<span style="color:var(--grey-400)">Â±0</span>';
+                :          '<span style="color:var(--grey-400)">±0</span>';
         return `<td style="text-align:right">${s}</td>`;
       };
 
       tbody.innerHTML = rows.map(r => `<tr>
         <td>${r.name}</td>
-        <td style="text-align:right;color:var(--grey-400)">${r.r1Old ?? 'â€”'}</td>
+        <td style="text-align:right;color:var(--grey-400)">${r.r1Old ?? '—'}</td>
         <td style="text-align:right"><strong>${r.r1New}</strong></td>
         ${dCell(r.r1Old, r.r1New)}
-        <td style="text-align:right;color:var(--grey-400)">${r.r2Old ?? 'â€”'}</td>
+        <td style="text-align:right;color:var(--grey-400)">${r.r2Old ?? '—'}</td>
         <td style="text-align:right"><strong>${r.r2New}</strong></td>
         ${dCell(r.r2Old, r.r2New)}
       </tr>`).join('');

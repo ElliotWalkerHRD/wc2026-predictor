@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WC2026 â€” Sign In</title>
+  <title>WC2026 — Sign In</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
@@ -175,7 +175,7 @@
           </div>
           <div class="form-group">
             <label class="form-label" for="siPassword">Password</label>
-            <input class="form-control" type="password" id="siPassword" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" autocomplete="current-password">
+            <input class="form-control" type="password" id="siPassword" placeholder="••••••••" autocomplete="current-password">
           </div>
           <button class="btn btn-lime btn-block btn-lg" id="signinBtn">
             Sign In <i class="ti ti-arrow-right"></i>
@@ -338,7 +338,7 @@
         if (leagueJoinCode) {
           const league = await DB.validateLeagueCode(leagueJoinCode);
           if (!league) {
-            showAlert('signupAlert', 'That league link is invalid â€” check the link and try again.');
+            showAlert('signupAlert', 'That league link is invalid — check the link and try again.');
             resetBtn();
             return;
           }
@@ -354,14 +354,14 @@
           }
         };
 
-        // Email confirmation OFF â€” signUp returns a session immediately
+        // Email confirmation OFF — signUp returns a session immediately
         if (signupResult?.session && signupResult?.user) {
           await postSignup(signupResult.user.id);
           window.location.href = redirectUrl;
           return;
         }
 
-        // No session from signUp â€” try signing in manually
+        // No session from signUp — try signing in manually
         try {
           const siData = await DB.signIn(email, password);
           if (siData?.user) await postSignup(siData.user.id);
@@ -371,7 +371,7 @@
           }
         } catch (_) {}
 
-        // Email confirmation still required â€” guide user to sign in
+        // Email confirmation still required — guide user to sign in
         showAlert('signupAlert', 'Account created! Please sign in below.', 'success');
         resetBtn();
         setTimeout(() => {
@@ -418,7 +418,7 @@
         await sb.auth.resetPasswordForEmail(email, {
           redirectTo: CONFIG.APP_URL + '/pages/reset-password.html'
         });
-        // Always show the same message â€” don't reveal whether the email exists
+        // Always show the same message — don't reveal whether the email exists
         document.getElementById('forgotForm').style.display = 'none';
         showAlert('forgotAlert', "If that email is registered, we've sent a reset link. Check your inbox.", 'success');
       } catch (err) {

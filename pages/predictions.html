@@ -148,7 +148,8 @@
       grid.innerHTML = ROUNDS_META.map((round, idx) => {
         const lockDate  = DB.getRoundLockDate(round.id);
         const lockTime  = lockDate?.getTime();
-        const locked     = lockTime && lockTime <= _now;
+        const locked     = DB.isRoundLocked(round.id);
+        const forceOpen  = !locked && lockTime && lockTime <= _now;
         const bracketSet = bracketReady(round.id);
         const isOpen     = !locked && bracketSet;
         const submitted = submittedRounds.has(round.id);
@@ -156,7 +157,7 @@
         const progress  = Math.min(100, Math.round((preds.length / round.questions) * 100));
         const hasScore  = userScore && userScore[round.id + '_points'] != null;
 
-        const urgent = isOpen && (lockTime - _now) < 86400000;
+        const urgent = isOpen && !forceOpen && lockTime && (lockTime - _now) < 86400000;
 
         let lockPill;
         if (locked) {
@@ -181,7 +182,7 @@
               <i class="ti ti-lock-open"></i>
               <div>
                 <span class="lock-pill-status">Open</span>
-                <span class="lock-pill-detail">Locks in <span class="lock-cd" data-lock="${lockDate.toISOString()}"></span></span>
+                <span class="lock-pill-detail">${forceOpen ? 'Admin override' : `Locks in <span class="lock-cd" data-lock="${lockDate.toISOString()}"></span>`}</span>
               </div>
             </div>`;
         }

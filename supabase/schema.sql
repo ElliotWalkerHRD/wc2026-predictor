@@ -249,6 +249,60 @@ $$;
 
 
 -- ============================================================
+--  TABLE: settings
+--  Key-value runtime config (e.g. kill-switch for automation)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.settings (
+  key        TEXT PRIMARY KEY,
+  value      TEXT NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+INSERT INTO public.settings (key, value)
+VALUES ('auto_update_enabled', 'true')
+ON CONFLICT (key) DO NOTHING;
+
+
+-- ============================================================
+--  TABLE: automation_logs
+--  Audit trail for every scheduled auto-update run
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.automation_logs (
+  id               BIGSERIAL PRIMARY KEY,
+  run_at           TIMESTAMPTZ DEFAULT NOW(),
+  triggered_by     TEXT        DEFAULT 'cron',
+  status           TEXT        NOT NULL,
+  results_updated  INTEGER     DEFAULT 0,
+  players_rescored INTEGER     DEFAULT 0,
+  default_fills    INTEGER     DEFAULT 0,
+  error_message    TEXT,
+  duration_ms      INTEGER
+);
+
+ALTER TABLE public.settings        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.automation_logs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "settings: authenticated read"
+  ON public.settings FOR SELECT TO authenticated USING (TRUE);
+CREATE POLICY "settings: admin write"
+  ON public.settings FOR ALL USING (
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = TRUE)
+  );
+
+CREATE POLICY "automation_logs: authenticated read"
+  ON public.automation_logs FOR SELECT TO authenticated USING (TRUE);
+CREATE POLICY "automation_logs: admin write"
+  ON public.automation_logs FOR ALL USING (
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = TRUE)
+  );
+
+GRANT SELECT ON public.settings TO anon, authenticated;
+GRANT INSERT, UPDATE ON public.settings TO authenticated;
+GRANT SELECT ON public.automation_logs TO authenticated;
+GRANT USAGE, SELECT ON SEQUENCE public.automation_logs_id_seq TO authenticated;
+
+
+-- ============================================================
 --  REALTIME: Enable on tables that need live updates
 -- ============================================================
 -- Run these in Supabase Dashboard > Database > Replication

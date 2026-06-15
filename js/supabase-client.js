@@ -371,6 +371,34 @@ async function validateLeagueCode(code) {
   return data; // { id, name } or null if not found
 }
 
+// ---- Automation settings + logs ----
+
+async function getAutoUpdateEnabled() {
+  const sb = initSupabase();
+  const { data } = await sb.from('settings').select('value').eq('key', 'auto_update_enabled').single();
+  return data?.value !== 'false'; // default true if row missing
+}
+
+async function setAutoUpdateEnabled(enabled) {
+  const sb = initSupabase();
+  const { error } = await sb.from('settings').upsert(
+    { key: 'auto_update_enabled', value: enabled ? 'true' : 'false', updated_at: new Date().toISOString() },
+    { onConflict: 'key' }
+  );
+  if (error) throw error;
+}
+
+async function getAutomationLogs(limit = 30) {
+  const sb = initSupabase();
+  const { data, error } = await sb
+    .from('automation_logs')
+    .select('*')
+    .order('run_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data || [];
+}
+
 // ---- Storage ----
 
 async function uploadAvatar(userId, file) {
@@ -478,6 +506,7 @@ window.DB = {
   recalculateScores, isRoundLocked, getRoundLockDate,
   initRoundOverrides, setRoundOverride,
   getMyLeagues, createLeague, joinLeague, leaveLeague, getLeagueMemberIds, validateLeagueCode,
+  getAutoUpdateEnabled, setAutoUpdateEnabled, getAutomationLogs,
   uploadAvatar, removeAvatar,
   initSupabase
 };

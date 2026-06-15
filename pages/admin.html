@@ -121,6 +121,7 @@
           <button class="tab-btn" data-tab="users"><i class="ti ti-users"></i> Users</button>
           <button class="tab-btn" data-tab="scoring"><i class="ti ti-calculator"></i> Scoring</button>
           <button class="tab-btn" data-tab="roundlocks"><i class="ti ti-lock"></i> Round Locks</button>
+          <button class="tab-btn" data-tab="automation"><i class="ti ti-clock-play"></i> Automation</button>
         </div>
 
         <!-- Results Panel -->
@@ -228,6 +229,67 @@
           <div id="asAnswerPanel" class="hidden" style="margin-top:1.5rem;max-width:680px"></div>
           <div id="asReviewPanel" class="hidden" style="margin-top:1.5rem"></div>
         </div>
+        <!-- Automation Panel -->
+        <div class="admin-panel" id="panel-automation">
+          <div style="max-width:700px">
+            <h2 style="font-family:var(--font-serif);font-size:1.35rem;margin-bottom:0.5rem">Automation</h2>
+            <p style="color:var(--grey-500);font-size:0.875rem;margin-bottom:1.5rem">
+              A pg_cron job calls the <code>auto-update</code> edge function every 10 minutes.
+              Each run fetches live results then recalculates all scores automatically.
+            </p>
+
+            <!-- Kill-switch card -->
+            <div class="card mb-4" style="padding:1.25rem 1.5rem">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+                <div>
+                  <div style="font-weight:700;margin-bottom:0.2rem">Auto-update</div>
+                  <div style="font-size:0.82rem;color:var(--grey-500)">Every 10 min: fetch results → recalculate scores</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.75rem">
+                  <span id="autoStatusBadge" style="font-size:0.75rem;font-weight:700;padding:0.2rem 0.65rem;border-radius:9999px">—</span>
+                  <button class="btn btn-outline btn-sm" id="autoToggleBtn" disabled>
+                    <i class="ti ti-loader"></i> Loading&hellip;
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Recent runs log -->
+            <div class="card" style="padding:0;overflow:hidden">
+              <div style="padding:1rem 1.25rem 0.75rem;display:flex;align-items:center;justify-content:space-between">
+                <h4 style="font-weight:700;font-size:0.9rem;margin:0">Recent Runs</h4>
+                <button class="btn btn-ghost btn-sm" id="autoRefreshBtn"><i class="ti ti-refresh"></i> Refresh</button>
+              </div>
+              <div style="overflow-x:auto">
+                <table style="width:100%;border-collapse:collapse;font-size:0.82rem" id="autoLogsTable">
+                  <thead>
+                    <tr style="border-bottom:1px solid var(--grey-200)">
+                      <th style="padding:0.5rem 1rem;text-align:left;font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--grey-500)">Time</th>
+                      <th style="padding:0.5rem 0.75rem;text-align:left;font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--grey-500)">Status</th>
+                      <th style="padding:0.5rem 0.75rem;text-align:right;font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--grey-500)">Results</th>
+                      <th style="padding:0.5rem 0.75rem;text-align:right;font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--grey-500)">Players</th>
+                      <th style="padding:0.5rem 0.75rem;text-align:right;font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--grey-500)">Duration</th>
+                      <th style="padding:0.5rem 1rem;text-align:left;font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--grey-500)">Error</th>
+                    </tr>
+                  </thead>
+                  <tbody id="autoLogsBody">
+                    <tr><td colspan="6" style="padding:1.5rem;text-align:center;color:var(--grey-400)">
+                      <div class="spinner" style="margin:0 auto"></div>
+                    </td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div style="margin-top:1rem;font-size:0.78rem;color:var(--grey-400)">
+              <i class="ti ti-info-circle"></i>
+              To disable the cron job entirely (vs. just toggling the kill-switch):
+              run <code>UPDATE cron.job SET active = FALSE WHERE jobname = 'wc2026-auto-update';</code>
+              in the SQL Editor.
+            </div>
+          </div>
+        </div>
+
         <!-- Round Locks Panel -->
         <div class="admin-panel" id="panel-roundlocks">
           <div style="max-width:640px">
@@ -334,6 +396,94 @@
       }
     }
 
+    // ---- AUTOMATION ----
+
+    let autoUpdateEnabled = true;
+
+    async function loadAutomationPanel() {
+      // Kill-switch state
+      try {
+        autoUpdateEnabled = await DB.getAutoUpdateEnabled();
+        renderAutoToggle();
+      } catch (e) {
+        document.getElementById('autoStatusBadge').textContent = 'Error';
+      }
+      // Logs
+      await refreshAutoLogs();
+    }
+
+    function renderAutoToggle() {
+      const badge = document.getElementById('autoStatusBadge');
+      const btn   = document.getElementById('autoToggleBtn');
+      if (autoUpdateEnabled) {
+        badge.textContent = 'Enabled';
+        badge.style.cssText = 'font-size:0.75rem;font-weight:700;padding:0.2rem 0.65rem;border-radius:9999px;background:rgba(200,241,53,0.2);color:#5c7000';
+        btn.innerHTML = '<i class="ti ti-player-pause"></i> Disable';
+        btn.className = 'btn btn-outline btn-sm';
+      } else {
+        badge.textContent = 'Disabled';
+        badge.style.cssText = 'font-size:0.75rem;font-weight:700;padding:0.2rem 0.65rem;border-radius:9999px;background:var(--grey-100);color:var(--grey-500)';
+        btn.innerHTML = '<i class="ti ti-player-play"></i> Enable';
+        btn.className = 'btn btn-lime btn-sm';
+      }
+      btn.disabled = false;
+    }
+
+    document.getElementById('autoToggleBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('autoToggleBtn');
+      btn.disabled = true;
+      try {
+        autoUpdateEnabled = !autoUpdateEnabled;
+        await DB.setAutoUpdateEnabled(autoUpdateEnabled);
+        renderAutoToggle();
+        Toast.success(`Auto-update ${autoUpdateEnabled ? 'enabled' : 'disabled'}`);
+      } catch (e) {
+        Toast.error('Failed to update setting: ' + e.message);
+        autoUpdateEnabled = !autoUpdateEnabled; // revert
+        renderAutoToggle();
+      }
+    });
+
+    document.getElementById('autoRefreshBtn').addEventListener('click', refreshAutoLogs);
+
+    async function refreshAutoLogs() {
+      const tbody = document.getElementById('autoLogsBody');
+      tbody.innerHTML = '<tr><td colspan="6" style="padding:1.5rem;text-align:center"><div class="spinner" style="margin:0 auto"></div></td></tr>';
+      try {
+        const logs = await DB.getAutomationLogs(30);
+        if (!logs.length) {
+          tbody.innerHTML = '<tr><td colspan="6" style="padding:1.5rem;text-align:center;color:var(--grey-400)">No runs yet — the cron job hasn\'t fired, or the table is empty.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = logs.map(log => {
+          const dt = new Date(log.run_at);
+          const timeStr = dt.toLocaleString('en-GB', {
+            day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', second:'2-digit',
+          });
+          const statusColor = log.status === 'success'
+            ? 'color:#5c7000;background:rgba(200,241,53,0.15)'
+            : log.status.startsWith('skipped')
+            ? 'color:var(--grey-500);background:var(--grey-100)'
+            : 'color:#b91c1c;background:rgba(185,28,28,0.08)';
+          const statusBadge = `<span style="font-size:0.72rem;font-weight:700;padding:0.15rem 0.5rem;border-radius:9999px;${statusColor}">${log.status}</span>`;
+          const dur = log.duration_ms ? `${(log.duration_ms / 1000).toFixed(1)}s` : '—';
+          const err = log.error_message
+            ? `<span style="color:#b91c1c;font-size:0.78rem" title="${log.error_message}">${log.error_message.slice(0, 60)}${log.error_message.length > 60 ? '…' : ''}</span>`
+            : '—';
+          return `<tr style="border-bottom:1px solid var(--grey-100)">
+            <td style="padding:0.55rem 1rem;white-space:nowrap;color:var(--grey-600)">${timeStr}</td>
+            <td style="padding:0.55rem 0.75rem">${statusBadge}</td>
+            <td style="padding:0.55rem 0.75rem;text-align:right">${log.results_updated ?? 0}</td>
+            <td style="padding:0.55rem 0.75rem;text-align:right">${log.players_rescored ?? 0}</td>
+            <td style="padding:0.55rem 0.75rem;text-align:right;white-space:nowrap">${dur}</td>
+            <td style="padding:0.55rem 1rem;max-width:200px">${err}</td>
+          </tr>`;
+        }).join('');
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="6" style="padding:1rem;color:#b91c1c">Error loading logs: ${e.message}</td></tr>`;
+      }
+    }
+
     async function init() {
       const session = await requireAuthFromPages();
       if (!session) return;
@@ -360,7 +510,8 @@
         document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
         btn.classList.add('active');
         document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
-        if (btn.dataset.tab === 'roundlocks') loadRoundLocksPanel();
+        if (btn.dataset.tab === 'roundlocks')  loadRoundLocksPanel();
+        if (btn.dataset.tab === 'automation')  loadAutomationPanel();
       });
 
       await Promise.all([loadResultsPanel(), loadUsers()]);

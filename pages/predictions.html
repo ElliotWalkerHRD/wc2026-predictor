@@ -139,7 +139,7 @@
       } catch (_) {}
 
       await DB.initRoundOverrides();
-      const openRounds = ROUNDS_META.filter(r => !DB.isRoundLocked(r.id)).length;
+      const openRounds = ROUNDS_META.filter(r => !DB.isRoundLocked(r.id) && bracketReady(r.id)).length;
       document.getElementById('roundsOpen').textContent = openRounds;
 
       const _now = Date.now();

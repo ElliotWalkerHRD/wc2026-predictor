@@ -521,9 +521,10 @@
             else if (actH === actA)        chip = `<span class="pred-pill result">Result</span>`;
             else                           chip = `<span class="pred-pill auto">Wrong</span>`;
           }
-          return `<div class="mpred-row mpred-auto${isYou ? ' mpred-you' : ''}">
+          const isAiAuto = isAiPlayer(p.profiles) && !isYou;
+          return `<div class="mpred-row mpred-auto${isYou ? ' mpred-you' : ''}${isAiAuto ? ' ai-player-row' : ''}">
             ${renderAvatar(p.profiles, 'avatar', 'width:32px;height:32px;font-size:0.85rem')}
-            <span class="mpred-name">${p.profiles?.display_name || 'Player'}${isYou ? ' <span class="you-badge">You</span>' : ''} <span class="auto-badge">auto</span></span>
+            <span class="mpred-name">${p.profiles?.display_name || 'Player'}${isYou ? ' <span class="you-badge">You</span>' : ''}${isAiAuto ? ' <span class="ai-tag">AI</span>' : ''} <span class="auto-badge">auto</span></span>
             <span class="mpred-score">4–4</span>
             ${chip}
           </div>`;
@@ -540,9 +541,10 @@
           else
             chipHtml = `<span class="pred-pill wrong">Wrong</span>`;
         }
-        return `<div class="mpred-row${isYou ? ' mpred-you' : ''}">
+        const isAiRow = isAiPlayer(p.profiles) && !isYou;
+        return `<div class="mpred-row${isYou ? ' mpred-you' : ''}${isAiRow ? ' ai-player-row' : ''}">
           ${renderAvatar(p.profiles, 'avatar', 'width:32px;height:32px;font-size:0.85rem')}
-          <span class="mpred-name">${p.profiles?.display_name || 'Player'}${isYou ? ' <span class="you-badge">You</span>' : ''}</span>
+          <span class="mpred-name">${p.profiles?.display_name || 'Player'}${isYou ? ' <span class="you-badge">You</span>' : ''}${isAiRow ? ' <span class="ai-tag">AI</span>' : ''}</span>
           <span class="mpred-score">${val !== null ? `${val.home}–${val.away}` : '—'}</span>
           ${chipHtml}
         </div>`;
@@ -571,6 +573,7 @@
         if (!map[matchId]) map[matchId] = [];
         map[matchId].push({
           name: p.profiles?.display_name || 'Player',
+          isAi: p.profiles?.display_name === 'Claude',
           home: val.home,
           away: val.away,
           userId: p.user_id
@@ -741,7 +744,8 @@
             else cls = 'wrong';
           }
           const isYou = p.userId === currentUserId;
-          return `<span class="pred-pill ${cls}"><span class="pred-name">${isYou ? '<strong>You</strong>' : p.name}:</span>${predText}</span>`;
+          const nameHtml = isYou ? '<strong>You</strong>' : (p.isAi ? `${p.name} <span class="ai-tag">AI</span>` : p.name);
+          return `<span class="pred-pill ${cls}${p.isAi ? ' ai-pill' : ''}"><span class="pred-name">${nameHtml}:</span>${predText}</span>`;
         })].filter(Boolean).join('');
         predsHtml = `<div class="preds-row"><span class="preds-label"><i class="ti ti-list-check"></i> Picks:</span>${pills}</div>`;
       }

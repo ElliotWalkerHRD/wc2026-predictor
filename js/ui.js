@@ -225,15 +225,20 @@ function teamFlagImg(code) {
 // ---- Avatar renderer ----
 // Renders a photo <img> if profile.avatar_url is set; otherwise a colour+initial <div>.
 // cls: CSS class applied to both variants  style: extra inline CSS  title: tooltip/alt text
+function isAiPlayer(profile) {
+  return profile?.display_name === 'Claude';
+}
+
 function renderAvatar(profile, cls = 'avatar', style = '', title = '') {
   const initial   = (profile?.display_name || '?').charAt(0).toUpperCase();
   const color     = profile?.avatar_color || '#c8f135';
   const titleAttr = title ? ` title="${title}"` : '';
   const styleBase = style ? `;${style}` : '';
+  const aiCls     = isAiPlayer(profile) ? ' ai-avatar' : '';
   if (profile?.avatar_url) {
-    return `<img src="${profile.avatar_url}" class="${cls}"${titleAttr} alt="${title}" style="object-fit:cover;flex-shrink:0${styleBase}">`;
+    return `<img src="${profile.avatar_url}" class="${cls}${aiCls}"${titleAttr} alt="${title}" style="object-fit:cover;flex-shrink:0${styleBase}">`;
   }
-  return `<div class="${cls}"${titleAttr} style="background:${color};color:#0d0d0d;flex-shrink:0${styleBase}">${initial}</div>`;
+  return `<div class="${cls}${aiCls}"${titleAttr} style="background:${color};color:#0d0d0d;flex-shrink:0${styleBase}">${initial}</div>`;
 }
 
 // ---- Points badge ----
@@ -269,6 +274,7 @@ window.renderMatchScore = renderMatchScore;
 window.buildTeamSelect = buildTeamSelect;
 window.teamFlagImg = teamFlagImg;
 window.ptsBadge = ptsBadge;
+window.isAiPlayer = isAiPlayer;
 window.renderAvatar = renderAvatar;
 window.ROUND_TO_KO = ROUND_TO_KO;
 window.bracketReady = bracketReady;

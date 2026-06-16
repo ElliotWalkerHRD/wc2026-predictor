@@ -103,10 +103,14 @@ serve(async (req) => {
 
   const startMs = Date.now();
 
-  // ---- Auth: must be called with service_role key ----
-  const authHeader = req.headers.get("Authorization");
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  if (authHeader !== `Bearer ${serviceRoleKey}`) {
+  // ---- Auth: require service_role JWT (gateway validates signature; we check the role claim) ----
+  let isServiceRole = false;
+  try {
+    const jwt = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/, "");
+    const payload = JSON.parse(atob(jwt.split(".")[1]));
+    isServiceRole = payload.role === "service_role";
+  } catch { /* malformed JWT */ }
+  if (!isServiceRole) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -114,7 +118,7 @@ serve(async (req) => {
 
   const supabaseAdmin = createClient(
     Deno.env.get("SUPABASE_URL")!,
-    serviceRoleKey,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     { auth: { persistSession: false } }
   );
 

@@ -220,6 +220,10 @@
       flex-shrink: 0;
     }
     .filter-divider { width: 1px; background: var(--grey-300); align-self: stretch; flex-shrink: 0; margin: 0 0.125rem; }
+    .pred-pill.auto { border-style: dashed; color: var(--grey-500); }
+    .auto-tag { display: inline-block; font-size: 0.62em; background: var(--grey-200); color: var(--grey-500); border-radius: 3px; padding: 0 3px; margin-left: 2px; vertical-align: middle; font-weight: 700; letter-spacing: 0; }
+    .mpred-auto .mpred-score { color: var(--grey-400); }
+    .auto-badge { display: inline-block; font-size: 0.65rem; background: var(--grey-200); color: var(--grey-500); border-radius: 3px; padding: 1px 5px; margin-left: 3px; font-weight: 600; letter-spacing: 0.02em; vertical-align: middle; }
   </style>
 </head>
 <body>
@@ -278,6 +282,7 @@
     let activePredLeague = 'global';
     let memberCache      = {};
     let currentSort      = 'round';
+    let allProfiles      = [];
 
     async function load() {
       const session = await DB.getSession();
@@ -323,6 +328,7 @@
       if (currentUserId) {
         myLeagues = await DB.getMyLeagues(currentUserId).catch(() => []);
       }
+      allProfiles = await DB.getAllProfiles().catch(() => []);
 
       render();
       renderLeagueFilter();
@@ -479,6 +485,18 @@
       let matchPreds = allPreds.filter(p => p.question_key === `m${matchId}`);
       if (memberIds) matchPreds = matchPreds.filter(p => memberIds.includes(p.user_id));
 
+      const result    = allResults[matchId];
+      const hasResult = result && result.home_score !== null;
+
+      // Add auto-default entries (4-4) for players with no pick when match has a result
+      if (hasResult && allProfiles.length) {
+        const predictedSet = new Set(matchPreds.map(p => p.user_id));
+        const pool = memberIds ? allProfiles.filter(pr => memberIds.includes(pr.id)) : allProfiles;
+        pool.filter(pr => !predictedSet.has(pr.id)).forEach(pr => {
+          matchPreds.push({ user_id: pr.id, profiles: pr, _auto: true });
+        });
+      }
+
       if (!matchPreds.length) {
         bodyEl.innerHTML = `<div style="text-align:center;padding:2rem 1rem;color:var(--grey-400)">
           <i class="ti ti-inbox" style="font-size:2rem;display:block;margin-bottom:0.75rem"></i>
@@ -493,13 +511,25 @@
         return (a.profiles?.display_name || '').localeCompare(b.profiles?.display_name || '');
       });
 
-      const result    = allResults[matchId];
-      const hasResult = result && result.home_score !== null;
-
       bodyEl.innerHTML = matchPreds.map(p => {
+        const isYou = p.user_id === currentUserId;
+        if (p._auto) {
+          let chip = '';
+          if (hasResult) {
+            const actH = result.home_score, actA = result.away_score;
+            if (actH === 4 && actA === 4) chip = `<span class="pred-pill exact">Exact</span>`;
+            else if (actH === actA)        chip = `<span class="pred-pill result">Result</span>`;
+            else                           chip = `<span class="pred-pill auto">Wrong</span>`;
+          }
+          return `<div class="mpred-row mpred-auto${isYou ? ' mpred-you' : ''}">
+            ${renderAvatar(p.profiles, 'avatar', 'width:32px;height:32px;font-size:0.85rem')}
+            <span class="mpred-name">${p.profiles?.display_name || 'Player'}${isYou ? ' <span class="you-badge">You</span>' : ''} <span class="auto-badge">auto</span></span>
+            <span class="mpred-score">4–4</span>
+            ${chip}
+          </div>`;
+        }
         let val = null;
         try { val = JSON.parse(p.value); } catch {}
-        const isYou = p.user_id === currentUserId;
         let chipHtml = '';
         if (hasResult && val !== null) {
           const actH = result.home_score, actA = result.away_score;
@@ -697,8 +727,11 @@
       }
 
       let predsHtml = '';
-      if (preds.length > 0) {
-        const pills = preds.map(p => {
+      const autoPill = hasResult && currentUserId && !preds.some(p => p.userId === currentUserId)
+        ? `<span class="pred-pill auto"><span class="pred-name"><strong>You</strong>:</span>4–4 <span class="auto-tag">auto</span></span>`
+        : '';
+      if (preds.length > 0 || autoPill) {
+        const pills = [autoPill, ...preds.map(p => {
           const predText = `${p.home}–${p.away}`;
           let cls = '';
           if (hasResult) {
@@ -709,7 +742,7 @@
           }
           const isYou = p.userId === currentUserId;
           return `<span class="pred-pill ${cls}"><span class="pred-name">${isYou ? '<strong>You</strong>' : p.name}:</span>${predText}</span>`;
-        }).join('');
+        })].filter(Boolean).join('');
         predsHtml = `<div class="preds-row"><span class="preds-label"><i class="ti ti-list-check"></i> Picks:</span>${pills}</div>`;
       }
 

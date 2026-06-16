@@ -117,6 +117,8 @@
     .match-pred-row.exact { border-color: var(--green); }
     .match-pred-row.result { border-color: var(--lime-dark); }
     .match-pred-row.wrong { border-color: var(--red); }
+    .match-pred-row.auto-default { border-style: dashed; border-color: var(--grey-300); background: var(--grey-50); }
+    .auto-tag { display: inline-block; font-size: 0.62em; background: var(--grey-200); color: var(--grey-500); border-radius: 3px; padding: 0 3px; margin-left: 3px; vertical-align: middle; font-weight: 700; letter-spacing: 0; }
 
     .match-pred-teams { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; font-weight: 600; flex-wrap: wrap; }
 
@@ -372,20 +374,6 @@
       }
 
       const preds = allPreds[activeRound] || [];
-
-      if (!preds.length) {
-        panel.innerHTML = `
-          <div class="empty-round">
-            <i class="ti ti-inbox" style="font-size:2.5rem;color:var(--grey-300);display:block;margin-bottom:1rem"></i>
-            <p style="font-weight:600;color:var(--grey-500)">No predictions submitted for this round yet.</p>
-            <p style="margin-top:0.5rem;font-size:0.875rem">
-              <a href="${activeRound}.html"><i class="ti ti-arrow-right"></i> Go make your predictions</a>
-            </p>
-          </div>
-        `;
-        return;
-      }
-
       const pts = userScore?.[activeRound + '_points'];
       const totalBar = `
         <div class="round-total-bar">
@@ -393,13 +381,29 @@
           <span class="round-total-pts">${pts !== undefined && pts !== null ? pts : '—'}</span>
         </div>
       `;
+      const emptyState = `
+        <div class="empty-round">
+          <i class="ti ti-inbox" style="font-size:2.5rem;color:var(--grey-300);display:block;margin-bottom:1rem"></i>
+          <p style="font-weight:600;color:var(--grey-500)">No predictions submitted for this round yet.</p>
+          <p style="margin-top:0.5rem;font-size:0.875rem">
+            <a href="${activeRound}.html"><i class="ti ti-arrow-right"></i> Go make your predictions</a>
+          </p>
+        </div>
+      `;
 
-      let content = '';
-      if (activeRound === 'round1') content = renderRound1Panel(preds);
-      else if (activeRound === 'round2') content = renderRound2Panel(preds);
-      else content = renderScorePanel(preds, activeRound);
+      if (activeRound === 'round1') {
+        panel.innerHTML = preds.length ? totalBar + renderRound1Panel(preds) : emptyState;
+        return;
+      }
+      if (activeRound === 'round2') {
+        panel.innerHTML = preds.length ? totalBar + renderRound2Panel(preds) : emptyState;
+        return;
+      }
 
-      panel.innerHTML = totalBar + content;
+      // round3-8: renderScorePanel handles auto-default rows; only fall back to empty state if
+      // there are truly no submitted picks and no match results to show defaults for
+      const content = renderScorePanel(preds, activeRound);
+      panel.innerHTML = content ? totalBar + content : emptyState;
     }
 
     function renderRound1Panel(preds) {
@@ -483,23 +487,50 @@
       }).join('');
     }
 
+    function getRoundMatchIds(round) {
+      const map = {
+        round3: GROUP_FIXTURES.map(f => f[0]),
+        round4: (KNOCKOUT_ROUNDS.round32?.matches || []).map(m => m.id),
+        round5: (KNOCKOUT_ROUNDS.round16?.matches || []).map(m => m.id),
+        round6: (KNOCKOUT_ROUNDS.quarterfinals?.matches || []).map(m => m.id),
+        round7: (KNOCKOUT_ROUNDS.semifinals?.matches || []).map(m => m.id),
+        round8: (KNOCKOUT_ROUNDS.final?.matches || []).map(m => m.id),
+      };
+      const ids = map[round] ? [...map[round]] : [];
+      // Match 103 (third place) is round8 in scoring but may not be in KNOCKOUT_ROUNDS.final
+      if (round === 'round8' && !ids.includes(103)) ids.push(103);
+      return ids;
+    }
+
     function renderScorePanel(preds, round) {
       const isFinale = round === 'round8';
       const exactPts = isFinale ? 10 : 7;
       const resultPts = isFinale ? 7 : 5;
 
-      const sorted = [...preds]
-        .filter(p => p.question_key.startsWith('m'))
-        .sort((a, b) => parseInt(a.question_key.slice(1)) - parseInt(b.question_key.slice(1)));
-
-      return sorted.map(p => {
+      // Map submitted predictions by matchId
+      const predsByMatchId = {};
+      preds.filter(p => p.question_key.startsWith('m')).forEach(p => {
         const matchId = parseInt(p.question_key.slice(1));
-        let val;
-        try { val = JSON.parse(p.value); } catch { val = null; }
-        if (!val) return '';
+        if (!isNaN(matchId)) predsByMatchId[matchId] = p;
+      });
 
+      // All matchIds for this round; show rows for submitted picks + auto-defaults (where result exists)
+      const roundMatchIds = getRoundMatchIds(round);
+      const displayIds = roundMatchIds.filter(matchId =>
+        predsByMatchId[matchId] ||
+        (allResults[matchId] && allResults[matchId].home_score !== null)
+      ).sort((a, b) => a - b);
+
+      return displayIds.map(matchId => {
+        const p = predsByMatchId[matchId];
         const result = allResults[matchId];
         const hasResult = result && result.home_score !== null;
+        const isAuto = !p && hasResult;
+
+        let val = null;
+        if (p) { try { val = JSON.parse(p.value); } catch {} }
+        if (isAuto) val = { home: 4, away: 4 };
+        if (!val) return '';
 
         const fixture = GROUP_FIXTURES.find(f => f[0] === matchId);
         let homeTeam, awayTeam;
@@ -507,8 +538,13 @@
           homeTeam = getTeam(fixture[4]);
           awayTeam = getTeam(fixture[5]);
         } else {
-          homeTeam = { code: 'TBD', name: 'TBD' };
-          awayTeam = { code: 'TBD', name: 'TBD' };
+          let koMatch = null;
+          for (const ko of Object.values(KNOCKOUT_ROUNDS)) {
+            koMatch = (ko.matches || []).find(m => m.id === matchId);
+            if (koMatch) break;
+          }
+          homeTeam = koMatch?.home_team ? getTeam(koMatch.home_team) : { code: 'TBD', name: 'TBD' };
+          awayTeam = koMatch?.away_team ? getTeam(koMatch.away_team) : { code: 'TBD', name: 'TBD' };
         }
 
         let pts = 0, scoreClass = '', indicator = '';
@@ -524,14 +560,14 @@
         }
 
         return `
-          <div class="match-pred-row ${scoreClass}">
+          <div class="match-pred-row ${isAuto ? 'auto-default' : scoreClass}">
             <div class="match-pred-teams">
               <span>${teamFlagImg(homeTeam.code)} ${homeTeam.name}</span>
               <span style="color:var(--grey-400)">vs</span>
               <span>${teamFlagImg(awayTeam.code)} ${awayTeam.name}</span>
             </div>
-            <div class="match-pred-score ${scoreClass}">
-              ${val.home} – ${val.away}
+            <div class="match-pred-score ${isAuto ? '' : scoreClass}">
+              ${val.home} – ${val.away}${isAuto ? ' <span class="auto-tag">auto</span>' : ''}
               ${hasResult ? `<div style="font-size:0.65rem;margin-top:0.15rem">${indicator}</div>` : ''}
               ${hasResult ? `<div style="font-size:0.65rem;color:var(--grey-400)">Actual: ${result.home_score}–${result.away_score}</div>` : ''}
             </div>
@@ -541,7 +577,7 @@
             </div>
           </div>
         `;
-      }).join('');
+      }).filter(Boolean).join('');
     }
 
     function computePredGroup(groupKey, predMap) {

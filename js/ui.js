@@ -229,16 +229,17 @@ function isAiPlayer(profile) {
   return profile?.display_name === 'Claude';
 }
 
-function renderAvatar(profile, cls = 'avatar', style = '', title = '') {
+function renderAvatar(profile, cls = 'avatar', style = '', title = '', extraCls = '') {
   const initial   = (profile?.display_name || '?').charAt(0).toUpperCase();
   const color     = profile?.avatar_color || '#c8f135';
   const titleAttr = title ? ` title="${title}"` : '';
   const styleBase = style ? `;${style}` : '';
   const aiCls     = isAiPlayer(profile) ? ' ai-avatar' : '';
+  const xCls      = extraCls ? ` ${extraCls}` : '';
   if (profile?.avatar_url) {
-    return `<img src="${profile.avatar_url}" class="${cls}${aiCls}"${titleAttr} alt="${title}" style="object-fit:cover;flex-shrink:0${styleBase}">`;
+    return `<img src="${profile.avatar_url}" class="${cls}${aiCls}${xCls}"${titleAttr} alt="${title}" style="object-fit:cover;flex-shrink:0${styleBase}">`;
   }
-  return `<div class="${cls}${aiCls}"${titleAttr} style="background:${color};color:#0d0d0d;flex-shrink:0${styleBase}">${initial}</div>`;
+  return `<div class="${cls}${aiCls}${xCls}"${titleAttr} style="background:${color};color:#0d0d0d;flex-shrink:0${styleBase}">${initial}</div>`;
 }
 
 // ---- Points badge ----

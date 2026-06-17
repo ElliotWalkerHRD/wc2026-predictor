@@ -480,7 +480,7 @@
         // Pre-kickoff: own prediction only + lock note
         const myHtml = myVal
           ? `<div class="mpred-row mpred-you">
-              ${renderAvatar(myPredRow.profiles, 'avatar', 'width:32px;height:32px;font-size:0.85rem')}
+              ${renderAvatar(myPredRow.profiles, 'avatar', 'width:32px;height:32px;font-size:0.85rem', '', 'you-avatar')}
               <span class="mpred-name">You <span class="you-badge">You</span></span>
               <span class="mpred-score">${myVal.home}–${myVal.away}</span>
             </div>`
@@ -543,7 +543,7 @@
           }
           const isAiAuto = isAiPlayer(p.profiles) && !isYou;
           return `<div class="mpred-row mpred-auto${isYou ? ' mpred-you' : ''}${isAiAuto ? ' ai-player-row' : ''}">
-            ${renderAvatar(p.profiles, 'avatar', 'width:32px;height:32px;font-size:0.85rem')}
+            ${renderAvatar(p.profiles, 'avatar', 'width:32px;height:32px;font-size:0.85rem', '', isYou ? 'you-avatar' : '')}
             <span class="mpred-name">${p.profiles?.display_name || 'Player'}${isYou ? ' <span class="you-badge">You</span>' : ''}${isAiAuto ? ' <span class="ai-tag">AI</span>' : ''} <span class="auto-badge">auto</span></span>
             <span class="mpred-score">4–4</span>
             ${chip}
@@ -563,7 +563,7 @@
         }
         const isAiRow = isAiPlayer(p.profiles) && !isYou;
         return `<div class="mpred-row${isYou ? ' mpred-you' : ''}${isAiRow ? ' ai-player-row' : ''}">
-          ${renderAvatar(p.profiles, 'avatar', 'width:32px;height:32px;font-size:0.85rem')}
+          ${renderAvatar(p.profiles, 'avatar', 'width:32px;height:32px;font-size:0.85rem', '', isYou ? 'you-avatar' : '')}
           <span class="mpred-name">${p.profiles?.display_name || 'Player'}${isYou ? ' <span class="you-badge">You</span>' : ''}${isAiRow ? ' <span class="ai-tag">AI</span>' : ''}</span>
           <span class="mpred-score">${val !== null ? `${val.home}–${val.away}` : '—'}</span>
           ${chipHtml}
@@ -765,7 +765,7 @@
           }
           const isYou = p.userId === currentUserId;
           const nameHtml = isYou ? '<strong>You</strong>' : (p.isAi ? `${p.name} <span class="ai-tag">AI</span>` : p.name);
-          return `<span class="pred-pill ${cls}${p.isAi ? ' ai-pill' : ''}"><span class="pred-name">${nameHtml}:</span>${predText}</span>`;
+          return `<span class="pred-pill ${cls}${p.isAi ? ' ai-pill' : ''}${isYou ? ' you-pill' : ''}"><span class="pred-name">${nameHtml}:</span>${predText}</span>`;
         })].filter(Boolean).join('');
         predsHtml = `<div class="preds-row"><span class="preds-label"><i class="ti ti-list-check"></i> Picks:</span>${pills}</div>`;
       }

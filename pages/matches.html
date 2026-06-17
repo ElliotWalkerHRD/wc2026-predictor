@@ -819,10 +819,9 @@
             <div class="match-info">
               <div class="match-num">${label}</div>
               <div class="match-kickoff">${
-                isLive    ? `<span class="live-badge sm"><span class="live-dot-sm"></span>LIVE</span>` :
-                hasResult ? `<span class="match-info-score">${result.home_score}–${result.away_score}</span>` :
-                kickoff   ? formatLocalKickoff(kickoff) :
-                            formatDate(date)
+                isLive  ? `<span class="live-badge sm"><span class="live-dot-sm"></span>LIVE</span>` :
+                kickoff ? formatLocalKickoff(kickoff) :
+                          formatDate(date)
               }</div>
               ${venue ? `<div class="match-venue">${venue}${city ? `, ${city}` : ''}</div>` : ''}
             </div>

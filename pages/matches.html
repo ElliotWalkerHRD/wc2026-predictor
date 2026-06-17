@@ -126,6 +126,22 @@
       animation: blink 1s ease-in-out infinite;
     }
 
+    .finished-badge {
+      display: inline-flex;
+      align-items: center;
+      background: var(--grey-100);
+      color: var(--grey-500);
+      padding: 0.15rem 0.5rem;
+      border-radius: 3px;
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .live-badge.sm { font-size: 0.58rem; padding: 0.1rem 0.35rem; gap: 0.2rem; }
+    .match-scoreline.live { color: var(--red); }
+
     .no-matches {
       text-align: center;
       padding: 3rem;
@@ -399,8 +415,12 @@
         }
       }
 
-      const result    = allResults[matchId];
-      const hasResult = result && result.home_score !== null;
+      const result        = allResults[matchId];
+      const hasResult     = result && result.home_score !== null;
+      const isLiveModal   = result?.status === 'IN_PLAY' || result?.status === 'PAUSED';
+      const modalScoreHtml = hasResult
+        ? ` · ${isLiveModal ? '<span class="live-badge sm"><span class="live-dot-sm"></span>LIVE</span> ' : ''}<strong>${result.home_score}–${result.away_score}</strong>`
+        : '';
 
       const privateLeagues = myLeagues.filter(l => !l.is_global);
       const leagueOpts = [
@@ -422,7 +442,7 @@
                 <span style="color:var(--grey-400);font-weight:400;font-size:0.8rem">vs</span>
                 <span>${away.name}</span>${away.code ? teamFlagImg(away.code) : ''}
               </div>
-              <div class="mpred-meta">${matchLabel}${matchDate ? ' · ' + formatDate(matchDate) : ''}${hasResult ? ` · <strong>${result.home_score}–${result.away_score}</strong>` : ''}</div>
+              <div class="mpred-meta">${matchLabel}${matchDate ? ' · ' + formatDate(matchDate) : ''}${modalScoreHtml}</div>
               <button class="mpred-close" onclick="closeMatchModal()"><i class="ti ti-x"></i></button>
             </div>
             ${leagueBarHtml}
@@ -723,9 +743,9 @@
 
       if (isLive) {
         statusBadge = `<div class="live-badge"><div class="live-dot-sm"></div>LIVE</div>`;
-        scoreLine = `<div class="match-scoreline">${result.home_score} – ${result.away_score}</div>`;
+        scoreLine = `<div class="match-scoreline live">${result.home_score} – ${result.away_score}</div>`;
       } else if (hasResult) {
-        statusBadge = `<span class="finished-badge">Final</span>`;
+        statusBadge = `<span class="finished-badge">FT</span>`;
         scoreLine = `<div class="match-scoreline">${result.home_score} – ${result.away_score}</div>`;
       }
 
@@ -744,7 +764,7 @@
             else cls = 'wrong';
           }
           const isYou = p.userId === currentUserId;
-          const nameHtml = isYou ? '<strong>You</strong>' : (p.isAi ? `${p.name} <span class="ai-tag">AI</span>` : p.name);
+          const nameHtml = isYou ? `${p.name} <span class="you-badge">YOU</span>` : (p.isAi ? `${p.name} <span class="ai-tag">AI</span>` : p.name);
           return `<span class="pred-pill ${cls}${p.isAi ? ' ai-pill' : ''}"><span class="pred-name">${nameHtml}:</span>${predText}</span>`;
         })].filter(Boolean).join('');
         predsHtml = `<div class="preds-row"><span class="preds-label"><i class="ti ti-list-check"></i> Picks:</span>${pills}</div>`;

@@ -285,6 +285,7 @@ serve(async (req) => {
       const round = MATCH_ROUND_MAP[matchId];
       if (!round) continue;
       if (result.home_score === null || result.away_score === null) continue;
+      if (result.status !== 'FINISHED') continue; // only score completed matches
       if (!matchesByRound[round]) matchesByRound[round] = [];
       matchesByRound[round].push(matchId);
     }

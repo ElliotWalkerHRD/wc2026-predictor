@@ -946,7 +946,7 @@ select.form-control option {
 .player-info .name { font-weight: 600; font-size: 0.9rem; }
 
 .you-badge {
-  font-size: 0.62rem;
+  font-size: 0.6em;
   background: var(--lime);
   color: var(--ink);
   padding: 0.1rem 0.4rem;

@@ -205,7 +205,7 @@
           return `
             <div class="podium-card rank-${rankNum}${isAi ? ' ai-player-row' : ''}">
               <div class="podium-position">${rankLabel}</div>
-              ${renderAvatar(s.profiles, 'podium-avatar', '', '', isYou ? 'you-avatar' : '')}
+              ${renderAvatar(s.profiles, 'podium-avatar')}
               <div class="podium-name">${s.profiles?.display_name || 'Player'}${isYou ? ' <span class="you-badge">You</span>' : ''}${isAi ? ' <span class="ai-tag">AI</span>' : ''}</div>
               <div class="podium-pts">${s.total_points || 0}</div>
               <div class="podium-pts-label">Points</div>
@@ -239,7 +239,7 @@
             <td><div class="rank-badge ${rankClass}">${rankNum}</div></td>
             <td>
               <div class="player-cell">
-                ${renderAvatar(s.profiles, 'avatar', 'width:30px;height:30px;font-size:0.8rem', '', isYou ? 'you-avatar' : '')}
+                ${renderAvatar(s.profiles, 'avatar', 'width:30px;height:30px;font-size:0.8rem')}
                 <div class="player-info">
                   <span class="name">${s.profiles?.display_name || 'Player'}</span>
                   ${isYou ? '<span class="you-badge">You</span>' : ''}${isAi ? '<span class="ai-tag">AI</span>' : ''}

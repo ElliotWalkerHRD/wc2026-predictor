@@ -783,8 +783,9 @@
     }
 
     function buildMatchRowHtml(id, date, home, away, result, preds, label, venue, city, exactPts, resultPts) {
-      const hasResult = result && result.home_score !== null;
-      const isLive = result?.status === 'IN_PLAY' || result?.status === 'PAUSED';
+      const hasResult  = result && result.home_score !== null;
+      const isLive     = result?.status === 'IN_PLAY' || result?.status === 'PAUSED';
+      const isFinished = hasResult && result.status === 'FINISHED';
       const kickoff = getMatchKickoff(id);
 
       let statusBadge = kickoff
@@ -795,20 +796,20 @@
       if (isLive) {
         statusBadge = `<div class="live-badge"><div class="live-dot-sm"></div>LIVE</div>`;
         scoreLine = `<div class="match-scoreline live">${result.home_score} – ${result.away_score}</div>`;
-      } else if (hasResult) {
+      } else if (isFinished) {
         statusBadge = `<span class="finished-badge">FT</span>`;
         scoreLine = `<div class="match-scoreline">${result.home_score} – ${result.away_score}</div>`;
       }
 
       let predsHtml = '';
-      const autoPill = hasResult && currentUserId && !preds.some(p => p.userId === currentUserId)
+      const autoPill = isFinished && currentUserId && !preds.some(p => p.userId === currentUserId)
         ? `<span class="pred-pill auto"><span class="pred-name"><strong>You</strong>:</span>4–4 <span class="auto-tag">auto</span></span>`
         : '';
       if (preds.length > 0 || autoPill) {
         const pills = [autoPill, ...preds.map(p => {
           const predText = `${p.home}–${p.away}`;
           let cls = '';
-          if (hasResult) {
+          if (isFinished) {
             const actH = result.home_score, actA = result.away_score;
             if (p.home === actH && p.away === actA) cls = 'exact';
             else if (Math.sign(p.home - p.away) === Math.sign(actH - actA)) cls = 'result';
@@ -822,7 +823,7 @@
       }
 
       return `
-        <div class="match-row ${isLive ? 'live' : hasResult ? 'finished' : ''}" data-match-id="${id}">
+        <div class="match-row ${isLive ? 'live' : isFinished ? 'finished' : ''}" data-match-id="${id}">
           <div class="match-row-main">
             <div class="match-info">
               <div class="match-num">${label}</div>

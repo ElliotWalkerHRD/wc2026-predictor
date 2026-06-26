@@ -254,7 +254,17 @@ serve(async (req) => {
     }
 
     const userPreds: Record<string, Record<string, Record<number, any>>> = {};
+    const userR2Preds: Record<string, Record<string, string>> = {};
     for (const p of allPredictions) {
+      if (p.question_key.startsWith("2.")) {
+        let val: string | null = null;
+        try { val = JSON.parse(p.value); } catch { val = p.value; }
+        if (!val) continue;
+        const subKey = p.question_key.slice(2); // "w.A", "r.A", etc.
+        if (!userR2Preds[p.user_id]) userR2Preds[p.user_id] = {};
+        userR2Preds[p.user_id][subKey] = val;
+        continue;
+      }
       if (!p.question_key.startsWith("m")) continue;
       const matchId = parseInt(p.question_key.slice(1));
       if (isNaN(matchId)) continue;
@@ -290,9 +300,35 @@ serve(async (req) => {
       matchesByRound[round].push(matchId);
     }
 
+    // Derive Round 2 group standings from finished matches
+    const GROUPS = ["A","B","C","D","E","F","G","H","I","J","K","L"];
+    const groupStandings: Record<string, { winner: string; runnerUp: string } | null> = {};
+    for (const group of GROUPS) {
+      const gFixtures = GROUP_FIXTURES.filter(([,g]) => g === group);
+      const allFinished = gFixtures.every(([id]) => resultMap[id]?.status === 'FINISHED');
+      if (!allFinished) { groupStandings[group] = null; continue; }
+      const teams: Record<string, { pts: number; gd: number; gf: number }> = {};
+      for (const [id, , home, away] of gFixtures) {
+        const r = resultMap[id];
+        if (!teams[home]) teams[home] = { pts: 0, gd: 0, gf: 0 };
+        if (!teams[away]) teams[away] = { pts: 0, gd: 0, gf: 0 };
+        const hg = r.home_score, ag = r.away_score;
+        teams[home].gf += hg; teams[home].gd += (hg - ag);
+        teams[away].gf += ag; teams[away].gd += (ag - hg);
+        if (hg > ag) { teams[home].pts += 3; }
+        else if (hg === ag) { teams[home].pts += 1; teams[away].pts += 1; }
+        else { teams[away].pts += 3; }
+      }
+      const sorted = Object.entries(teams).sort(([,a], [,b]) =>
+        b.pts - a.pts || b.gd - a.gd || b.gf - a.gf
+      );
+      groupStandings[group] = { winner: sorted[0][0], runnerUp: sorted[1][0] };
+    }
+    const allGroupsComplete = GROUPS.every(g => groupStandings[g] !== null);
+
     // Fetch all existing scores in one query (avoids N+1 per user)
     const { data: existingScores } = await supabaseAdmin
-      .from("scores").select("user_id, round1_points, round2_points");
+      .from("scores").select("user_id, round1_points");
     const existingScoreMap: Record<string, any> = {};
     (existingScores || []).forEach((s: any) => { existingScoreMap[s.user_id] = s; });
 
@@ -337,7 +373,34 @@ serve(async (req) => {
 
       const existing = existingScoreMap[userId];
       scores.round1 = existing?.round1_points || 0;
-      scores.round2 = existing?.round2_points || 0;
+
+      // Round 2: Group Winners & Runners-Up
+      {
+        const r2 = userR2Preds[userId] || {};
+        let pts = 0, correctWinners = 0, correctQualifiers = 0;
+        for (const group of GROUPS) {
+          const standing = groupStandings[group];
+          if (!standing) continue;
+          const { winner, runnerUp } = standing;
+          const predW = r2[`w.${group}`] ?? null;
+          const predR = r2[`r.${group}`] ?? null;
+          if (predW) {
+            if (predW === winner) { pts += 10; correctWinners++; correctQualifiers++; }
+            else if (predW === runnerUp) { pts += 5; correctQualifiers++; }
+          }
+          if (predR) {
+            if (predR === runnerUp) { pts += 10; correctQualifiers++; }
+            else if (predR === winner) { pts += 5; correctQualifiers++; }
+          }
+        }
+        if (allGroupsComplete) {
+          if (correctWinners === 12) pts += 10;
+          else if (correctWinners >= 10) pts += 5;
+          if (correctQualifiers >= 24) pts += 10;
+          else if (correctQualifiers >= 20) pts += 5;
+        }
+        scores.round2 = pts;
+      }
 
       const total = Object.values(scores).reduce((a, b) => a + b, 0);
       scoreUpdates.push({

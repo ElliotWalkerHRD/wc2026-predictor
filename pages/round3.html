@@ -970,7 +970,19 @@
     });
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
     document.getElementById('saveBtn')?.addEventListener('click', savePredictions);
-    DB.subscribeToMatchResults(() => load());
+    DB.subscribeToMatchResults(async () => {
+      // Update result data and re-render displays in place.
+      // Do NOT call load() — that resets `saved` and wipes unsaved typed predictions.
+      try {
+        const fresh = await DB.getMatchResults();
+        fresh.forEach(r => { results[r.match_id] = r; });
+        renderLockingSoon();
+        renderMatches();
+        renderPredTables();
+      } catch (e) {
+        console.error('[round3] live result refresh failed:', e);
+      }
+    });
     load();
   </script>
 

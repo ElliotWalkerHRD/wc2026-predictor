@@ -13,7 +13,7 @@
     .answers-panel {
       margin-top: 0.875rem;
       border-top: 1px solid var(--grey-300);
-      padding-top: 0.75rem;
+      padding: 0.75rem 1rem 0;
     }
     .answers-panel-label {
       font-size: 0.68rem;
@@ -56,7 +56,7 @@
     .r2-result-strip {
       margin-top: 0.75rem;
       border-top: 1px solid var(--grey-200);
-      padding-top: 0.65rem;
+      padding: 0.65rem 1rem 0.75rem;
     }
     .r2-result-row {
       display: flex; align-items: center; gap: 0.4rem;
@@ -66,8 +66,15 @@
       font-size: 0.62rem; font-weight: 700; letter-spacing: 0.07em;
       text-transform: uppercase; color: var(--grey-400); width: 44px; flex-shrink: 0;
     }
-    .r2-result-val { display: flex; align-items: center; gap: 0.3rem; flex: 1; font-weight: 600; color: var(--grey-700); flex-wrap: wrap; }
-    .r2-result-pts { font-family: var(--font-serif); font-size: 1.1rem; font-weight: 700; color: var(--green); white-space: nowrap; margin-left: auto; }
+    .r2-result-val {
+      display: flex; align-items: center; gap: 0.5rem;
+      flex: 1; min-width: 0; font-weight: 600; color: var(--grey-700); flex-wrap: wrap;
+    }
+    .r2-result-team {
+      display: inline-flex; align-items: center; gap: 0.25rem; min-width: 0;
+    }
+    .r2-result-sep { color: var(--grey-300); flex-shrink: 0; }
+    .r2-result-pts { font-family: var(--font-serif); font-size: 1.1rem; font-weight: 700; color: var(--green); white-space: nowrap; flex-shrink: 0; }
     .r2-result-pts.zero { color: var(--grey-300); }
     .r2-result-pending { font-size: 0.78rem; color: var(--grey-400); font-style: italic; }
     .r2-bonus-panel {
@@ -298,22 +305,18 @@
         <div class="r2-result-row">
           <span class="r2-result-lbl">Actual</span>
           <span class="r2-result-val">
-            <i class="ti ti-trophy" style="font-size:0.85rem;color:var(--grey-400)"></i>
-            ${teamFlagImg(standing.winner)} ${wTeam?.name || standing.winner}
-            <span style="color:var(--grey-300)">&middot;</span>
-            <i class="ti ti-medal" style="font-size:0.85rem;color:var(--grey-400)"></i>
-            ${teamFlagImg(standing.runnerUp)} ${rTeam?.name || standing.runnerUp}
+            <span class="r2-result-team"><i class="ti ti-trophy" style="font-size:0.82rem;color:var(--grey-400)"></i> ${teamFlagImg(standing.winner)} ${wTeam?.name || standing.winner}</span>
+            <span class="r2-result-sep">&middot;</span>
+            <span class="r2-result-team"><i class="ti ti-medal" style="font-size:0.82rem;color:var(--grey-400)"></i> ${teamFlagImg(standing.runnerUp)} ${rTeam?.name || standing.runnerUp}</span>
           </span>
           <span class="r2-result-pts${pts > 0 ? '' : ' zero'}">+${pts}</span>
         </div>
         <div class="r2-result-row">
           <span class="r2-result-lbl">Picked</span>
           <span class="r2-result-val">
-            <i class="ti ti-trophy" style="font-size:0.85rem;color:${wColor}"></i>
-            ${pickedWStr}
-            <span style="color:var(--grey-300)">&middot;</span>
-            <i class="ti ti-medal" style="font-size:0.85rem;color:${rColor}"></i>
-            ${pickedRStr}
+            <span class="r2-result-team"><i class="ti ti-trophy" style="font-size:0.82rem;color:${wColor}"></i> ${pickedWStr}</span>
+            <span class="r2-result-sep">&middot;</span>
+            <span class="r2-result-team"><i class="ti ti-medal" style="font-size:0.82rem;color:${rColor}"></i> ${pickedRStr}</span>
           </span>
         </div>
       </div>`;

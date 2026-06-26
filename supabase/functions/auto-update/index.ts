@@ -23,6 +23,16 @@ const corsHeaders = {
 const EXACT_PTS:  Record<string, number> = { round3:7, round4:7, round5:7, round6:7, round7:7, round8:10 };
 const RESULT_PTS: Record<string, number> = { round3:5, round4:5, round5:5, round6:5, round7:5, round8:7  };
 
+// ---- Elo constants (mirror elo-update/index.ts) ----
+const WC_K     = 60;
+const ELO_BASE = 1500;
+
+function eloGdMult(gd: number): number {
+  if (gd <= 1) return 1.00;
+  if (gd === 2) return 1.50;
+  return Math.min(2.00, 1.75 + (gd - 3) * 0.10);
+}
+
 // ---- Group fixture map (mirrors fetch-results/data.js) ----
 const GROUP_FIXTURES: [number, string, string, string][] = [
   [1,"A","MEX","RSA"],[2,"A","KOR","CZE"],[3,"B","CAN","BIH"],[4,"D","USA","PAR"],
@@ -53,6 +63,11 @@ const KNOCKOUT_IDS: Record<string, number[]> = {
   THIRD_PLACE:    [103],
   FINAL:          [104],
 };
+
+// match_id → [homeCode, awayCode] for Elo updates (derived from GROUP_FIXTURES)
+const ELO_MATCH_TEAMS = new Map<number, [string, string]>(
+  GROUP_FIXTURES.map(([id, , h, a]) => [id, [h, a]])
+);
 
 // Hardcoded match→round map so uncontested matches still get 4-4 default
 const MATCH_ROUND_MAP: Record<number, string> = {};
@@ -440,6 +455,103 @@ serve(async (req) => {
     });
   }
 
+  // ---- Step 3: Update Elo ratings ----
+  // Non-fatal: errors are logged but never surface to the caller.
+  // Idempotency: elo_processed_matches tracks which match_ids have been applied,
+  // so running every 2 minutes never double-counts a match.
+  let eloMatchesApplied = 0;
+  try {
+    // Load current ratings
+    const { data: eloRows, error: eloLoadErr } = await supabaseAdmin
+      .from("team_elo").select("team_code, rating, games_used");
+    if (eloLoadErr) throw eloLoadErr;
+
+    const eloRatings: Record<string, { rating: number; games: number }> = {};
+    for (const row of (eloRows ?? [])) {
+      eloRatings[row.team_code] = { rating: Number(row.rating), games: row.games_used };
+    }
+
+    // Idempotency: skip any match_id already recorded in elo_processed_matches
+    const { data: processed } = await supabaseAdmin
+      .from("elo_processed_matches").select("match_id");
+    const processedIds = new Set<number>((processed ?? []).map((r: any) => r.match_id));
+
+    // Find group stage matches that are FINISHED and not yet applied
+    const groupIds = GROUP_FIXTURES.map(([id]) => id);
+    const { data: finishedMatches, error: matchErr } = await supabaseAdmin
+      .from("match_results")
+      .select("match_id, home_score, away_score, status")
+      .in("match_id", groupIds)
+      .eq("status", "FINISHED");
+    if (matchErr) throw matchErr;
+
+    const newMatches = (finishedMatches ?? []).filter((r: any) => !processedIds.has(r.match_id));
+
+    const eloUpserts:        any[] = [];
+    const processedInserts:  any[] = [];
+
+    for (const match of newMatches) {
+      const teams = ELO_MATCH_TEAMS.get(match.match_id);
+      if (!teams) continue;
+
+      const [hCode, aCode] = teams;
+      const rH = eloRatings[hCode] ?? { rating: ELO_BASE, games: 0 };
+      const rA = eloRatings[aCode] ?? { rating: ELO_BASE, games: 0 };
+
+      // Neutral venue — no home advantage at WC2026 (US/CAN/MEX)
+      const dr    = rH.rating - rA.rating;
+      const eH    = 1 / (1 + Math.pow(10, -dr / 400));
+      const hg    = match.home_score as number;
+      const ag    = match.away_score as number;
+      const W     = hg > ag ? 1 : hg === ag ? 0.5 : 0;
+      const delta = WC_K * eloGdMult(Math.abs(hg - ag)) * (W - eH);
+
+      eloRatings[hCode] = { rating: rH.rating + delta, games: rH.games + 1 };
+      eloRatings[aCode] = { rating: rA.rating - delta, games: rA.games + 1 };
+
+      processedInserts.push({
+        match_id:   match.match_id,
+        home_team:  hCode,
+        away_team:  aCode,
+        home_score: hg,
+        away_score: ag,
+        home_delta: Math.round(delta * 100) / 100,
+        away_delta: Math.round(-delta * 100) / 100,
+      });
+    }
+
+    if (processedInserts.length > 0) {
+      const changedCodes = new Set<string>(
+        processedInserts.flatMap((p: any) => [p.home_team, p.away_team])
+      );
+      const now = new Date().toISOString();
+      for (const code of changedCodes) {
+        const r = eloRatings[code];
+        eloUpserts.push({
+          team_code:    code,
+          rating:       Math.round(r.rating * 100) / 100,
+          games_used:   r.games,
+          last_updated: now,
+        });
+      }
+
+      const { error: eloUpErr } = await supabaseAdmin
+        .from("team_elo").upsert(eloUpserts, { onConflict: "team_code" });
+      if (eloUpErr) throw eloUpErr;
+
+      const { error: eloInsErr } = await supabaseAdmin
+        .from("elo_processed_matches").insert(processedInserts);
+      if (eloInsErr) throw eloInsErr;
+
+      eloMatchesApplied = processedInserts.length;
+    }
+
+    console.log(`[auto-update] elo: ${eloMatchesApplied} new matches applied`);
+  } catch (e: any) {
+    // Non-fatal — results and scores are already written; Elo will catch up next run
+    console.error("[auto-update] elo update error (non-fatal):", e.message);
+  }
+
   // ---- Log success ----
   const durationMs = Date.now() - startMs;
   await writeLog(supabaseAdmin, {
@@ -456,6 +568,7 @@ serve(async (req) => {
       results_updated: resultsUpdated,
       players_rescored: playersRescored,
       default_fills: defaultFills,
+      elo_matches_applied: eloMatchesApplied,
       duration_ms: durationMs,
     }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } }

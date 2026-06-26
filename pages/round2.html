@@ -53,6 +53,43 @@
       text-overflow: ellipsis;
       max-width: 220px;
     }
+    .r2-result-strip {
+      margin-top: 0.75rem;
+      border-top: 1px solid var(--grey-200);
+      padding-top: 0.65rem;
+    }
+    .r2-result-row {
+      display: flex; align-items: center; gap: 0.4rem;
+      font-size: 0.82rem; padding: 0.1rem 0;
+    }
+    .r2-result-lbl {
+      font-size: 0.62rem; font-weight: 700; letter-spacing: 0.07em;
+      text-transform: uppercase; color: var(--grey-400); width: 44px; flex-shrink: 0;
+    }
+    .r2-result-val { display: flex; align-items: center; gap: 0.3rem; flex: 1; font-weight: 600; color: var(--grey-700); flex-wrap: wrap; }
+    .r2-result-pts { font-family: var(--font-serif); font-size: 1.1rem; font-weight: 700; color: var(--green); white-space: nowrap; margin-left: auto; }
+    .r2-result-pts.zero { color: var(--grey-300); }
+    .r2-result-pending { font-size: 0.78rem; color: var(--grey-400); font-style: italic; }
+    .r2-bonus-panel {
+      margin-top: 1.25rem; padding: 0.875rem 1.25rem;
+      background: var(--grey-50, #f9f9f9); border: 1px solid var(--grey-200);
+      border-radius: var(--radius-md);
+    }
+    .r2-bonus-title {
+      font-size: 0.8rem; font-weight: 700; color: var(--ink);
+      margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;
+    }
+    .r2-bonus-title i { color: #d97706; }
+    .r2-bonus-row {
+      display: flex; align-items: center; gap: 0.4rem;
+      font-size: 0.82rem; color: var(--grey-600); padding: 0.2rem 0;
+    }
+    .r2-bonus-row.hit { color: var(--grey-700); }
+    .r2-bonus-row.hit i { color: var(--green); }
+    .r2-bonus-row.miss i { color: var(--grey-300); }
+    .r2-bonus-row-pts { margin-left: auto; font-family: var(--font-serif); font-size: 1rem; font-weight: 700; color: var(--green); }
+    .r2-bonus-row-pts.zero { color: var(--grey-300); }
+    .r2-bonus-pending { font-size: 0.8rem; color: var(--grey-500); }
   </style>
 </head>
 <body>
@@ -88,6 +125,8 @@
         <div class="loading-overlay"><div class="spinner"></div></div>
       </div>
 
+      <div id="r2BonusPanel"></div>
+
       <div class="sticky-dock" id="stickySave" style="display:none">
         <div class="sticky-dock-inner">
           <div class="dock-status" id="saveStatus">Pick a winner and runner-up for each group</div>
@@ -117,6 +156,7 @@
     let activeLeague = 'global';
     let memberCache  = {};
     let allAnswers   = [];
+    let matchResults = {};
 
     async function load() {
       const session = await requireAuthFromPages();
@@ -135,7 +175,12 @@
 
       // getRoundAnswers enforces lock at query level:
       // pre-lock → own row only; post-lock → all players' rows
-      allAnswers = await DB.getRoundAnswers('round2', { currentUserId: userId, isLocked: locked }).catch(() => []);
+      const [answersData, resultsData] = await Promise.all([
+        DB.getRoundAnswers('round2', { currentUserId: userId, isLocked: locked }).catch(() => []),
+        DB.getMatchResults().catch(() => [])
+      ]);
+      allAnswers = answersData;
+      resultsData.forEach(r => { matchResults[r.match_id] = r; });
 
       allAnswers.forEach(p => {
         if (p.user_id === userId) {
@@ -178,6 +223,151 @@
       if (!val) return '—';
       const t = getTeam(val);
       return t ? `${t.flag} ${t.name}` : val;
+    }
+
+    function deriveGroupStanding(groupLetter) {
+      const fixtures = GROUP_FIXTURES.filter(f => f[3] === groupLetter);
+      if (!fixtures.every(f => matchResults[f[0]]?.status === 'FINISHED')) return null;
+      const teams = {};
+      for (const f of fixtures) {
+        const r = matchResults[f[0]];
+        const home = f[4], away = f[5];
+        if (!teams[home]) teams[home] = { pts: 0, gd: 0, gf: 0 };
+        if (!teams[away]) teams[away] = { pts: 0, gd: 0, gf: 0 };
+        const hg = r.home_score, ag = r.away_score;
+        teams[home].gf += hg; teams[home].gd += hg - ag;
+        teams[away].gf += ag; teams[away].gd += ag - hg;
+        if (hg > ag) teams[home].pts += 3;
+        else if (hg === ag) { teams[home].pts++; teams[away].pts++; }
+        else teams[away].pts += 3;
+      }
+      const sorted = Object.entries(teams)
+        .sort(([,a],[,b]) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+      return { winner: sorted[0][0], runnerUp: sorted[1][0] };
+    }
+
+    function calcGroupPts(groupLetter, standing) {
+      const predW = saved[`2.w.${groupLetter}`] || null;
+      const predR = saved[`2.r.${groupLetter}`] || null;
+      let pts = 0;
+      if (predW) {
+        if (predW === standing.winner) pts += 10;
+        else if (predW === standing.runnerUp) pts += 5;
+      }
+      if (predR) {
+        if (predR === standing.runnerUp) pts += 10;
+        else if (predR === standing.winner) pts += 5;
+      }
+      return pts;
+    }
+
+    function renderGroupResultStrip(groupLetter) {
+      const standing = deriveGroupStanding(groupLetter);
+      const predW = saved[`2.w.${groupLetter}`] || null;
+      const predR = saved[`2.r.${groupLetter}`] || null;
+
+      if (!standing && !predW && !predR) return '';
+
+      if (!standing) {
+        return `<div class="r2-result-strip">
+          <div class="r2-result-pending"><i class="ti ti-clock" style="font-size:0.78rem;margin-right:0.3rem"></i>Awaiting group results&hellip;</div>
+        </div>`;
+      }
+
+      const pts = calcGroupPts(groupLetter, standing);
+      const wTeam = getTeam(standing.winner);
+      const rTeam = getTeam(standing.runnerUp);
+      const predWTeam = predW ? getTeam(predW) : null;
+      const predRTeam = predR ? getTeam(predR) : null;
+
+      const wColor = predW
+        ? (predW === standing.winner ? 'var(--green)' : predW === standing.runnerUp ? '#d97706' : 'var(--red)')
+        : 'var(--grey-400)';
+      const rColor = predR
+        ? (predR === standing.runnerUp ? 'var(--green)' : predR === standing.winner ? '#d97706' : 'var(--red)')
+        : 'var(--grey-400)';
+
+      const pickedWStr = predWTeam
+        ? `${teamFlagImg(predW)} ${predWTeam.name}`
+        : '<em style="color:var(--grey-400)">No pick</em>';
+      const pickedRStr = predRTeam
+        ? `${teamFlagImg(predR)} ${predRTeam.name}`
+        : '<em style="color:var(--grey-400)">No pick</em>';
+
+      return `<div class="r2-result-strip">
+        <div class="r2-result-row">
+          <span class="r2-result-lbl">Actual</span>
+          <span class="r2-result-val">
+            <i class="ti ti-trophy" style="font-size:0.85rem;color:var(--grey-400)"></i>
+            ${teamFlagImg(standing.winner)} ${wTeam?.name || standing.winner}
+            <span style="color:var(--grey-300)">&middot;</span>
+            <i class="ti ti-medal" style="font-size:0.85rem;color:var(--grey-400)"></i>
+            ${teamFlagImg(standing.runnerUp)} ${rTeam?.name || standing.runnerUp}
+          </span>
+          <span class="r2-result-pts${pts > 0 ? '' : ' zero'}">+${pts}</span>
+        </div>
+        <div class="r2-result-row">
+          <span class="r2-result-lbl">Picked</span>
+          <span class="r2-result-val">
+            <i class="ti ti-trophy" style="font-size:0.85rem;color:${wColor}"></i>
+            ${pickedWStr}
+            <span style="color:var(--grey-300)">&middot;</span>
+            <i class="ti ti-medal" style="font-size:0.85rem;color:${rColor}"></i>
+            ${pickedRStr}
+          </span>
+        </div>
+      </div>`;
+    }
+
+    function renderBonusPanel() {
+      const el = document.getElementById('r2BonusPanel');
+      if (!el) return;
+      const groupKeys = Object.keys(GROUPS);
+      const standings = {};
+      groupKeys.forEach(g => { standings[g] = deriveGroupStanding(g); });
+      const allComplete = groupKeys.every(g => standings[g] !== null);
+
+      if (!allComplete) {
+        const doneCount = groupKeys.filter(g => standings[g]).length;
+        if (!doneCount) { el.innerHTML = ''; return; }
+        el.innerHTML = `<div class="r2-bonus-panel">
+          <div class="r2-bonus-title"><i class="ti ti-sparkles"></i> Bonus Points</div>
+          <div class="r2-bonus-pending"><i class="ti ti-clock" style="margin-right:0.3rem;font-size:0.85rem"></i>${doneCount}/12 groups complete &mdash; bonus available once all done</div>
+        </div>`;
+        return;
+      }
+
+      let correctWinners = 0, correctQualifiers = 0;
+      groupKeys.forEach(g => {
+        const s = standings[g];
+        const predW = saved[`2.w.${g}`];
+        const predR = saved[`2.r.${g}`];
+        if (predW === s.winner) { correctWinners++; correctQualifiers++; }
+        else if (predW === s.runnerUp) correctQualifiers++;
+        if (predR === s.runnerUp) correctQualifiers++;
+        else if (predR === s.winner) correctQualifiers++;
+      });
+
+      const winnerBonusPts = correctWinners === 12 ? 10 : correctWinners >= 10 ? 5 : 0;
+      const qualBonusPts   = correctQualifiers >= 24 ? 10 : correctQualifiers >= 20 ? 5 : 0;
+      const bonusPts = winnerBonusPts + qualBonusPts;
+
+      el.innerHTML = `<div class="r2-bonus-panel">
+        <div class="r2-bonus-title">
+          <i class="ti ti-sparkles"></i> Bonus Points
+          ${bonusPts > 0 ? `<span style="margin-left:auto;font-family:var(--font-serif);font-size:1.1rem;color:var(--green)">+${bonusPts}</span>` : ''}
+        </div>
+        <div class="r2-bonus-row ${winnerBonusPts > 0 ? 'hit' : 'miss'}">
+          <i class="ti ti-${winnerBonusPts > 0 ? 'check' : 'x'}"></i>
+          ${correctWinners}/12 winners correct
+          <span class="r2-bonus-row-pts${winnerBonusPts > 0 ? '' : ' zero'}">+${winnerBonusPts}</span>
+        </div>
+        <div class="r2-bonus-row ${qualBonusPts > 0 ? 'hit' : 'miss'}">
+          <i class="ti ti-${qualBonusPts > 0 ? 'check' : 'x'}"></i>
+          ${correctQualifiers}/24 qualifiers correct
+          <span class="r2-bonus-row-pts${qualBonusPts > 0 ? '' : ' zero'}">+${qualBonusPts}</span>
+        </div>
+      </div>`;
     }
 
     function renderGroupPicksPanel(groupLetter) {
@@ -249,6 +439,7 @@
         ).join('');
 
         const allPicksPanel = locked ? renderGroupPicksPanel(groupLetter) : '';
+        const resultStrip = renderGroupResultStrip(groupLetter);
 
         return `
           <div class="group-card">
@@ -267,6 +458,7 @@
                 ${runnerSel}
               </div>
             </div>
+            ${resultStrip}
             ${allPicksPanel}
           </div>
         `;
@@ -283,6 +475,8 @@
           }
         }));
       });
+
+      renderBonusPanel();
     }
 
     async function savePredictions() {

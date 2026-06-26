@@ -214,6 +214,26 @@
     .gd-pos { color: #16a34a; font-weight: 600; }
     .gd-neg { color: var(--red); font-weight: 600; }
 
+    .r2-pred-row { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; }
+    .r2-actual-row {
+      display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;
+      font-size: 0.8rem; color: var(--grey-500); margin-top: 0.3rem;
+    }
+    .r2-actual-lbl {
+      font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.05em; color: var(--grey-400);
+    }
+    .r2-pred-sep { color: var(--grey-300); margin: 0 0.1rem; }
+    .r2-bonus-summary {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.75rem 1.25rem;
+      background: var(--grey-50, #f9f9f9); border: 1px solid var(--grey-200);
+      border-radius: var(--radius-md); font-size: 0.82rem;
+      margin-bottom: 0.625rem; color: var(--grey-600); box-shadow: var(--shadow-sm);
+    }
+    .r2-bonus-pts { margin-left: auto; font-family: var(--font-serif); font-size: 1.05rem; font-weight: 700; color: var(--green); }
+    .r2-bonus-pts.zero { color: var(--grey-300); }
+
     .legend { display: flex; gap: 1.25rem; flex-wrap: wrap; font-size: 0.72rem; color: var(--grey-500); align-items: center; }
     .legend-item { display: flex; align-items: center; gap: 0.35rem; }
     .legend-stripe { width: 10px; height: 14px; border-radius: 2px; flex-shrink: 0; }
@@ -453,38 +473,127 @@
       }).join('');
     }
 
+    function deriveGroupStanding(groupLetter) {
+      const fixtures = GROUP_FIXTURES.filter(f => f[3] === groupLetter);
+      if (!fixtures.every(f => allResults[f[0]]?.status === 'FINISHED')) return null;
+      const teams = {};
+      for (const f of fixtures) {
+        const r = allResults[f[0]];
+        const home = f[4], away = f[5];
+        if (!teams[home]) teams[home] = { pts: 0, gd: 0, gf: 0 };
+        if (!teams[away]) teams[away] = { pts: 0, gd: 0, gf: 0 };
+        const hg = r.home_score, ag = r.away_score;
+        teams[home].gf += hg; teams[home].gd += hg - ag;
+        teams[away].gf += ag; teams[away].gd += ag - hg;
+        if (hg > ag) teams[home].pts += 3;
+        else if (hg === ag) { teams[home].pts++; teams[away].pts++; }
+        else teams[away].pts += 3;
+      }
+      const sorted = Object.entries(teams)
+        .sort(([,a],[,b]) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+      return { winner: sorted[0][0], runnerUp: sorted[1][0] };
+    }
+
     function renderRound2Panel(preds) {
-      const grouped = {};
+      const GROUPS_R2 = ['A','B','C','D','E','F','G','H','I','J','K','L'];
+      const predMap = {};
       preds.forEach(p => {
-        const match = p.question_key.match(/^2\.(w|r)\.([A-L])$/);
-        if (!match) return;
-        const [, pos, g] = match;
-        if (!grouped[g]) grouped[g] = {};
-        grouped[g][pos] = p.value.replace(/"/g,'');
+        const m = p.question_key.match(/^2\.(w|r)\.([A-L])$/);
+        if (!m) return;
+        const [, pos, g] = m;
+        if (!predMap[g]) predMap[g] = {};
+        predMap[g][pos] = p.value.replace(/"/g, '');
       });
 
-      return Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([g, gPreds]) => {
-        const winner = gPreds.w ? getTeam(gPreds.w) : null;
-        const runner = gPreds.r ? getTeam(gPreds.r) : null;
+      if (!Object.keys(predMap).length) return '';
+
+      const standingsMap = {};
+      GROUPS_R2.forEach(g => { standingsMap[g] = deriveGroupStanding(g); });
+      const allGroupsComplete = GROUPS_R2.every(g => standingsMap[g] !== null);
+
+      let correctWinners = 0, correctQualifiers = 0;
+
+      const rows = GROUPS_R2.map(g => {
+        const gPreds = predMap[g];
+        if (!gPreds) return '';
+        const predW = gPreds.w || null;
+        const predR = gPreds.r || null;
+        const standing = standingsMap[g];
+
+        let pts = 0;
+        if (standing) {
+          if (predW) {
+            if (predW === standing.winner) { pts += 10; correctWinners++; correctQualifiers++; }
+            else if (predW === standing.runnerUp) { pts += 5; correctQualifiers++; }
+          }
+          if (predR) {
+            if (predR === standing.runnerUp) { pts += 10; correctQualifiers++; }
+            else if (predR === standing.winner) { pts += 5; correctQualifiers++; }
+          }
+        }
+
+        const predWTeam = predW ? getTeam(predW) : null;
+        const predRTeam = predR ? getTeam(predR) : null;
+
+        const wColor = standing && predW
+          ? (predW === standing.winner ? 'var(--green)' : predW === standing.runnerUp ? '#d97706' : 'var(--red)')
+          : 'var(--lime-dark)';
+        const rColor = standing && predR
+          ? (predR === standing.runnerUp ? 'var(--green)' : predR === standing.winner ? '#d97706' : 'var(--red)')
+          : 'var(--grey-400)';
+
+        let actualRow = '';
+        if (standing) {
+          const wTeam = getTeam(standing.winner);
+          const rTeam = getTeam(standing.runnerUp);
+          actualRow = `<div class="r2-actual-row">
+            <span class="r2-actual-lbl">Result</span>
+            <i class="ti ti-trophy" style="font-size:0.82rem;color:var(--grey-300)"></i>
+            ${teamFlagImg(standing.winner)} ${wTeam?.name || standing.winner}
+            <span class="r2-pred-sep">&middot;</span>
+            <i class="ti ti-medal" style="font-size:0.82rem;color:var(--grey-300)"></i>
+            ${teamFlagImg(standing.runnerUp)} ${rTeam?.name || standing.runnerUp}
+          </div>`;
+        }
+
         return `
           <div class="pred-item">
             <div>
               <div class="pred-question">Group ${g}</div>
-              <div class="pred-answer">
-                <i class="ti ti-trophy" style="color:var(--lime-dark);font-size:0.9rem"></i>
-                ${winner ? `${teamFlagImg(gPreds.w)} ${winner.name}` : '—'}
-                &nbsp;&middot;&nbsp;
-                <i class="ti ti-medal" style="color:var(--grey-400);font-size:0.9rem"></i>
-                ${runner ? `${teamFlagImg(gPreds.r)} ${runner.name}` : '—'}
+              <div class="pred-answer r2-pred-row">
+                <i class="ti ti-trophy" style="color:${wColor};font-size:0.9rem"></i>
+                ${predWTeam ? `${teamFlagImg(predW)} ${predWTeam.name}` : '—'}
+                <span class="r2-pred-sep">&middot;</span>
+                <i class="ti ti-medal" style="color:${rColor};font-size:0.9rem"></i>
+                ${predRTeam ? `${teamFlagImg(predR)} ${predRTeam.name}` : '—'}
               </div>
+              ${actualRow}
             </div>
             <div class="pred-pts">
-              <div class="pts-number zero">?</div>
+              <div class="pts-number ${standing ? (pts > 0 ? 'positive' : 'zero') : 'zero'}">${standing ? pts : '?'}</div>
               <div class="pts-label">pts</div>
             </div>
           </div>
         `;
-      }).join('');
+      }).filter(Boolean).join('');
+
+      let bonusHtml = '';
+      if (allGroupsComplete) {
+        let bonusPts = 0;
+        if (correctWinners === 12) bonusPts += 10;
+        else if (correctWinners >= 10) bonusPts += 5;
+        if (correctQualifiers >= 24) bonusPts += 10;
+        else if (correctQualifiers >= 20) bonusPts += 5;
+        bonusHtml = `
+          <div class="r2-bonus-summary">
+            <i class="ti ti-sparkles" style="color:#d97706;font-size:1rem"></i>
+            <span>Bonus: ${correctWinners}/12 winners &middot; ${correctQualifiers}/24 qualifiers</span>
+            <span class="r2-bonus-pts${bonusPts > 0 ? '' : ' zero'}">+${bonusPts}</span>
+          </div>
+        `;
+      }
+
+      return rows + bonusHtml;
     }
 
     function getRoundMatchIds(round) {

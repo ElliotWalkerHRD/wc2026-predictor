@@ -122,6 +122,7 @@
           <button class="tab-btn" data-tab="scoring"><i class="ti ti-calculator"></i> Scoring</button>
           <button class="tab-btn" data-tab="roundlocks"><i class="ti ti-lock"></i> Round Locks</button>
           <button class="tab-btn" data-tab="automation"><i class="ti ti-clock-play"></i> Automation</button>
+          <button class="tab-btn" data-tab="calibration"><i class="ti ti-chart-bar"></i> Calibration</button>
         </div>
 
         <!-- Results Panel -->
@@ -302,6 +303,21 @@
             </p>
             <div id="roundLocksGrid" style="display:grid;gap:0.75rem">
               <div class="loading-overlay"><div class="spinner" style="margin:0 auto"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Calibration Panel -->
+        <div class="admin-panel" id="panel-calibration">
+          <div style="max-width:700px">
+            <h2 style="font-family:var(--font-serif);font-size:1.35rem;margin-bottom:0.5rem">Model Calibration</h2>
+            <p style="color:var(--grey-500);font-size:0.875rem;margin-bottom:1.5rem">
+              How well does each probability layer predict match outcomes?
+              Snapshots are locked in before kickoff; outcomes are recorded when matches finish.
+              Read-only — has no effect on scoring.
+            </p>
+            <div id="cal-content">
+              <div style="text-align:center;padding:2rem"><div class="spinner" style="margin:0 auto"></div></div>
             </div>
           </div>
         </div>
@@ -510,8 +526,9 @@
         document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
         btn.classList.add('active');
         document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
-        if (btn.dataset.tab === 'roundlocks')  loadRoundLocksPanel();
-        if (btn.dataset.tab === 'automation')  loadAutomationPanel();
+        if (btn.dataset.tab === 'roundlocks')   loadRoundLocksPanel();
+        if (btn.dataset.tab === 'automation')   loadAutomationPanel();
+        if (btn.dataset.tab === 'calibration')  loadCalibrationPanel();
       });
 
       await Promise.all([loadResultsPanel(), loadUsers()]);
@@ -1271,6 +1288,222 @@
 
     document.getElementById('asLoadBtn').addEventListener('click', asLoad);
 
+    // ---- CALIBRATION ----
+
+    async function loadCalibrationPanel() {
+      const el = document.getElementById('cal-content');
+      el.innerHTML = '<div style="text-align:center;padding:2rem"><div class="spinner" style="margin:0 auto"></div></div>';
+
+      const sb = DB.initSupabase();
+      const { data: rows, error } = await sb
+        .from('model_calibration').select('*').order('match_id');
+
+      if (error) {
+        el.innerHTML = `<p style="color:var(--red);font-size:0.875rem">Error loading calibration data: ${error.message}</p>`;
+        return;
+      }
+
+      const resolved = (rows || []).filter(r => r.actual_outcome !== null);
+      const pending  = (rows || []).filter(r => r.actual_outcome === null);
+
+      if (resolved.length === 0) {
+        el.innerHTML = `
+          <div class="card" style="padding:1.5rem;text-align:center;color:var(--grey-400)">
+            <i class="ti ti-hourglass" style="font-size:2rem;display:block;margin-bottom:0.5rem"></i>
+            <p>No resolved matches yet.</p>
+            <p style="font-size:0.825rem;margin-top:0.4rem">
+              ${pending.length} snapshot${pending.length !== 1 ? 's' : ''} stored — calibration data will appear here as matches complete.
+            </p>
+          </div>`;
+        return;
+      }
+
+      // ---- Accuracy ----
+      function predict(row, hKey, dKey, aKey) {
+        const h = row[hKey], d = row[dKey], a = row[aKey];
+        if (h == null) return null;
+        const mx = Math.max(h, d, a);
+        return h === mx ? 'home' : d === mx ? 'draw' : 'away';
+      }
+
+      const eloCorrect   = resolved.filter(r => predict(r,'elo_home','elo_draw','elo_away')   === r.actual_outcome).length;
+      const blendCorrect = resolved.filter(r => predict(r,'blend_home','blend_draw','blend_away') === r.actual_outcome).length;
+      const crowdRows    = resolved.filter(r => r.crowd_n > 0);
+      const crowdCorrect = crowdRows.filter(r => predict(r,'crowd_home','crowd_draw','crowd_away') === r.actual_outcome).length;
+
+      const pct = (n, d) => d ? (100 * n / d).toFixed(1) + '%' : '—';
+
+      // ---- Brier score ----
+      function brier(rows, hKey, dKey, aKey) {
+        if (!rows.length) return null;
+        const sum = rows.reduce((acc, r) => {
+          const iH = r.actual_outcome === 'home' ? 1 : 0;
+          const iD = r.actual_outcome === 'draw' ? 1 : 0;
+          const iA = r.actual_outcome === 'away' ? 1 : 0;
+          return acc + Math.pow(r[hKey]-iH,2) + Math.pow(r[dKey]-iD,2) + Math.pow(r[aKey]-iA,2);
+        }, 0);
+        return (sum / rows.length).toFixed(3);
+      }
+
+      const eloBrier   = brier(resolved, 'elo_home',   'elo_draw',   'elo_away');
+      const blendBrier = brier(resolved, 'blend_home', 'blend_draw', 'blend_away');
+      const crowdBrier = crowdRows.length ? brier(crowdRows, 'crowd_home', 'crowd_draw', 'crowd_away') : null;
+
+      // ---- Calibration buckets (blend layer) ----
+      const BUCKETS = [
+        { label: '33–45%', min: 0.33, max: 0.45 },
+        { label: '45–55%', min: 0.45, max: 0.55 },
+        { label: '55–65%', min: 0.55, max: 0.65 },
+        { label: '65–75%', min: 0.65, max: 0.75 },
+        { label: '75%+',   min: 0.75, max: 1.01 },
+      ];
+
+      const buckets = BUCKETS.map(b => {
+        const mRows = resolved.filter(r => {
+          const mx = Math.max(r.blend_home, r.blend_draw, r.blend_away);
+          return mx >= b.min && mx < b.max;
+        });
+        if (!mRows.length) return { ...b, count: 0, avgP: null, hitRate: null };
+        const avgP = mRows.reduce((s,r) => s + Math.max(r.blend_home,r.blend_draw,r.blend_away), 0) / mRows.length;
+        const hits = mRows.filter(r => predict(r,'blend_home','blend_draw','blend_away') === r.actual_outcome).length;
+        return { ...b, count: mRows.length, avgP, hitRate: hits / mRows.length };
+      });
+
+      // ---- Per-match table ----
+      const TEAM_NAMES = {};
+      GROUP_FIXTURES.forEach(f => { TEAM_NAMES[f[0]] = { h: f[4], a: f[5] }; });
+
+      const matchRows = resolved.map(r => {
+        const teams = TEAM_NAMES[r.match_id] || { h: '?', a: '?' };
+        const scoreStr = r.home_score !== null ? `${r.home_score}–${r.away_score}` : '';
+        const ePred = predict(r,'elo_home','elo_draw','elo_away');
+        const cPred = predict(r,'crowd_home','crowd_draw','crowd_away');
+        const bPred = predict(r,'blend_home','blend_draw','blend_away');
+        const tick = v => v === r.actual_outcome
+          ? '<span style="color:#5c7000;font-weight:700">✓</span>'
+          : '<span style="color:var(--grey-400)">✗</span>';
+        const fp = (v, label) => v != null ? `${(v*100).toFixed(0)}%` : label;
+        return `<tr>
+          <td style="font-size:0.8rem;font-weight:600">${teams.h} v ${teams.a}</td>
+          <td style="text-align:center;font-family:var(--font-serif)">${scoreStr}</td>
+          <td style="text-align:center;font-size:0.8rem">${r.actual_outcome}</td>
+          <td style="text-align:center">${tick(ePred)} <span style="font-size:0.75rem;color:var(--grey-500)">${fp(Math.max(r.elo_home,r.elo_draw,r.elo_away),'')}</span></td>
+          <td style="text-align:center">${r.crowd_n > 0 ? tick(cPred) + ` <span style="font-size:0.75rem;color:var(--grey-500)">${fp(Math.max(r.crowd_home,r.crowd_draw,r.crowd_away),'')}</span>` : '<span style="color:var(--grey-300)">—</span>'}</td>
+          <td style="text-align:center">${tick(bPred)} <span style="font-size:0.75rem;color:var(--grey-500)">${fp(Math.max(r.blend_home,r.blend_draw,r.blend_away),'')}</span></td>
+        </tr>`;
+      }).join('');
+
+      // ---- Render ----
+      const calBucketRows = buckets.filter(b => b.count > 0).map(b => `
+        <tr>
+          <td>${b.label}</td>
+          <td style="text-align:center">${b.count}</td>
+          <td style="text-align:center">${(b.avgP*100).toFixed(1)}%</td>
+          <td style="text-align:center">${(b.hitRate*100).toFixed(1)}%</td>
+          <td style="text-align:center">
+            <span style="color:${Math.abs(b.avgP - b.hitRate) < 0.1 ? '#5c7000' : Math.abs(b.avgP - b.hitRate) < 0.2 ? 'var(--ink)' : 'var(--red)'}">
+              ${b.hitRate >= b.avgP ? '+' : ''}${((b.hitRate - b.avgP)*100).toFixed(1)}pp
+            </span>
+          </td>
+        </tr>`).join('');
+
+      const tdH = s => `<th style="font-size:0.72rem;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:var(--grey-500);padding:0.5rem 0.75rem;border-bottom:1px solid var(--grey-300);text-align:${s||'left'}">`
+      const card = (html, mb) => `<div class="card" style="padding:1.25rem;margin-bottom:${mb||'1rem'}">${html}</div>`;
+
+      el.innerHTML = `
+        <div style="display:flex;gap:0.75rem;margin-bottom:1rem;flex-wrap:wrap">
+          <div class="card" style="padding:0.875rem 1.25rem;flex:1;min-width:130px">
+            <div style="font-size:0.68rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--grey-400);margin-bottom:0.25rem">Resolved</div>
+            <div style="font-size:1.5rem;font-family:var(--font-serif)">${resolved.length}</div>
+          </div>
+          <div class="card" style="padding:0.875rem 1.25rem;flex:1;min-width:130px">
+            <div style="font-size:0.68rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--grey-400);margin-bottom:0.25rem">Pending</div>
+            <div style="font-size:1.5rem;font-family:var(--font-serif)">${pending.length}</div>
+          </div>
+          <div class="card" style="padding:0.875rem 1.25rem;flex:1;min-width:130px">
+            <div style="font-size:0.68rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--grey-400);margin-bottom:0.25rem">Blend accuracy</div>
+            <div style="font-size:1.5rem;font-family:var(--font-serif)">${pct(blendCorrect,resolved.length)}</div>
+          </div>
+          <div class="card" style="padding:0.875rem 1.25rem;flex:1;min-width:130px">
+            <div style="font-size:0.68rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--grey-400);margin-bottom:0.25rem">Blend Brier ↓</div>
+            <div style="font-size:1.5rem;font-family:var(--font-serif)">${blendBrier}</div>
+          </div>
+        </div>
+
+        <h3 style="font-size:0.78rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--grey-500);margin-bottom:0.5rem">Accuracy by layer</h3>
+        ${card(`
+          <table style="width:100%;border-collapse:collapse;font-size:0.85rem">
+            <thead><tr>
+              ${tdH()}Layer</th>
+              ${tdH('center')}Matches</th>
+              ${tdH('center')}Correct</th>
+              ${tdH('center')}Accuracy</th>
+              ${tdH('center')}Brier ↓</th>
+            </tr></thead>
+            <tbody>
+              <tr>
+                <td style="padding:0.6rem 0.75rem">Elo only</td>
+                <td style="text-align:center">${resolved.length}</td>
+                <td style="text-align:center">${eloCorrect}</td>
+                <td style="text-align:center;font-weight:600">${pct(eloCorrect,resolved.length)}</td>
+                <td style="text-align:center">${eloBrier}</td>
+              </tr>
+              <tr style="background:var(--grey-100)">
+                <td style="padding:0.6rem 0.75rem">Crowd only</td>
+                <td style="text-align:center">${crowdRows.length}<span style="font-size:0.72rem;color:var(--grey-400)"> w/ picks</span></td>
+                <td style="text-align:center">${crowdCorrect}</td>
+                <td style="text-align:center;font-weight:600">${pct(crowdCorrect,crowdRows.length)}</td>
+                <td style="text-align:center">${crowdBrier ?? '—'}</td>
+              </tr>
+              <tr>
+                <td style="padding:0.6rem 0.75rem"><strong>Blend (70/30)</strong></td>
+                <td style="text-align:center">${resolved.length}</td>
+                <td style="text-align:center">${blendCorrect}</td>
+                <td style="text-align:center;font-weight:600">${pct(blendCorrect,resolved.length)}</td>
+                <td style="text-align:center"><strong>${blendBrier}</strong></td>
+              </tr>
+            </tbody>
+          </table>
+          <p style="font-size:0.72rem;color:var(--grey-400);margin-top:0.6rem">Brier score: lower = better. Random 3-way baseline = 0.667.</p>
+        `)}
+
+        ${calBucketRows ? `
+          <h3 style="font-size:0.78rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--grey-500);margin-bottom:0.5rem">Blend calibration by confidence</h3>
+          ${card(`
+            <table style="width:100%;border-collapse:collapse;font-size:0.85rem">
+              <thead><tr>
+                ${tdH()}Confidence</th>
+                ${tdH('center')}Count</th>
+                ${tdH('center')}Avg predicted</th>
+                ${tdH('center')}Actual hit rate</th>
+                ${tdH('center')}Δ (gap)</th>
+              </tr></thead>
+              <tbody>${calBucketRows}</tbody>
+            </table>
+            <p style="font-size:0.72rem;color:var(--grey-400);margin-top:0.6rem">
+              Confidence = max probability across home/draw/away for each match.
+              Gap close to 0pp = well calibrated. Negative = model over-confident.
+            </p>
+          `)}` : ''}
+
+        <h3 style="font-size:0.78rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--grey-500);margin-bottom:0.5rem">Per-match results</h3>
+        ${card(`
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:0.82rem">
+              <thead><tr>
+                ${tdH()}Match</th>
+                ${tdH('center')}Score</th>
+                ${tdH('center')}Outcome</th>
+                ${tdH('center')}Elo ✓?</th>
+                ${tdH('center')}Crowd ✓?</th>
+                ${tdH('center')}Blend ✓?</th>
+              </tr></thead>
+              <tbody style="font-size:0.8rem">${matchRows}</tbody>
+            </table>
+          </div>
+        `,'0')}
+      `;
+    }
 
     init();
   </script>

@@ -111,6 +111,42 @@ async function writeLog(sb: any, entry: {
   }
 }
 
+// ---- Calibration helpers (mirror js/elo.js + js/match-probs.js) ----
+
+const DRAW_BASE   = 0.24;
+const DRAW_SIGMA2 = 100_000;
+const CAL_BLEND_ELO   = 0.70;
+const CAL_BLEND_CROWD = 0.30;
+const CAL_MIN_CROWD   = 10;
+
+function eloThreeWay(homeR: number, awayR: number): { home: number; draw: number; away: number } {
+  const dr     = homeR - awayR;
+  const eA     = 1 / (1 + Math.pow(10, -dr / 400));
+  const rawD   = DRAW_BASE * Math.exp(-(dr * dr) / DRAW_SIGMA2);
+  const wA     = Math.max(0, eA - rawD / 2);
+  const wB     = Math.max(0, (1 - eA) - rawD / 2);
+  const wD     = Math.max(0, rawD);
+  const tot    = wA + wD + wB;
+  return { home: wA / tot, draw: wD / tot, away: wB / tot };
+}
+
+function blendCalib(
+  elo: { home: number; draw: number; away: number },
+  crowd: { home: number; draw: number; away: number } | null,
+  n: number,
+): { home: number; draw: number; away: number; eloW: number } {
+  if (!crowd || n === 0) return { ...elo, eloW: 1.0 };
+  const eW  = n < CAL_MIN_CROWD ? CAL_BLEND_ELO + CAL_BLEND_CROWD * 0.5 : CAL_BLEND_ELO;
+  const cW  = n < CAL_MIN_CROWD ? CAL_BLEND_CROWD * 0.5 : CAL_BLEND_CROWD;
+  const tw  = eW + cW;
+  return {
+    home: (elo.home * eW + crowd.home * cW) / tw,
+    draw: (elo.draw * eW + crowd.draw * cW) / tw,
+    away: (elo.away * eW + crowd.away * cW) / tw,
+    eloW: eW / tw,
+  };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -459,6 +495,8 @@ serve(async (req) => {
   // Non-fatal: errors are logged but never surface to the caller.
   // Idempotency: elo_processed_matches tracks which match_ids have been applied,
   // so running every 2 minutes never double-counts a match.
+  // eloRatings is declared here so Step 4 (calibration) can read the post-update state.
+  let eloRatings: Record<string, { rating: number; games: number }> = {};
   let eloMatchesApplied = 0;
   try {
     // Load current ratings
@@ -466,7 +504,6 @@ serve(async (req) => {
       .from("team_elo").select("team_code, rating, games_used");
     if (eloLoadErr) throw eloLoadErr;
 
-    const eloRatings: Record<string, { rating: number; games: number }> = {};
     for (const row of (eloRows ?? [])) {
       eloRatings[row.team_code] = { rating: Number(row.rating), games: row.games_used };
     }
@@ -552,6 +589,128 @@ serve(async (req) => {
     console.error("[auto-update] elo update error (non-fatal):", e.message);
   }
 
+  // ---- Step 4: Calibration snapshots ----
+  // Non-fatal, idempotent.
+  // Part A: For each upcoming group match with no snapshot yet, store current
+  //         Elo + crowd probabilities so we can later measure model accuracy.
+  // Part B: For each snapped match that just finished, record the actual outcome.
+  let calibSnapshotted = 0, calibResolved = 0;
+  try {
+    const groupIds = GROUP_FIXTURES.map(([id]) => id);
+
+    // Load existing calibration state
+    const { data: calRows } = await supabaseAdmin
+      .from("model_calibration").select("match_id, actual_outcome");
+    const calMap = new Map<number, string | null>(
+      (calRows ?? []).map((r: any) => [r.match_id, r.actual_outcome ?? null])
+    );
+
+    // Load current results for group matches
+    const { data: allResults } = await supabaseAdmin
+      .from("match_results")
+      .select("match_id, home_score, away_score, status")
+      .in("match_id", groupIds);
+    const resMap = new Map<number, any>(
+      (allResults ?? []).map((r: any) => [r.match_id, r])
+    );
+
+    // ---- Part A: snapshot upcoming matches ----
+    const unsnapped = groupIds.filter(id => {
+      if (calMap.has(id)) return false;
+      const res = resMap.get(id);
+      return !res || res.status !== "FINISHED";
+    });
+
+    if (unsnapped.length > 0) {
+      // Fetch crowd picks for these matches
+      const { data: crowdData } = await supabaseAdmin
+        .from("predictions")
+        .select("question_key, value")
+        .in("question_key", unsnapped.map(id => `m${id}`));
+
+      const crowdByQ: Record<string, any[]> = {};
+      for (const p of (crowdData ?? [])) {
+        if (!crowdByQ[p.question_key]) crowdByQ[p.question_key] = [];
+        crowdByQ[p.question_key].push(p);
+      }
+
+      const r5 = (n: number) => Math.round(n * 100000) / 100000;
+      const r3 = (n: number) => Math.round(n * 1000) / 1000;
+      const nowStr = new Date().toISOString();
+      const snapshotRows: any[] = [];
+
+      for (const id of unsnapped) {
+        const teams = ELO_MATCH_TEAMS.get(id);
+        if (!teams) continue;
+        const [homeCode, awayCode] = teams;
+
+        const homeR = eloRatings[homeCode]?.rating ?? ELO_BASE;
+        const awayR = eloRatings[awayCode]?.rating ?? ELO_BASE;
+        const elo   = eloThreeWay(homeR, awayR);
+
+        // Compute crowd distribution from picks
+        const picks = crowdByQ[`m${id}`] ?? [];
+        let hw = 0, d = 0, aw = 0;
+        for (const p of picks) {
+          let v: any; try { v = JSON.parse(p.value); } catch { continue; }
+          const h = parseInt(v.home), a = parseInt(v.away);
+          if (isNaN(h) || isNaN(a)) continue;
+          if (h > a) hw++; else if (h === a) d++; else aw++;
+        }
+        const crowdN = hw + d + aw;
+        const crowd  = crowdN > 0 ? { home: hw / crowdN, draw: d / crowdN, away: aw / crowdN } : null;
+        const blend  = blendCalib(elo, crowd, crowdN);
+
+        snapshotRows.push({
+          match_id:         id,
+          elo_home:         r5(elo.home),
+          elo_draw:         r5(elo.draw),
+          elo_away:         r5(elo.away),
+          crowd_home:       crowd ? r5(crowd.home) : null,
+          crowd_draw:       crowd ? r5(crowd.draw) : null,
+          crowd_away:       crowd ? r5(crowd.away) : null,
+          crowd_n:          crowdN,
+          blend_home:       r5(blend.home),
+          blend_draw:       r5(blend.draw),
+          blend_away:       r5(blend.away),
+          blend_elo_weight: r3(blend.eloW),
+          snapshot_at:      nowStr,
+        });
+      }
+
+      if (snapshotRows.length > 0) {
+        const { error: snapErr } = await supabaseAdmin
+          .from("model_calibration").insert(snapshotRows);
+        if (snapErr) console.error("[auto-update] calibration insert error:", snapErr.message);
+        else calibSnapshotted = snapshotRows.length;
+      }
+    }
+
+    // ---- Part B: resolve outcomes ----
+    const unresolved = groupIds.filter(id => calMap.has(id) && calMap.get(id) === null);
+    for (const id of unresolved) {
+      const res = resMap.get(id);
+      if (!res || res.status !== "FINISHED" || res.home_score == null) continue;
+      const outcome = res.home_score > res.away_score ? "home"
+                    : res.home_score === res.away_score ? "draw"
+                    : "away";
+      const { error: resErr } = await supabaseAdmin
+        .from("model_calibration")
+        .update({
+          actual_outcome: outcome,
+          home_score:     res.home_score,
+          away_score:     res.away_score,
+          resolved_at:    new Date().toISOString(),
+        })
+        .eq("match_id", id);
+      if (!resErr) calibResolved++;
+    }
+
+    console.log(`[auto-update] calibration: ${calibSnapshotted} snapped, ${calibResolved} resolved`);
+  } catch (e: any) {
+    console.error("[auto-update] calibration error (non-fatal):", e.message);
+  }
+
   // ---- Log success ----
   const durationMs = Date.now() - startMs;
   await writeLog(supabaseAdmin, {
@@ -569,6 +728,8 @@ serve(async (req) => {
       players_rescored: playersRescored,
       default_fills: defaultFills,
       elo_matches_applied: eloMatchesApplied,
+      calib_snapshotted: calibSnapshotted,
+      calib_resolved: calibResolved,
       duration_ms: durationMs,
     }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } }

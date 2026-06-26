@@ -261,6 +261,110 @@
     @media (max-width: 600px) {
       .mc-filter-select { min-height: 44px; flex: 1; }
     }
+
+    /* ---- Win probability bar ---- */
+    .prob-bar-section {
+      border-top: 1px solid var(--grey-100);
+      padding: 0.55rem 1.25rem 0.5rem;
+      cursor: pointer;
+      user-select: none;
+    }
+    .prob-bar-section:hover { background: #fafafa; }
+
+    .prob-bar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.4rem;
+    }
+    .prob-bar-title {
+      font-size: 0.64rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--grey-400);
+    }
+    .prob-chevron {
+      font-size: 0.8rem;
+      color: var(--grey-400);
+      transition: transform 0.2s;
+      flex-shrink: 0;
+    }
+    .prob-chevron.open { transform: rotate(180deg); }
+
+    .prob-bar {
+      display: flex;
+      height: 26px;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      gap: 2px;
+    }
+    .prob-seg {
+      min-width: 0;
+      transition: flex 0.3s ease;
+    }
+    .prob-seg.home { background: var(--ink);      border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+    .prob-seg.draw { background: var(--grey-200); }
+    .prob-seg.away { background: var(--grey-500); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+
+    .prob-label-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 0.3rem;
+      font-size: 0.68rem;
+      color: var(--grey-600);
+      font-weight: 500;
+    }
+    .prob-label-row span:last-child { text-align: right; }
+    .prob-label-row span:nth-child(2) { text-align: center; color: var(--grey-400); }
+
+    /* Expanded factor rows */
+    .prob-factors { padding-top: 0.45rem; display: flex; flex-direction: column; gap: 0.3rem; border-top: 1px solid var(--grey-100); margin-top: 0.45rem; }
+
+    .prob-factor-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .prob-factor-label {
+      width: 118px;
+      flex-shrink: 0;
+      font-size: 0.67rem;
+      color: var(--grey-500);
+      line-height: 1.3;
+    }
+    .prob-mini-bar {
+      flex: 1;
+      display: flex;
+      height: 8px;
+      border-radius: 3px;
+      overflow: hidden;
+      gap: 1px;
+      min-width: 0;
+    }
+    .prob-mini-seg.home { background: var(--ink);      border-radius: 3px 0 0 3px; }
+    .prob-mini-seg.draw { background: var(--grey-200); }
+    .prob-mini-seg.away { background: var(--grey-500); border-radius: 0 3px 3px 0; }
+
+    .prob-factor-pcts {
+      flex-shrink: 0;
+      font-size: 0.65rem;
+      color: var(--grey-500);
+      text-align: right;
+      width: 86px;
+    }
+    .prob-low-sample {
+      display: inline-block;
+      background: var(--grey-200);
+      color: var(--grey-500);
+      border-radius: 3px;
+      padding: 0 3px;
+      font-size: 0.58rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      vertical-align: middle;
+    }
+    .prob-no-crowd { color: var(--grey-400); font-size: 0.67rem; font-style: italic; flex: 1; }
   </style>
 </head>
 <body>
@@ -327,6 +431,8 @@
   <script src="../js/data.js?v=8"></script>
   <script src="../js/supabase-client.js?v=8"></script>
   <script src="../js/scoring.js?v=8"></script>
+  <script src="../js/elo.js?v=1"></script>
+  <script src="../js/match-probs.js?v=1"></script>
   <script src="../js/ui.js?v=8"></script>
   <script>
     DB.initSupabase();
@@ -341,6 +447,8 @@
     let memberCache      = {};
     let currentSort      = 'kickoff';
     let allProfiles      = [];
+    let eloRatings       = {};  // teamCode → Elo rating
+    let crowdPickMap     = {};  // matchId  → { homeWin, draw, awayWin, pickCount } | null
 
     async function load() {
       const session = await DB.getSession();
@@ -363,11 +471,42 @@
       const ownProfilePromise  = currentUserId ? DB.getProfiles([currentUserId]).catch(() => [])      : Promise.resolve([]);
       const lockedPredsPromise = lockedKeys.length ? DB.getAllPredictions(null, lockedKeys).catch(() => []) : Promise.resolve([]);
 
+      // ---- Elo ratings (public read) ----
+      const sb = window._supabase;
+      const eloPromise = sb.from('team_elo').select('team_code,rating')
+        .then(({ data }) => { (data || []).forEach(r => { eloRatings[r.team_code] = Number(r.rating); }); })
+        .catch(() => {});
+
+      // ---- Crowd picks for upcoming group matches (aggregated only — no user IDs) ----
+      const upcomingGroupIds = GROUP_FIXTURES
+        .filter(f => now < new Date(`${f[1]}T${f[2]}:00Z`).getTime())
+        .map(f => f[0]);
+      const crowdPromise = upcomingGroupIds.length
+        ? sb.from('predictions')
+            .select('question_key,value')
+            .in('question_key', upcomingGroupIds.map(id => `m${id}`))
+            .then(({ data }) => {
+              if (!data) return;
+              const byMatch = {};
+              data.forEach(p => {
+                const mid = parseInt(p.question_key.slice(1));
+                if (!byMatch[mid]) byMatch[mid] = [];
+                byMatch[mid].push(p);
+              });
+              upcomingGroupIds.forEach(id => {
+                crowdPickMap[id] = MatchProbs.computeCrowdPicks(byMatch[id] || []);
+              });
+            })
+            .catch(() => {})
+        : Promise.resolve();
+
       const [matchResults, ownPreds, ownProfiles, lockedPreds] = await Promise.all([
         DB.getMatchResults().catch(() => []),
         ownPredsPromise,
         ownProfilePromise,
-        lockedPredsPromise
+        lockedPredsPromise,
+        eloPromise,
+        crowdPromise,
       ]);
 
       matchResults.forEach(r => { allResults[r.match_id] = r; });
@@ -765,12 +904,104 @@
       `).join('');
     }
 
+    // ---- Win probability bar (upcoming group matches only) ----
+
+    function buildProbBar(matchId, homeCode, awayCode, result) {
+      const isFinished = result?.status === 'FINISHED';
+      const isLive     = result?.status === 'IN_PLAY' || result?.status === 'PAUSED';
+      if (isFinished || isLive) return '';
+
+      const homeR = eloRatings[homeCode];
+      const awayR = eloRatings[awayCode];
+      if (!homeR || !awayR) return '';  // ratings not loaded yet
+
+      const crowd  = crowdPickMap[matchId] ?? null;
+      const probs  = MatchProbs.getMatchProbs(homeR, awayR, crowd);
+      const b = probs.blended, e = probs.elo;
+
+      const hPct = Math.round(b.homeWin * 100);
+      const dPct = Math.round(b.draw    * 100);
+      const aPct = Math.round(b.awayWin * 100);
+      const eH   = Math.round(e.homeWin * 100);
+      const eD   = Math.round(e.draw    * 100);
+      const eA   = Math.round(e.awayWin * 100);
+
+      const homeName = getTeam(homeCode).name;
+      const awayName = getTeam(awayCode).name;
+
+      // Crowd factor row
+      let crowdHtml;
+      if (crowd) {
+        const cH = Math.round(crowd.homeWin * 100);
+        const cD = Math.round(crowd.draw    * 100);
+        const cA = Math.round(crowd.awayWin * 100);
+        const lowNote = crowd.pickCount < MatchProbs.MIN_CROWD_SIZE
+          ? ` <span class="prob-low-sample">low sample</span>` : '';
+        crowdHtml = `
+          <div class="prob-factor-row">
+            <span class="prob-factor-label">Crowd&thinsp;(${crowd.pickCount} picks)${lowNote}</span>
+            <div class="prob-mini-bar">
+              <div class="prob-mini-seg home" style="flex:${crowd.homeWin}"></div>
+              <div class="prob-mini-seg draw" style="flex:${crowd.draw}"></div>
+              <div class="prob-mini-seg away" style="flex:${crowd.awayWin}"></div>
+            </div>
+            <span class="prob-factor-pcts">${cH}%&thinsp;/&thinsp;${cD}%&thinsp;/&thinsp;${cA}%</span>
+          </div>`;
+      } else {
+        crowdHtml = `
+          <div class="prob-factor-row">
+            <span class="prob-factor-label">Crowd</span>
+            <span class="prob-no-crowd">No picks yet</span>
+          </div>`;
+      }
+
+      return `
+        <div class="prob-bar-section" onclick="event.stopPropagation();toggleProbFactors(${matchId})">
+          <div class="prob-bar-header">
+            <span class="prob-bar-title">Win probability</span>
+            <i class="ti ti-chevron-down prob-chevron" id="prob-icon-${matchId}"></i>
+          </div>
+          <div class="prob-bar">
+            <div class="prob-seg home" style="flex:${b.homeWin}"></div>
+            <div class="prob-seg draw" style="flex:${b.draw}"></div>
+            <div class="prob-seg away" style="flex:${b.awayWin}"></div>
+          </div>
+          <div class="prob-label-row">
+            <span>${homeName}&ensp;${hPct}%</span>
+            <span>Draw&ensp;${dPct}%</span>
+            <span>${aPct}%&ensp;${awayName}</span>
+          </div>
+          <div class="prob-factors" id="prob-factors-${matchId}" hidden>
+            <div class="prob-factor-row">
+              <span class="prob-factor-label">Model&thinsp;(Elo)</span>
+              <div class="prob-mini-bar">
+                <div class="prob-mini-seg home" style="flex:${e.homeWin}"></div>
+                <div class="prob-mini-seg draw" style="flex:${e.draw}"></div>
+                <div class="prob-mini-seg away" style="flex:${e.awayWin}"></div>
+              </div>
+              <span class="prob-factor-pcts">${eH}%&thinsp;/&thinsp;${eD}%&thinsp;/&thinsp;${eA}%</span>
+            </div>
+            ${crowdHtml}
+          </div>
+        </div>`;
+    }
+
+    function toggleProbFactors(matchId) {
+      const factors = document.getElementById(`prob-factors-${matchId}`);
+      const icon    = document.getElementById(`prob-icon-${matchId}`);
+      if (!factors) return;
+      const wasHidden = factors.hasAttribute('hidden');
+      factors.toggleAttribute('hidden', !wasHidden);
+      icon?.classList.toggle('open', wasHidden);
+    }
+
     function buildGroupMatchRow(m, predMap, results) {
       const [id, date, , group, homeCode, awayCode, venue, city] = m;
       const home = getTeam(homeCode);
       const away = getTeam(awayCode);
       const result = results[id];
-      return buildMatchRowHtml(id, date, home, away, result, predMap[id] || [], `Match ${id} · Group ${group}`, venue, city, 7, 5);
+      const probBarHtml = buildProbBar(id, homeCode, awayCode, result);
+      return buildMatchRowHtml(id, date, home, away, result, predMap[id] || [], `Match ${id} · Group ${group}`, venue, city, 7, 5, probBarHtml);
     }
 
     function buildKoMatchRow(m, predMap, results) {
@@ -782,7 +1013,7 @@
       return buildMatchRowHtml(m.id, m.date, home, away, result, predMap[m.id] || [], m.match_label, '', '', exactPts, resultPts);
     }
 
-    function buildMatchRowHtml(id, date, home, away, result, preds, label, venue, city, exactPts, resultPts) {
+    function buildMatchRowHtml(id, date, home, away, result, preds, label, venue, city, exactPts, resultPts, probBarHtml = '') {
       const hasResult  = result && result.home_score !== null;
       const isLive     = result?.status === 'IN_PLAY' || result?.status === 'PAUSED';
       const isFinished = hasResult && result.status === 'FINISHED';
@@ -848,6 +1079,7 @@
             </div>
             <div class="match-status-block"></div>
           </div>
+          ${probBarHtml}
           ${predsHtml}
         </div>
       `;

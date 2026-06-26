@@ -18,6 +18,30 @@ const corsHeaders = {
 const EXACT_PTS   = { round3: 7, round4: 7, round5: 7, round6: 7, round7: 7, round8: 10 };
 const RESULT_PTS  = { round3: 5, round4: 5, round5: 5, round6: 5, round7: 5, round8: 7  };
 
+// Group fixture map: [id, group, homeTeam, awayTeam]
+const GROUP_FIXTURES: [number, string, string, string][] = [
+  [1,"A","MEX","RSA"],[2,"A","KOR","CZE"],[3,"B","CAN","BIH"],[4,"D","USA","PAR"],
+  [5,"C","HAI","SCO"],[6,"D","AUS","TUR"],[7,"C","BRA","MAR"],[8,"B","QAT","SUI"],
+  [9,"E","CIV","ECU"],[10,"E","GER","CUW"],[11,"F","NED","JPN"],[12,"F","SWE","TUN"],
+  [13,"H","KSA","URU"],[14,"H","ESP","CPV"],[15,"G","IRN","NZL"],[16,"G","BEL","EGY"],
+  [17,"I","FRA","SEN"],[18,"I","IRQ","NOR"],[19,"J","ARG","ALG"],[20,"J","AUT","JOR"],
+  [21,"L","GHA","PAN"],[22,"L","ENG","CRO"],[23,"K","POR","COD"],[24,"K","UZB","COL"],
+  [25,"A","CZE","RSA"],[26,"B","SUI","BIH"],[27,"B","CAN","QAT"],[28,"A","MEX","KOR"],
+  [29,"C","BRA","HAI"],[30,"C","SCO","MAR"],[31,"D","TUR","PAR"],[32,"D","USA","AUS"],
+  [33,"E","GER","CIV"],[34,"E","ECU","CUW"],[35,"F","NED","SWE"],[36,"F","TUN","JPN"],
+  [37,"H","URU","CPV"],[38,"H","ESP","KSA"],[39,"G","BEL","IRN"],[40,"G","NZL","EGY"],
+  [41,"I","NOR","SEN"],[42,"I","FRA","IRQ"],[43,"J","ARG","AUT"],[44,"J","JOR","ALG"],
+  [45,"L","ENG","GHA"],[46,"L","PAN","CRO"],[47,"K","POR","UZB"],[48,"K","COL","COD"],
+  [49,"C","SCO","BRA"],[50,"C","MAR","HAI"],[51,"B","SUI","CAN"],[52,"B","BIH","QAT"],
+  [53,"A","CZE","MEX"],[54,"A","RSA","KOR"],[55,"E","CUW","CIV"],[56,"E","ECU","GER"],
+  [57,"F","JPN","SWE"],[58,"F","TUN","NED"],[59,"D","TUR","USA"],[60,"D","PAR","AUS"],
+  [61,"I","NOR","FRA"],[62,"I","SEN","IRQ"],[63,"G","EGY","IRN"],[64,"G","NZL","BEL"],
+  [65,"H","CPV","KSA"],[66,"H","URU","ESP"],[67,"L","PAN","ENG"],[68,"L","CRO","GHA"],
+  [69,"J","ALG","AUT"],[70,"J","JOR","ARG"],[71,"K","COL","POR"],[72,"K","COD","UZB"],
+];
+
+const GROUPS = ["A","B","C","D","E","F","G","H","I","J","K","L"];
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -99,8 +123,18 @@ serve(async (req) => {
 
     // 3. Group predictions by user indexed by matchId, and build match→round map from existing data
     const userPreds: Record<string, Record<string, Record<number, any>>> = {};
+    const userR2Preds: Record<string, Record<string, string>> = {};
     const matchRoundMap: Record<number, string> = {};
     (allPredictions || []).forEach((p: any) => {
+      if (p.question_key.startsWith("2.")) {
+        let val: string | null = null;
+        try { val = JSON.parse(p.value); } catch { val = p.value; }
+        if (!val) return;
+        const subKey = p.question_key.slice(2); // "w.A", "r.A", etc.
+        if (!userR2Preds[p.user_id]) userR2Preds[p.user_id] = {};
+        userR2Preds[p.user_id][subKey] = val;
+        return;
+      }
       if (!p.question_key.startsWith("m")) return;
       const matchId = parseInt(p.question_key.slice(1));
       if (isNaN(matchId)) return;
@@ -139,9 +173,35 @@ serve(async (req) => {
       const round = matchRoundMap[matchId];
       if (!round) continue;
       if (result.home_score === null || result.away_score === null) continue;
+      if (result.status !== 'FINISHED') continue;
       if (!matchesByRound[round]) matchesByRound[round] = [];
       matchesByRound[round].push(matchId);
     }
+
+    // Derive Round 2 group standings from finished matches
+    const groupStandings: Record<string, { winner: string; runnerUp: string } | null> = {};
+    for (const group of GROUPS) {
+      const gFixtures = GROUP_FIXTURES.filter(([,g]) => g === group);
+      const allFinished = gFixtures.every(([id]) => resultMap[id]?.status === 'FINISHED');
+      if (!allFinished) { groupStandings[group] = null; continue; }
+      const teams: Record<string, { pts: number; gd: number; gf: number }> = {};
+      for (const [id, , home, away] of gFixtures) {
+        const r = resultMap[id];
+        if (!teams[home]) teams[home] = { pts: 0, gd: 0, gf: 0 };
+        if (!teams[away]) teams[away] = { pts: 0, gd: 0, gf: 0 };
+        const hg = r.home_score, ag = r.away_score;
+        teams[home].gf += hg; teams[home].gd += (hg - ag);
+        teams[away].gf += ag; teams[away].gd += (ag - hg);
+        if (hg > ag) { teams[home].pts += 3; }
+        else if (hg === ag) { teams[home].pts += 1; teams[away].pts += 1; }
+        else { teams[away].pts += 3; }
+      }
+      const sorted = Object.entries(teams).sort(([,a], [,b]) =>
+        b.pts - a.pts || b.gd - a.gd || b.gf - a.gf
+      );
+      groupStandings[group] = { winner: sorted[0][0], runnerUp: sorted[1][0] };
+    }
+    const allGroupsComplete = GROUPS.every(g => groupStandings[g] !== null);
 
     // 4. Calculate scores per user; default 4-4 for any match with a result but no prediction
     const scoreUpdates: any[] = [];
@@ -187,12 +247,39 @@ serve(async (req) => {
         scores[round] = pts;
       }
 
-      // Preserve existing r1/r2 scores
+      // Round 2: Group Winners & Runners-Up
+      {
+        const r2 = userR2Preds[userId] || {};
+        let pts = 0, correctWinners = 0, correctQualifiers = 0;
+        for (const group of GROUPS) {
+          const standing = groupStandings[group];
+          if (!standing) continue;
+          const { winner, runnerUp } = standing;
+          const predW = r2[`w.${group}`] ?? null;
+          const predR = r2[`r.${group}`] ?? null;
+          if (predW) {
+            if (predW === winner) { pts += 10; correctWinners++; correctQualifiers++; }
+            else if (predW === runnerUp) { pts += 5; correctQualifiers++; }
+          }
+          if (predR) {
+            if (predR === runnerUp) { pts += 10; correctQualifiers++; }
+            else if (predR === winner) { pts += 5; correctQualifiers++; }
+          }
+        }
+        if (allGroupsComplete) {
+          if (correctWinners === 12) pts += 10;
+          else if (correctWinners >= 10) pts += 5;
+          if (correctQualifiers >= 24) pts += 10;
+          else if (correctQualifiers >= 20) pts += 5;
+        }
+        scores.round2 = pts;
+      }
+
+      // Preserve existing round1 score (scored separately)
       const { data: existingScore } = await supabaseAdmin
-        .from("scores").select("round1_points,round2_points").eq("user_id", userId).single();
+        .from("scores").select("round1_points").eq("user_id", userId).single();
 
       scores.round1 = existingScore?.round1_points || 0;
-      scores.round2 = existingScore?.round2_points || 0;
 
       const total = Object.values(scores).reduce((a, b) => a + b, 0);
 
@@ -227,7 +314,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        version: "v3-default-fill",
+        version: "v4-round2-scoring",
         matchResultsLoaded: matchResults?.length ?? 0,
         predictionsLoaded: allPredictions?.length ?? 0,
         usersUpdated: scoreUpdates.length,

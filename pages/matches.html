@@ -465,7 +465,7 @@
     let eloRatings       = {};  // teamCode → Elo rating
     let crowdPickMap     = {};  // matchId  → { homeWin, draw, awayWin, pickCount } | null
     let calibrationMap   = {};  // matchId  → model_calibration row (pre-kickoff snapshot)
-    let probExpanded     = sessionStorage.getItem('probExpanded') === 'true';
+    const probExpanded   = new Set(); // matchIds currently expanded
 
     async function load() {
       const session = await DB.getSession();
@@ -1007,10 +1007,10 @@
         }
 
         return `
-          <div class="prob-bar-section" onclick="event.stopPropagation();toggleProbFactors()">
+          <div class="prob-bar-section" onclick="event.stopPropagation();toggleProbFactors(${matchId})">
             <div class="prob-bar-header">
               <span class="prob-bar-title">Pre-match prediction</span>
-              <i class="ti ti-chevron-down prob-chevron${probExpanded ? ' open' : ''}" id="prob-icon-${matchId}"></i>
+              <i class="ti ti-chevron-down prob-chevron" id="prob-icon-${matchId}"></i>
             </div>
             <div class="prob-bar">
               <div class="prob-seg home" style="flex:${cal.blend_home}"></div>
@@ -1022,7 +1022,7 @@
               <span>Draw&ensp;${dPct}%</span>
               <span>${aPct}%&ensp;${awayName}</span>
             </div>
-            <div class="prob-factors" id="prob-factors-${matchId}"${probExpanded ? '' : ' hidden'}>
+            <div class="prob-factors" id="prob-factors-${matchId}" hidden>
               <div class="prob-factor-row">
                 <span class="prob-factor-label">Model&thinsp;(Elo)</span>
                 <div class="prob-mini-bar">
@@ -1079,10 +1079,10 @@
       }
 
       return `
-        <div class="prob-bar-section" onclick="event.stopPropagation();toggleProbFactors()">
+        <div class="prob-bar-section" onclick="event.stopPropagation();toggleProbFactors(${matchId})">
           <div class="prob-bar-header">
             <span class="prob-bar-title">Win probability</span>
-            <i class="ti ti-chevron-down prob-chevron${probExpanded ? ' open' : ''}" id="prob-icon-${matchId}"></i>
+            <i class="ti ti-chevron-down prob-chevron" id="prob-icon-${matchId}"></i>
           </div>
           <div class="prob-bar">
             <div class="prob-seg home" style="flex:${b.homeWin}"></div>
@@ -1094,7 +1094,7 @@
             <span>Draw&ensp;${dPct}%</span>
             <span>${aPct}%&ensp;${awayName}</span>
           </div>
-          <div class="prob-factors" id="prob-factors-${matchId}"${probExpanded ? '' : ' hidden'}>
+          <div class="prob-factors" id="prob-factors-${matchId}" hidden>
             <div class="prob-factor-row">
               <span class="prob-factor-label">Model&thinsp;(Elo)</span>
               <div class="prob-mini-bar">
@@ -1109,11 +1109,13 @@
         </div>`;
     }
 
-    function toggleProbFactors() {
-      probExpanded = !probExpanded;
-      sessionStorage.setItem('probExpanded', probExpanded);
-      document.querySelectorAll('.prob-factors').forEach(el => el.toggleAttribute('hidden', !probExpanded));
-      document.querySelectorAll('.prob-chevron').forEach(el => el.classList.toggle('open', probExpanded));
+    function toggleProbFactors(matchId) {
+      const open = probExpanded.has(matchId);
+      if (open) probExpanded.delete(matchId); else probExpanded.add(matchId);
+      const factors = document.getElementById(`prob-factors-${matchId}`);
+      const icon    = document.getElementById(`prob-icon-${matchId}`);
+      if (factors) factors.toggleAttribute('hidden', open);
+      if (icon)    icon.classList.toggle('open', !open);
     }
 
     function buildGroupMatchRow(m, predMap, results) {

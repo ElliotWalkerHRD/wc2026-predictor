@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WC2026 â€” My Predictions</title>
+  <title>WC2026 "” My Predictions</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
@@ -255,19 +255,19 @@
 
       <div class="stats-strip mb-4" id="summaryStrip">
         <div class="stat-box">
-          <div class="stat-value" id="sumTotal">â€”</div>
+          <div class="stat-value" id="sumTotal">"”</div>
           <div class="stat-label">Total Points</div>
         </div>
         <div class="stat-box">
-          <div class="stat-value" id="sumRank">â€”</div>
+          <div class="stat-value" id="sumRank">"”</div>
           <div class="stat-label">Rank</div>
         </div>
         <div class="stat-box">
-          <div class="stat-value" id="sumCorrect">â€”</div>
+          <div class="stat-value" id="sumCorrect">"”</div>
           <div class="stat-label">Correct Results</div>
         </div>
         <div class="stat-box">
-          <div class="stat-value" id="sumExact">â€”</div>
+          <div class="stat-value" id="sumExact">"”</div>
           <div class="stat-label">Exact Scores</div>
         </div>
       </div>
@@ -322,7 +322,7 @@
       if (userScore) {
         document.getElementById('sumTotal').textContent = userScore.total_points || 0;
         const rank = scores.findIndex(s => s.user_id === userId) + 1;
-        document.getElementById('sumRank').textContent = rank > 0 ? `#${rank}` : 'â€”';
+        document.getElementById('sumRank').textContent = rank > 0 ? `#${rank}` : '"”';
       }
 
       let totalCorrect = 0, totalExact = 0;
@@ -398,7 +398,7 @@
       const totalBar = `
         <div class="round-total-bar">
           <span class="round-total-label"><i class="ti ti-chart-bar" style="margin-right:0.35rem"></i>Round Points</span>
-          <span class="round-total-pts">${pts !== undefined && pts !== null ? pts : 'â€”'}</span>
+          <span class="round-total-pts">${pts !== undefined && pts !== null ? pts : '"”'}</span>
         </div>
       `;
       const emptyState = `
@@ -562,10 +562,10 @@
               <div class="pred-question">Group ${g}</div>
               <div class="pred-answer r2-pred-row">
                 <i class="ti ti-trophy" style="color:${wColor};font-size:0.9rem"></i>
-                ${predWTeam ? `${teamFlagImg(predW)} ${predWTeam.name}` : 'â€”'}
+                ${predWTeam ? `${teamFlagImg(predW)} ${predWTeam.name}` : '"”'}
                 <span class="r2-pred-sep">&middot;</span>
                 <i class="ti ti-medal" style="color:${rColor};font-size:0.9rem"></i>
-                ${predRTeam ? `${teamFlagImg(predR)} ${predRTeam.name}` : 'â€”'}
+                ${predRTeam ? `${teamFlagImg(predR)} ${predRTeam.name}` : '"”'}
               </div>
               ${actualRow}
             </div>
@@ -676,9 +676,9 @@
               <span>${teamFlagImg(awayTeam.code)} ${awayTeam.name}</span>
             </div>
             <div class="match-pred-score ${isAuto ? '' : scoreClass}">
-              ${val.home} â€“ ${val.away}${isAuto ? ' <span class="auto-tag">auto</span>' : ''}
+              ${val.home} "“ ${val.away}${isAuto ? ' <span class="auto-tag">auto</span>' : ''}
               ${hasResult ? `<div style="font-size:0.65rem;margin-top:0.15rem">${indicator}</div>` : ''}
-              ${hasResult ? `<div style="font-size:0.65rem;color:var(--grey-400)">Actual: ${result.home_score}â€“${result.away_score}</div>` : ''}
+              ${hasResult ? `<div style="font-size:0.65rem;color:var(--grey-400)">Actual: ${result.home_score}"“${result.away_score}</div>` : ''}
             </div>
             <div class="pred-pts" style="min-width:40px">
               <div class="pts-number ${pts > 0 ? 'positive' : 'zero'}">${hasResult ? pts : '?'}</div>
@@ -803,7 +803,7 @@
       return `
         <div style="margin-bottom:1rem;padding:0.75rem 1rem;background:var(--grey-50,#f9f9f9);border:1px solid var(--grey-200);border-radius:var(--radius-md);font-size:0.8rem;color:var(--grey-600)">
           <i class="ti ti-info-circle" style="margin-right:0.35rem;color:var(--grey-400)"></i>
-          Based on your ${predictedCount} / ${totalMatches} predicted scores. Read-only â€” edit predictions in <a href="round3.html" style="color:var(--ink);font-weight:600">Group Scores</a>.
+          Based on your ${predictedCount} / ${totalMatches} predicted scores. Read-only "” edit predictions in <a href="round3.html" style="color:var(--ink);font-weight:600">Group Scores</a>.
         </div>
         <div class="pred-tables-grid">${groupCards}</div>
         <div class="legend" style="margin-top:0.25rem">

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WC2026 â€” Admin</title>
+  <title>WC2026 "” Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
@@ -112,7 +112,7 @@
     <div class="container" style="padding-top:2rem;padding-bottom:4rem">
 
       <div id="adminAccessDenied" class="alert alert-error hidden">
-        <i class="ti ti-ban"></i> Access denied â€” admin only.
+        <i class="ti ti-ban"></i> Access denied "” admin only.
       </div>
 
       <div id="adminContent" class="hidden">
@@ -222,8 +222,8 @@
           <hr style="margin:2rem 0;border:none;border-top:1px solid var(--grey-200)">
           <h3 style="font-family:var(--font-serif);font-size:1.25rem;margin:0 0 0.4rem">Auto-Score Rounds 1 &amp; 2</h3>
           <p style="font-size:0.83rem;color:var(--grey-500);margin:0 0 1.25rem;max-width:540px">
-            Derives Q1.8, Q1.9, Q1.11, Q1.12, Q1.1â€“3, and all Round 2 answers from match results.
-            Name questions (Q1.4, Q1.6) use normalised fuzzy matching with an admin review step â€”
+            Derives Q1.8, Q1.9, Q1.11, Q1.12, Q1.1"“3, and all Round 2 answers from match results.
+            Name questions (Q1.4, Q1.6) use normalised fuzzy matching with an admin review step "”
             scores are <strong>never written</strong> until you confirm the matches.
           </p>
           <button class="btn btn-outline" id="asLoadBtn"><i class="ti ti-database"></i> Load data &amp; compute answers</button>
@@ -247,7 +247,7 @@
                   <div style="font-size:0.82rem;color:var(--grey-500)">Every 2 min: fetch results â†’ recalculate scores</div>
                 </div>
                 <div style="display:flex;align-items:center;gap:0.75rem">
-                  <span id="autoStatusBadge" style="font-size:0.75rem;font-weight:700;padding:0.2rem 0.65rem;border-radius:9999px">â€”</span>
+                  <span id="autoStatusBadge" style="font-size:0.75rem;font-weight:700;padding:0.2rem 0.65rem;border-radius:9999px">"”</span>
                   <button class="btn btn-outline btn-sm" id="autoToggleBtn" disabled>
                     <i class="ti ti-loader"></i> Loading&hellip;
                   </button>
@@ -289,7 +289,7 @@
                   <div style="font-weight:700;margin-bottom:0.2rem">Seed R32 Bracket</div>
                   <div style="font-size:0.82rem;color:var(--grey-500);max-width:420px">
                     Computes final group standings, ranks 3rd-place teams, runs FIFA bipartite matching,
-                    and writes home/away team codes to <code>match_results</code> for matches 73â€“88.
+                    and writes home/away team codes to <code>match_results</code> for matches 73"“88.
                     Auto-runs via cron once all 12 groups finish. Use this button to force or re-seed manually.
                   </div>
                 </div>
@@ -332,7 +332,7 @@
             <p style="color:var(--grey-500);font-size:0.875rem;margin-bottom:1.5rem">
               How well does each probability layer predict match outcomes?
               Snapshots are locked in before kickoff; outcomes are recorded when matches finish.
-              Read-only â€” has no effect on scoring.
+              Read-only "” has no effect on scoring.
             </p>
             <div id="cal-content">
               <div style="text-align:center;padding:2rem"><div class="spinner" style="margin:0 auto"></div></div>
@@ -360,14 +360,14 @@
     // ---- ROUND LOCKS ----
 
     const ROUND_LOCK_LABELS = {
-      round1: 'R1 â€” Pre-tournament',
-      round2: 'R2 â€” Group winners',
-      round3: 'R3 â€” Group stage scores',
-      round4: 'R4 â€” Round of 32',
-      round5: 'R5 â€” Round of 16',
-      round6: 'R6 â€” Quarter-finals',
-      round7: 'R7 â€” Semi-finals',
-      round8: 'R8 â€” Final',
+      round1: 'R1 "” Pre-tournament',
+      round2: 'R2 "” Group winners',
+      round3: 'R3 "” Group stage scores',
+      round4: 'R4 "” Round of 32',
+      round5: 'R5 "” Round of 16',
+      round6: 'R6 "” Quarter-finals',
+      round7: 'R7 "” Semi-finals',
+      round8: 'R8 "” Final',
     };
 
     async function loadRoundLocksPanel() {
@@ -391,8 +391,8 @@
 
         const timeBadgeColor = timeLocked ? '#b91c1c' : '#15803d';
         const timeBadgeText  = timeLocked
-          ? `Time-locked since ${lockTime ? new Date(lockTime).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'UTC'}) + ' UTC' : 'â€”'}`
-          : `Time-open until ${lockTime ? new Date(lockTime).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'UTC'}) + ' UTC' : 'â€”'}`;
+          ? `Time-locked since ${lockTime ? new Date(lockTime).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'UTC'}) + ' UTC' : '"”'}`
+          : `Time-open until ${lockTime ? new Date(lockTime).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'UTC'}) + ' UTC' : '"”'}`;
 
         const effectiveBadge = ov === 'open'
           ? '<span style="font-size:0.72rem;font-weight:700;color:#15803d;background:rgba(21,128,61,0.1);padding:0.15rem 0.5rem;border-radius:9999px">FORCED OPEN</span>'
@@ -486,7 +486,7 @@
       try {
         const logs = await DB.getAutomationLogs(30);
         if (!logs.length) {
-          tbody.innerHTML = '<tr><td colspan="6" style="padding:1.5rem;text-align:center;color:var(--grey-400)">No runs yet â€” the cron job hasn\'t fired, or the table is empty.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="6" style="padding:1.5rem;text-align:center;color:var(--grey-400)">No runs yet "” the cron job hasn\'t fired, or the table is empty.</td></tr>';
           return;
         }
         tbody.innerHTML = logs.map(log => {
@@ -500,10 +500,10 @@
             ? 'color:var(--grey-500);background:var(--grey-100)'
             : 'color:#b91c1c;background:rgba(185,28,28,0.08)';
           const statusBadge = `<span style="font-size:0.72rem;font-weight:700;padding:0.15rem 0.5rem;border-radius:9999px;${statusColor}">${log.status}</span>`;
-          const dur = log.duration_ms ? `${(log.duration_ms / 1000).toFixed(1)}s` : 'â€”';
+          const dur = log.duration_ms ? `${(log.duration_ms / 1000).toFixed(1)}s` : '"”';
           const err = log.error_message
-            ? `<span style="color:#b91c1c;font-size:0.78rem" title="${log.error_message}">${log.error_message.slice(0, 60)}${log.error_message.length > 60 ? 'â€¦' : ''}</span>`
-            : 'â€”';
+            ? `<span style="color:#b91c1c;font-size:0.78rem" title="${log.error_message}">${log.error_message.slice(0, 60)}${log.error_message.length > 60 ? '"¦' : ''}</span>`
+            : '"”';
           return `<tr style="border-bottom:1px solid var(--grey-100)">
             <td style="padding:0.55rem 1rem;white-space:nowrap;color:var(--grey-600)">${timeStr}</td>
             <td style="padding:0.55rem 0.75rem">${statusBadge}</td>
@@ -570,7 +570,7 @@
       const btn = document.getElementById('seedBracketBtn');
       const statusEl = document.getElementById('seedBracketStatus');
       btn.disabled = true;
-      btn.innerHTML = '<i class="ti ti-loader"></i> Seedingâ€¦';
+      btn.innerHTML = '<i class="ti ti-loader"></i> Seeding"¦';
       statusEl.innerHTML = '';
       try {
         const sb = DB.initSupabase();
@@ -655,12 +655,12 @@
         } else {
           const pending = GROUPS_ALL.filter(g => gStandings[g] === null);
           statusEl.innerHTML = `<div class="alert alert-info" style="margin-top:0"><i class="ti ti-info-circle"></i>
-            3rd-place slots await groups: ${pending.join(', ')} â€” seeding direct matches only.
+            3rd-place slots await groups: ${pending.join(', ')} "” seeding direct matches only.
           </div>`;
         }
 
         if (upserts.length === 0) {
-          statusEl.innerHTML = `<div class="alert alert-info" style="margin-top:0"><i class="ti ti-info-circle"></i> No R32 slots could be resolved yet â€” groups may be incomplete.</div>`;
+          statusEl.innerHTML = `<div class="alert alert-info" style="margin-top:0"><i class="ti ti-info-circle"></i> No R32 slots could be resolved yet "” groups may be incomplete.</div>`;
           return;
         }
 
@@ -754,9 +754,9 @@
               <span>${teamFlagImg(awayCode)} ${away.name}</span>
             </div>
             <div class="result-inputs">
-              <input type="number" id="rh_${id}" class="result-num" min="0" max="20" value="${hScore}" placeholder="â€“">
-              <span style="font-size:1.2rem;color:var(--grey-400)">â€“</span>
-              <input type="number" id="ra_${id}" class="result-num" min="0" max="20" value="${aScore}" placeholder="â€“">
+              <input type="number" id="rh_${id}" class="result-num" min="0" max="20" value="${hScore}" placeholder=""“">
+              <span style="font-size:1.2rem;color:var(--grey-400)">"“</span>
+              <input type="number" id="ra_${id}" class="result-num" min="0" max="20" value="${aScore}" placeholder=""“">
             </div>
           </div>
         `;
@@ -811,7 +811,7 @@
           html += `<div class="alert alert-info" style="margin-top:0.5rem">
             <i class="ti ti-info-circle"></i>
             <strong>${data.unmapped.length} API match${data.unmapped.length !== 1 ? 'es' : ''} could not be mapped</strong>
-            â€” add missing aliases in the Edge Function if needed:<br>
+            "” add missing aliases in the Edge Function if needed:<br>
             <pre style="margin:0.4rem 0 0;font-size:0.7rem;white-space:pre-wrap;opacity:0.85">${data.unmapped.join('\n')}</pre>
           </div>`;
         }
@@ -848,11 +848,11 @@
             <td>
               <div style="display:flex;align-items:center;gap:0.6rem">
                 ${renderAvatar(p, 'avatar', 'width:28px;height:28px;font-size:0.75rem')}
-                <span style="font-weight:600">${p.display_name || 'â€”'}</span>
+                <span style="font-weight:600">${p.display_name || '"”'}</span>
               </div>
             </td>
-            <td class="text-muted text-sm">${p.email || 'â€”'}</td>
-            <td class="text-muted text-sm">${p.created_at ? new Date(p.created_at).toLocaleDateString() : 'â€”'}</td>
+            <td class="text-muted text-sm">${p.email || '"”'}</td>
+            <td class="text-muted text-sm">${p.created_at ? new Date(p.created_at).toLocaleDateString() : '"”'}</td>
             <td style="font-family:var(--font-serif);font-size:1.1rem">${scoreMap[p.id] || 0}</td>
             <td>${p.is_admin ? '<span class="chip chip-ink">Admin</span>' : '<span class="chip chip-grey">Player</span>'}</td>
             <td>
@@ -937,7 +937,7 @@
       if (!s) return '';
       return String(s).toLowerCase()
         .normalize('NFD').replace(/[Ì€-Í¯]/g, '')
-        .replace(/[â€˜â€™Ê¼'\-]/g, ' ')
+        .replace(/[''Ê¼'\-]/g, ' ')
         .replace(/[^a-z0-9\s]/g, '')
         .replace(/\s+/g, ' ').trim();
     }
@@ -1113,7 +1113,7 @@
         ? `<span class="as-chip as-ok"><i class="ti ti-check"></i> ${label ?? val}</span>`
         : '<span class="as-chip as-pending">pending</span>';
 
-      const teamOpts = '<option value="">â€” select â€”</option>' +
+      const teamOpts = '<option value="">"” select "”</option>' +
         Object.values(TEAMS).sort((a,b) => a.name.localeCompare(b.name))
           .map(t => `<option value="${t.code}">${t.flag} ${t.name}</option>`).join('');
 
@@ -1125,7 +1125,7 @@
         <div class="as-card">
           <div class="as-card-hd">
             Computed from match results
-            <small style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--grey-500)"> â€” ${c.finishedCount}/72 group fixtures finished</small>
+            <small style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--grey-500)"> "” ${c.finishedCount}/72 group fixtures finished</small>
           </div>
           ${[
             ['Q1.8',  'Host nations (USA/CAN/MEX) combined group goals', c.r1['1.8']],
@@ -1142,12 +1142,12 @@
             </div>
           `).join('')}
           <div class="as-row">
-            <span class="as-qkey">Q1.1â€“3</span>
+            <span class="as-qkey">Q1.1"“3</span>
             <span class="as-qlabel">Winner / Runner-up / Beaten semis (from bracket result)</span>
             <span style="margin-left:auto;flex-shrink:0">
               ${hasWinner && hasSemis
-                ? chip(1, `${TEAMS[c.r1['1.1']]?.flag} ${TEAMS[c.r1['1.1']]?.name} &amp; others â€” auto`)
-                : '<span class="as-chip as-pending">bracket not seeded â€” enter below</span>'}
+                ? chip(1, `${TEAMS[c.r1['1.1']]?.flag} ${TEAMS[c.r1['1.1']]?.name} &amp; others "” auto`)
+                : '<span class="as-chip as-pending">bracket not seeded "” enter below</span>'}
             </span>
           </div>
           <div class="as-row">
@@ -1274,11 +1274,11 @@
         if (!answer) return `
           <div class="as-card">
             <div class="as-card-hd">${qKey}: ${label}</div>
-            <div class="as-row" style="color:var(--grey-400);font-style:italic">No answer entered â€” will not be scored.</div>
+            <div class="as-row" style="color:var(--grey-400);font-style:italic">No answer entered "” will not be scored.</div>
           </div>`;
         if (guessMap.size === 0) return `
           <div class="as-card">
-            <div class="as-card-hd">${qKey}: ${label} â€” answer: <strong>${answer}</strong></div>
+            <div class="as-card-hd">${qKey}: ${label} "” answer: <strong>${answer}</strong></div>
             <div class="as-row" style="color:var(--grey-400);font-style:italic">No player guesses found.</div>
           </div>`;
 
@@ -1300,7 +1300,7 @@
         return `
           <div class="as-card">
             <div class="as-card-hd">
-              ${qKey}: ${label} â€” correct answer: <strong>${answer}</strong>
+              ${qKey}: ${label} "” correct answer: <strong>${answer}</strong>
               &rarr; normalised: <em style="font-weight:400">${asNormName(answer)}</em>
             </div>
             <div style="overflow-x:auto">
@@ -1385,7 +1385,7 @@
         const r1 = asScoreUser_R1(p1, _asComputed, _asAdminAnswers || {}, _asNameMatches);
         const r2 = ScoringEngine.calculateRound2(p2, _asComputed.r2);
         rows.push({
-          name:  nameMap[uid] || uid.substring(0,8) + 'â€¦',
+          name:  nameMap[uid] || uid.substring(0,8) + '"¦',
           r1Old: exist.round1_points ?? null,
           r1New: r1.points,
           r2Old: exist.round2_points ?? null,
@@ -1406,10 +1406,10 @@
 
       tbody.innerHTML = rows.map(r => `<tr>
         <td>${r.name}</td>
-        <td style="text-align:right;color:var(--grey-400)">${r.r1Old ?? 'â€”'}</td>
+        <td style="text-align:right;color:var(--grey-400)">${r.r1Old ?? '"”'}</td>
         <td style="text-align:right"><strong>${r.r1New}</strong></td>
         ${dCell(r.r1Old, r.r1New)}
-        <td style="text-align:right;color:var(--grey-400)">${r.r2Old ?? 'â€”'}</td>
+        <td style="text-align:right;color:var(--grey-400)">${r.r2Old ?? '"”'}</td>
         <td style="text-align:right"><strong>${r.r2New}</strong></td>
         ${dCell(r.r2Old, r.r2New)}
       </tr>`).join('');
@@ -1491,7 +1491,7 @@
             <i class="ti ti-hourglass" style="font-size:2rem;display:block;margin-bottom:0.5rem"></i>
             <p>No resolved matches yet.</p>
             <p style="font-size:0.825rem;margin-top:0.4rem">
-              ${pending.length} snapshot${pending.length !== 1 ? 's' : ''} stored â€” calibration data will appear here as matches complete.
+              ${pending.length} snapshot${pending.length !== 1 ? 's' : ''} stored "” calibration data will appear here as matches complete.
             </p>
           </div>`;
         return;
@@ -1510,7 +1510,7 @@
       const crowdRows    = resolved.filter(r => r.crowd_n > 0);
       const crowdCorrect = crowdRows.filter(r => predict(r,'crowd_home','crowd_draw','crowd_away') === r.actual_outcome).length;
 
-      const pct = (n, d) => d ? (100 * n / d).toFixed(1) + '%' : 'â€”';
+      const pct = (n, d) => d ? (100 * n / d).toFixed(1) + '%' : '"”';
 
       // ---- Brier score ----
       function brier(rows, hKey, dKey, aKey) {
@@ -1530,10 +1530,10 @@
 
       // ---- Calibration buckets (blend layer) ----
       const BUCKETS = [
-        { label: '33â€“45%', min: 0.33, max: 0.45 },
-        { label: '45â€“55%', min: 0.45, max: 0.55 },
-        { label: '55â€“65%', min: 0.55, max: 0.65 },
-        { label: '65â€“75%', min: 0.65, max: 0.75 },
+        { label: '33"“45%', min: 0.33, max: 0.45 },
+        { label: '45"“55%', min: 0.45, max: 0.55 },
+        { label: '55"“65%', min: 0.55, max: 0.65 },
+        { label: '65"“75%', min: 0.65, max: 0.75 },
         { label: '75%+',   min: 0.75, max: 1.01 },
       ];
 
@@ -1554,7 +1554,7 @@
 
       const matchRows = resolved.map(r => {
         const teams = TEAM_NAMES[r.match_id] || { h: '?', a: '?' };
-        const scoreStr = r.home_score !== null ? `${r.home_score}â€“${r.away_score}` : '';
+        const scoreStr = r.home_score !== null ? `${r.home_score}"“${r.away_score}` : '';
         const ePred = predict(r,'elo_home','elo_draw','elo_away');
         const cPred = predict(r,'crowd_home','crowd_draw','crowd_away');
         const bPred = predict(r,'blend_home','blend_draw','blend_away');
@@ -1567,7 +1567,7 @@
           <td style="text-align:center;font-family:var(--font-serif)">${scoreStr}</td>
           <td style="text-align:center;font-size:0.8rem">${r.actual_outcome}</td>
           <td style="text-align:center">${tick(ePred)} <span style="font-size:0.75rem;color:var(--grey-500)">${fp(Math.max(r.elo_home,r.elo_draw,r.elo_away),'')}</span></td>
-          <td style="text-align:center">${r.crowd_n > 0 ? tick(cPred) + ` <span style="font-size:0.75rem;color:var(--grey-500)">${fp(Math.max(r.crowd_home,r.crowd_draw,r.crowd_away),'')}</span>` : '<span style="color:var(--grey-300)">â€”</span>'}</td>
+          <td style="text-align:center">${r.crowd_n > 0 ? tick(cPred) + ` <span style="font-size:0.75rem;color:var(--grey-500)">${fp(Math.max(r.crowd_home,r.crowd_draw,r.crowd_away),'')}</span>` : '<span style="color:var(--grey-300)">"”</span>'}</td>
           <td style="text-align:center">${tick(bPred)} <span style="font-size:0.75rem;color:var(--grey-500)">${fp(Math.max(r.blend_home,r.blend_draw,r.blend_away),'')}</span></td>
         </tr>`;
       }).join('');
@@ -1632,7 +1632,7 @@
                 <td style="text-align:center">${crowdRows.length}<span style="font-size:0.72rem;color:var(--grey-400)"> w/ picks</span></td>
                 <td style="text-align:center">${crowdCorrect}</td>
                 <td style="text-align:center;font-weight:600">${pct(crowdCorrect,crowdRows.length)}</td>
-                <td style="text-align:center">${crowdBrier ?? 'â€”'}</td>
+                <td style="text-align:center">${crowdBrier ?? '"”'}</td>
               </tr>
               <tr>
                 <td style="padding:0.6rem 0.75rem"><strong>Blend (70/30)</strong></td>

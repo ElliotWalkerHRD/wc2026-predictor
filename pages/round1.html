@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WC2026 â€” Round 1: Pre-Tournament</title>
+  <title>WC2026 "” Round 1: Pre-Tournament</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
@@ -109,7 +109,7 @@
       { key:'1.6',  num:'Q1.6',  text:'Who will win the GOLDEN BOOT (tournament top scorer)?',                        pts:'10 pts for correct player',                                type:'text',  placeholder:'e.g. Kylian MbappÃ©' },
       { key:'1.7',  num:'Q1.7',  text:'How many goals will the Golden Boot winner score?',                            pts:'10 pts exact',                                             type:'number', placeholder:'0' },
       { key:'1.8',  num:'Q1.8',  text:'How many goals will USA, Canada & Mexico score collectively in the group stage?', pts:'5 pts exact Â· 3 pts within Â±3',                        type:'number', placeholder:'0' },
-      { key:'1.9',  num:'Q1.9',  text:'From England, France, Brazil & Argentina â€” which team will score the MOST goals in the group stage?', pts:'5 pts correct',                   type:'team-select-subset', subset:['ENG','FRA','BRA','ARG'] },
+      { key:'1.9',  num:'Q1.9',  text:'From England, France, Brazil & Argentina "” which team will score the MOST goals in the group stage?', pts:'5 pts correct',                   type:'team-select-subset', subset:['ENG','FRA','BRA','ARG'] },
       { key:'1.10', num:'Q1.10', text:'How many RED CARDS will be shown in the group stage? (incl. second yellows)',  pts:'5 pts exact',                                             type:'number', placeholder:'0' },
       { key:'1.11', num:'Q1.11', text:'How many TOTAL GOALS will be scored in the group stage?',                     pts:'10 pts exact Â· 5 pts within Â±10',                          type:'number', placeholder:'0' },
       { key:'1.12', num:'Q1.12', text:'Which GROUP will be hardest to qualify from? (your pick for most competitive group)', pts:'5 pts if your group has lowest total points gap between 1st and 4th', type:'group-select' },
@@ -180,7 +180,7 @@
     function displayR1Answer(q, rawVal) {
       let val;
       try { val = JSON.parse(rawVal); } catch { val = rawVal; }
-      if (val === null || val === undefined || val === '') return 'â€”';
+      if (val === null || val === undefined || val === '') return '"”';
       if (q.type === 'team-select' || q.type === 'team-select-subset') {
         const t = getTeam(val);
         return t ? `${t.flag} ${t.name}` : val;

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WC2026 â€” My Profile</title>
+  <title>WC2026 "” My Profile</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
@@ -233,14 +233,14 @@
           canvas.height = Math.round(h * scale);
           canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
           canvas.toBlob(blob => {
-            if (!blob) { reject(new Error('Canvas export failed â€” try a different image.')); return; }
+            if (!blob) { reject(new Error('Canvas export failed "” try a different image.')); return; }
             resolve(new File([blob], 'avatar.jpg', { type: 'image/jpeg' }));
           }, 'image/jpeg', 0.85);
         };
 
         img.onerror = () => {
           URL.revokeObjectURL(objectUrl);
-          reject(new Error("Couldn't read that image â€” try a JPG or PNG."));
+          reject(new Error("Couldn't read that image "” try a JPG or PNG."));
         };
 
         img.src = objectUrl;
@@ -252,14 +252,14 @@
       const file = this.files[0];
       if (!file) return;
 
-      // Loose guard before resize â€” real photos are never this large
+      // Loose guard before resize "” real photos are never this large
       if (file.size > 20 * 1024 * 1024) {
         showAlert('File is too large (max 20 MB).');
         this.value = '';
         return;
       }
 
-      showAlert('Resizingâ€¦', 'info');
+      showAlert('Resizing"¦', 'info');
       try {
         const resized = await resizeImage(file);
         pendingFile = resized;
@@ -269,7 +269,7 @@
         document.getElementById('removePhotoBtn').classList.remove('hidden');
         document.getElementById('profileAlert').innerHTML = '';
       } catch (err) {
-        showAlert(err.message || "Couldn't process that image â€” try a JPG or PNG.");
+        showAlert(err.message || "Couldn't process that image "” try a JPG or PNG.");
         this.value = '';
       }
     });

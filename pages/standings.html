@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WC2026 â€” Standings</title>
+  <title>WC2026 "” Standings</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
@@ -115,7 +115,7 @@
     .team-name-abbr { display: none; }
 
     /* 2-col and 3-col (800px+): hide GF/GA/GD so team names get full width.
-       600â€“799px is 1-col â€” cards fill the full container, all 8 cols fit. */
+       600"“799px is 1-col "” cards fill the full container, all 8 cols fit. */
     @media (min-width: 800px) {
       .standings-table .col-gf,
       .standings-table .col-ga,
@@ -298,11 +298,11 @@
         <div class="legend">
           <div class="legend-item">
             <div class="legend-stripe" style="background:var(--lime-dark)"></div>
-            <span>Top 2 â€” advance to R32</span>
+            <span>Top 2 "” advance to R32</span>
           </div>
           <div class="legend-item">
             <div class="legend-stripe" style="background:#a3e635"></div>
-            <span>3rd place â€” may advance</span>
+            <span>3rd place "” may advance</span>
           </div>
         </div>
         <div class="groups-grid" id="groupsGrid">
@@ -338,7 +338,7 @@
 
     let resultMap = {}; // match_id -> { home_score, away_score, status }
     let viewMode = 'official'; // 'official' | 'predicted'
-    let predMap = null;        // question_key -> { home, away } â€” loaded on demand
+    let predMap = null;        // question_key -> { home, away } "” loaded on demand
     let currentUser = null;
 
     // ---- Group standings ----
@@ -407,7 +407,7 @@
             <td>${s.L}</td>
             <td class="col-gf">${s.GF}</td>
             <td class="col-ga">${s.GA}</td>
-            <td class="col-gd ${gdClass}">${s.P > 0 ? gdStr : 'â€”'}</td>
+            <td class="col-gd ${gdClass}">${s.P > 0 ? gdStr : '"”'}</td>
             <td class="pts-cell">${s.Pts}</td>
           </tr>`;
       }).join('');
@@ -511,7 +511,7 @@
             <span class="bracket-score">${hasResult ? res.away_score : ''}</span>
           </div>`;
       } else if (hasResult) {
-        // Score exists but teams not yet named in static data â€” split note at " vs "
+        // Score exists but teams not yet named in static data "” split note at " vs "
         const parts = (m.note || 'TBD vs TBD').split(' vs ');
         const homeNote = parts[0] || 'TBD';
         const awayNote = parts.slice(1).join(' vs ') || 'TBD';

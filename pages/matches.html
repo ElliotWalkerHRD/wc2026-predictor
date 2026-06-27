@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
-  <link rel="stylesheet" href="../css/style.css?v=8">
+  <link rel="stylesheet" href="../css/style.css?v=9">
   <style>
     .round-section { margin-bottom: 2.5rem; }
 
@@ -320,7 +320,8 @@
     .prob-label-row span:nth-child(2) { text-align: center; color: var(--grey-400); }
 
     /* Expanded factor rows */
-    .prob-factors { padding-top: 0.45rem; display: flex; flex-direction: column; gap: 0.3rem; border-top: 1px solid var(--grey-100); margin-top: 0.45rem; }
+    .prob-factors { padding-top: 0.45rem; flex-direction: column; gap: 0.3rem; border-top: 1px solid var(--grey-100); margin-top: 0.45rem; }
+    .prob-factors:not([hidden]) { display: flex; }
 
     .prob-factor-row {
       display: flex;
@@ -428,13 +429,13 @@
   <div id="matchPredModal"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="../js/config.js?v=8"></script>
-  <script src="../js/data.js?v=8"></script>
-  <script src="../js/supabase-client.js?v=8"></script>
-  <script src="../js/scoring.js?v=8"></script>
+  <script src="../js/config.js?v=9"></script>
+  <script src="../js/data.js?v=9"></script>
+  <script src="../js/supabase-client.js?v=9"></script>
+  <script src="../js/scoring.js?v=9"></script>
   <script src="../js/elo.js?v=1"></script>
   <script src="../js/match-probs.js?v=1"></script>
-  <script src="../js/ui.js?v=8"></script>
+  <script src="../js/ui.js?v=9"></script>
   <script>
     DB.initSupabase();
     Nav.render('matches');
@@ -450,6 +451,7 @@
     let allProfiles      = [];
     let eloRatings       = {};  // teamCode → Elo rating
     let crowdPickMap     = {};  // matchId  → { homeWin, draw, awayWin, pickCount } | null
+    let probExpanded     = sessionStorage.getItem('probExpanded') === 'true';
 
     async function load() {
       const session = await DB.getSession();
@@ -957,10 +959,10 @@
       }
 
       return `
-        <div class="prob-bar-section" onclick="event.stopPropagation();toggleProbFactors(${matchId})">
+        <div class="prob-bar-section" onclick="event.stopPropagation();toggleProbFactors()">
           <div class="prob-bar-header">
             <span class="prob-bar-title">Win probability</span>
-            <i class="ti ti-chevron-down prob-chevron" id="prob-icon-${matchId}"></i>
+            <i class="ti ti-chevron-down prob-chevron${probExpanded ? ' open' : ''}" id="prob-icon-${matchId}"></i>
           </div>
           <div class="prob-bar">
             <div class="prob-seg home" style="flex:${b.homeWin}"></div>
@@ -972,7 +974,7 @@
             <span>Draw&ensp;${dPct}%</span>
             <span>${aPct}%&ensp;${awayName}</span>
           </div>
-          <div class="prob-factors" id="prob-factors-${matchId}" hidden>
+          <div class="prob-factors" id="prob-factors-${matchId}"${probExpanded ? '' : ' hidden'}>
             <div class="prob-factor-row">
               <span class="prob-factor-label">Model&thinsp;(Elo)</span>
               <div class="prob-mini-bar">
@@ -987,13 +989,11 @@
         </div>`;
     }
 
-    function toggleProbFactors(matchId) {
-      const factors = document.getElementById(`prob-factors-${matchId}`);
-      const icon    = document.getElementById(`prob-icon-${matchId}`);
-      if (!factors) return;
-      const wasHidden = factors.hasAttribute('hidden');
-      factors.toggleAttribute('hidden', !wasHidden);
-      icon?.classList.toggle('open', wasHidden);
+    function toggleProbFactors() {
+      probExpanded = !probExpanded;
+      sessionStorage.setItem('probExpanded', probExpanded);
+      document.querySelectorAll('.prob-factors').forEach(el => el.toggleAttribute('hidden', !probExpanded));
+      document.querySelectorAll('.prob-chevron').forEach(el => el.classList.toggle('open', probExpanded));
     }
 
     function buildGroupMatchRow(m, predMap, results) {

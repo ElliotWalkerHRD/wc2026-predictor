@@ -140,7 +140,11 @@ async function getUserPredictions(userId, round = null) {
 
 async function getAllPredictions(round = null, questionKeys = null) {
   const sb = initSupabase();
-  let query = sb.from('predictions').select('*, profiles(display_name, avatar_color, avatar_url)');
+  // .range(0, 4999) overrides PostgREST's default 1000-row cap.
+  // With 34 players × 103 matches the theoretical max is ~3500 rows.
+  let query = sb.from('predictions')
+    .select('*, profiles(display_name, avatar_color, avatar_url)')
+    .range(0, 4999);
   if (round) query = query.eq('round', round);
   // When questionKeys supplied, restrict to those match question_keys only —
   // used to fetch all-user data only for already-kicked-off matches.

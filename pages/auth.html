@@ -222,12 +222,15 @@
             <div class="color-swatches" id="colorSwatches"></div>
             <input type="hidden" id="suColor" value="#c8f135">
           </div>
+          <div class="form-group" style="display:flex;align-items:flex-start;gap:0.6rem;margin-bottom:0.25rem">
+            <input type="checkbox" id="suConsent" style="margin-top:0.2rem;flex-shrink:0;width:1rem;height:1rem;accent-color:var(--lime-dark);cursor:pointer">
+            <label for="suConsent" style="font-size:0.82rem;color:var(--grey-700);cursor:pointer;line-height:1.45">
+              I agree to the <a href="privacy-policy.html" target="_blank" style="color:var(--ink);text-decoration:underline">Privacy Policy</a> and understand that my name, predictions, and scores will be visible to other players
+            </label>
+          </div>
           <button class="btn btn-lime btn-block btn-lg" id="signupBtn">
             Create Account <i class="ti ti-arrow-right"></i>
           </button>
-          <div class="form-footer mt-2">
-            By signing up you agree to have fun and accept all controversial referee decisions.
-          </div>
         </div>
       </div>
     </div>
@@ -322,6 +325,7 @@
       if (!name)    return showAlert('signupAlert', 'Please enter a display name.');
       if (!email)   return showAlert('signupAlert', 'Please enter your email.');
       if (password.length < 8) return showAlert('signupAlert', 'Password must be at least 8 characters.');
+      if (!document.getElementById('suConsent').checked) return showAlert('signupAlert', 'Please agree to the Privacy Policy to continue.');
 
       const btn = document.getElementById('signupBtn');
       btn.disabled = true;
@@ -345,7 +349,7 @@
         }
 
         const signupResult = await DB.signUp(email, password, name);
-        const profileUpdate = { display_name: name, avatar_color: color };
+        const profileUpdate = { display_name: name, avatar_color: color, consented_at: new Date().toISOString() };
 
         const postSignup = async (uid) => {
           try { await DB.upsertProfile(uid, profileUpdate); } catch (_) {}

@@ -87,6 +87,16 @@ const Nav = {
       </div>
     `;
 
+    // Footer
+    let footerEl = document.getElementById('main-footer');
+    if (!footerEl) {
+      footerEl = document.createElement('footer');
+      footerEl.id = 'main-footer';
+      footerEl.className = 'site-footer';
+      document.body.appendChild(footerEl);
+    }
+    footerEl.innerHTML = `<a href="${p}privacy-policy.html">Privacy Policy</a>`;
+
     // Mobile toggle
     const toggle = document.getElementById('navToggle');
     const links = document.getElementById('navLinks');

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
-  <link rel="stylesheet" href="../css/style.css?v=10">
+  <link rel="stylesheet" href="../css/style.css?v=25">
   <style>
     .round-section { margin-bottom: 2.5rem; }
 
@@ -101,6 +101,8 @@
     .pred-pill.exact { border-color: var(--green); color: var(--green); background: rgba(34,197,94,0.06); }
     .pred-pill.result { border-color: var(--lime-dark); color: var(--lime-dark); background: rgba(184,224,32,0.08); }
     .pred-pill.wrong { border-color: var(--red); color: var(--red); background: rgba(239,68,68,0.05); }
+    .pred-pill.pending { color: var(--grey-500); border-color: var(--grey-300); }
+    .pred-pill.live-wait { border-color: #f59e0b; color: #b45309; background: rgba(245,158,11,0.06); }
 
     .pred-name { color: var(--grey-500); margin-right: 0.1rem; }
 
@@ -235,6 +237,17 @@
       border-top: 1px solid var(--grey-200);
       flex-shrink: 0;
     }
+    .mpred-status-note {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1.25rem;
+      font-size: 0.8rem;
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--grey-200);
+    }
+    .mpred-status-note.pending-note { color: var(--grey-500); background: var(--grey-100); }
+    .mpred-status-note.live-note { color: #b45309; background: rgba(245,158,11,0.06); border-bottom-color: rgba(245,158,11,0.2); }
     .pred-pill.auto { border-style: dashed; color: var(--grey-500); }
     .auto-tag { display: inline-block; font-size: 0.62em; background: var(--grey-200); color: var(--grey-500); border-radius: 3px; padding: 0 3px; margin-left: 2px; vertical-align: middle; font-weight: 700; letter-spacing: 0; }
     .mpred-auto .mpred-score { color: var(--grey-400); }
@@ -429,13 +442,13 @@
   <div id="matchPredModal"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="../js/config.js?v=10"></script>
-  <script src="../js/data.js?v=10"></script>
-  <script src="../js/supabase-client.js?v=10"></script>
-  <script src="../js/scoring.js?v=10"></script>
+  <script src="../js/config.js?v=25"></script>
+  <script src="../js/data.js?v=25"></script>
+  <script src="../js/supabase-client.js?v=25"></script>
+  <script src="../js/scoring.js?v=25"></script>
   <script src="../js/elo.js?v=1"></script>
   <script src="../js/match-probs.js?v=1"></script>
-  <script src="../js/ui.js?v=10"></script>
+  <script src="../js/ui.js?v=25"></script>
   <script>
     DB.initSupabase();
     Nav.render('matches');
@@ -716,11 +729,13 @@
       let matchPreds = allPreds.filter(p => p.question_key === `m${matchId}`);
       if (memberIds) matchPreds = matchPreds.filter(p => memberIds.includes(p.user_id));
 
-      const result    = allResults[matchId];
-      const hasResult = result && result.home_score !== null;
+      const result          = allResults[matchId];
+      const hasResult       = result && result.home_score !== null;
+      const isMatchFinished = result?.status === 'FINISHED';
+      const isMatchLive     = result?.status === 'IN_PLAY' || result?.status === 'PAUSED' || result?.status === 'LIVE';
 
-      // Add auto-default entries (4-4) for players with no pick when match has a result
-      if (hasResult && allProfiles.length) {
+      // Auto-defaults (4-4) only apply once the match is fully finished — not during live play
+      if (isMatchFinished && allProfiles.length) {
         const predictedSet = new Set(matchPreds.map(p => p.user_id));
         const pool = memberIds ? allProfiles.filter(pr => memberIds.includes(pr.id)) : allProfiles;
         pool.filter(pr => !predictedSet.has(pr.id)).forEach(pr => {
@@ -742,15 +757,26 @@
         return (a.profiles?.display_name || '').localeCompare(b.profiles?.display_name || '');
       });
 
-      bodyEl.innerHTML = matchPreds.map(p => {
+      let statusNote = '';
+      if (isMatchLive) {
+        statusNote = `<div class="mpred-status-note live-note"><i class="ti ti-live-view"></i> Match in progress — picks are locked and will score at full time</div>`;
+      } else if (!isMatchFinished) {
+        statusNote = `<div class="mpred-status-note pending-note"><i class="ti ti-clock"></i> Awaiting result — all picks are saved and will score once the match finishes</div>`;
+      }
+
+      bodyEl.innerHTML = statusNote + matchPreds.map(p => {
         const isYou = p.user_id === currentUserId;
         if (p._auto) {
           let chip = '';
-          if (hasResult) {
+          if (isMatchFinished && hasResult) {
             const actH = result.home_score, actA = result.away_score;
             if (actH === 4 && actA === 4) chip = `<span class="pred-pill exact">Exact</span>`;
             else if (actH === actA)        chip = `<span class="pred-pill result">Result</span>`;
             else                           chip = `<span class="pred-pill auto">Wrong</span>`;
+          } else if (isMatchLive) {
+            chip = `<span class="pred-pill live-wait">Live</span>`;
+          } else {
+            chip = `<span class="pred-pill pending">Pending</span>`;
           }
           const isAiAuto = isAiPlayer(p.profiles) && !isYou;
           return `<div class="mpred-row mpred-auto${isYou ? ' mpred-you' : ''}${isAiAuto ? ' ai-player-row' : ''}">
@@ -763,7 +789,7 @@
         let val = null;
         try { val = JSON.parse(p.value); } catch {}
         let chipHtml = '';
-        if (hasResult && val !== null) {
+        if (isMatchFinished && hasResult && val !== null) {
           const actH = result.home_score, actA = result.away_score;
           if (val.home === actH && val.away === actA)
             chipHtml = `<span class="pred-pill exact">Exact</span>`;
@@ -771,6 +797,10 @@
             chipHtml = `<span class="pred-pill result">Result</span>`;
           else
             chipHtml = `<span class="pred-pill wrong">Wrong</span>`;
+        } else if (isMatchLive) {
+          chipHtml = `<span class="pred-pill live-wait">Live</span>`;
+        } else {
+          chipHtml = `<span class="pred-pill pending">Pending</span>`;
         }
         const isAiRow = isAiPlayer(p.profiles) && !isYou;
         return `<div class="mpred-row${isYou ? ' mpred-you' : ''}${isAiRow ? ' ai-player-row' : ''}">
@@ -1133,6 +1163,10 @@
             if (p.home === actH && p.away === actA) cls = 'exact';
             else if (Math.sign(p.home - p.away) === Math.sign(actH - actA)) cls = 'result';
             else cls = 'wrong';
+          } else if (isLive) {
+            cls = 'live-wait';
+          } else {
+            cls = 'pending';
           }
           const isYou = p.userId === currentUserId;
           const nameHtml = isYou ? `${p.name} <span class="you-badge">YOU</span>` : (p.isAi ? `${p.name} <span class="ai-tag">AI</span>` : p.name);

@@ -451,6 +451,7 @@
     let allProfiles      = [];
     let eloRatings       = {};  // teamCode → Elo rating
     let crowdPickMap     = {};  // matchId  → { homeWin, draw, awayWin, pickCount } | null
+    let calibrationMap   = {};  // matchId  → model_calibration row (pre-kickoff snapshot)
     let probExpanded     = sessionStorage.getItem('probExpanded') === 'true';
 
     async function load() {
@@ -478,6 +479,12 @@
       const sb = window._supabase;
       const eloPromise = sb.from('team_elo').select('team_code,rating')
         .then(({ data }) => { (data || []).forEach(r => { eloRatings[r.team_code] = Number(r.rating); }); })
+        .catch(() => {});
+
+      // ---- Pre-kickoff model snapshots — used to freeze the prob bar for live/finished matches ----
+      const calibrationPromise = sb.from('model_calibration')
+        .select('match_id,blend_home,blend_draw,blend_away,elo_home,elo_draw,elo_away,crowd_home,crowd_draw,crowd_away,crowd_n')
+        .then(({ data }) => { (data || []).forEach(r => { calibrationMap[r.match_id] = r; }); })
         .catch(() => {});
 
       // ---- Crowd picks for upcoming group matches (aggregated only — no user IDs) ----
@@ -510,6 +517,7 @@
         lockedPredsPromise,
         eloPromise,
         crowdPromise,
+        calibrationPromise,
       ]);
 
       matchResults.forEach(r => { allResults[r.match_id] = r; });
@@ -925,7 +933,76 @@
     function buildProbBar(matchId, homeCode, awayCode, result) {
       const isFinished = result?.status === 'FINISHED';
       const isLive     = result?.status === 'IN_PLAY' || result?.status === 'PAUSED' || result?.status === 'LIVE';
-      if (isFinished || isLive) return '';
+      const homeName   = getTeam(homeCode).name;
+      const awayName   = getTeam(awayCode).name;
+
+      if (isFinished || isLive) {
+        // Show frozen pre-kickoff snapshot from model_calibration
+        const cal = calibrationMap[matchId];
+        if (!cal) return '';
+
+        const hPct = Math.round(cal.blend_home * 100);
+        const dPct = Math.round(cal.blend_draw * 100);
+        const aPct = Math.round(cal.blend_away * 100);
+        const eH   = Math.round(cal.elo_home   * 100);
+        const eD   = Math.round(cal.elo_draw   * 100);
+        const eA   = Math.round(cal.elo_away   * 100);
+
+        let crowdHtml;
+        if (cal.crowd_home != null && cal.crowd_n > 0) {
+          const cH = Math.round(cal.crowd_home * 100);
+          const cD = Math.round(cal.crowd_draw * 100);
+          const cA = Math.round(cal.crowd_away * 100);
+          const lowNote = cal.crowd_n < MatchProbs.MIN_CROWD_SIZE
+            ? ` <span class="prob-low-sample">low sample</span>` : '';
+          crowdHtml = `
+            <div class="prob-factor-row">
+              <span class="prob-factor-label">Crowd&thinsp;(${cal.crowd_n} picks)${lowNote}</span>
+              <div class="prob-mini-bar">
+                <div class="prob-mini-seg home" style="flex:${cal.crowd_home}"></div>
+                <div class="prob-mini-seg draw" style="flex:${cal.crowd_draw}"></div>
+                <div class="prob-mini-seg away" style="flex:${cal.crowd_away}"></div>
+              </div>
+              <span class="prob-factor-pcts">${cH}%&thinsp;/&thinsp;${cD}%&thinsp;/&thinsp;${cA}%</span>
+            </div>`;
+        } else {
+          crowdHtml = `
+            <div class="prob-factor-row">
+              <span class="prob-factor-label">Crowd</span>
+              <span class="prob-no-crowd">No picks at kickoff</span>
+            </div>`;
+        }
+
+        return `
+          <div class="prob-bar-section" onclick="event.stopPropagation();toggleProbFactors()">
+            <div class="prob-bar-header">
+              <span class="prob-bar-title">Pre-match prediction</span>
+              <i class="ti ti-chevron-down prob-chevron${probExpanded ? ' open' : ''}" id="prob-icon-${matchId}"></i>
+            </div>
+            <div class="prob-bar">
+              <div class="prob-seg home" style="flex:${cal.blend_home}"></div>
+              <div class="prob-seg draw" style="flex:${cal.blend_draw}"></div>
+              <div class="prob-seg away" style="flex:${cal.blend_away}"></div>
+            </div>
+            <div class="prob-label-row">
+              <span>${homeName}&ensp;${hPct}%</span>
+              <span>Draw&ensp;${dPct}%</span>
+              <span>${aPct}%&ensp;${awayName}</span>
+            </div>
+            <div class="prob-factors" id="prob-factors-${matchId}"${probExpanded ? '' : ' hidden'}>
+              <div class="prob-factor-row">
+                <span class="prob-factor-label">Model&thinsp;(Elo)</span>
+                <div class="prob-mini-bar">
+                  <div class="prob-mini-seg home" style="flex:${cal.elo_home}"></div>
+                  <div class="prob-mini-seg draw" style="flex:${cal.elo_draw}"></div>
+                  <div class="prob-mini-seg away" style="flex:${cal.elo_away}"></div>
+                </div>
+                <span class="prob-factor-pcts">${eH}%&thinsp;/&thinsp;${eD}%&thinsp;/&thinsp;${eA}%</span>
+              </div>
+              ${crowdHtml}
+            </div>
+          </div>`;
+      }
 
       const homeR = eloRatings[homeCode];
       const awayR = eloRatings[awayCode];
@@ -941,9 +1018,6 @@
       const eH   = Math.round(e.homeWin * 100);
       const eD   = Math.round(e.draw    * 100);
       const eA   = Math.round(e.awayWin * 100);
-
-      const homeName = getTeam(homeCode).name;
-      const awayName = getTeam(awayCode).name;
 
       // Crowd factor row
       let crowdHtml;

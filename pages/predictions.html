@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WC2026 "” Predictions</title>
+  <title>WC2026 — Predictions</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
@@ -66,11 +66,11 @@
       <!-- Stats -->
       <div class="stats-strip mb-4" id="statsStrip">
         <div class="stat-box">
-          <div class="stat-value" id="totalPts">"”</div>
+          <div class="stat-value" id="totalPts">—</div>
           <div class="stat-label">Total Points</div>
         </div>
         <div class="stat-box">
-          <div class="stat-value" id="yourRank">"”</div>
+          <div class="stat-value" id="yourRank">—</div>
           <div class="stat-label">Your Rank</div>
         </div>
         <div class="stat-box">
@@ -78,7 +78,7 @@
           <div class="stat-label">Rounds Submitted</div>
         </div>
         <div class="stat-box">
-          <div class="stat-value" id="roundsOpen">"”</div>
+          <div class="stat-value" id="roundsOpen">—</div>
           <div class="stat-label">Rounds Open</div>
         </div>
       </div>
@@ -90,7 +90,7 @@
 
       <p style="margin-top:1.5rem;font-size:0.82rem;color:var(--grey-500);text-align:center">
         <i class="ti ti-chart-treemap" style="vertical-align:-0.1em"></i>
-        Not sure what to pick? <a href="calculator.html" style="color:var(--ink);font-weight:600">Try the Calculator</a> "” play out every result and push the scenario straight to your predictions.
+        Not sure what to pick? <a href="calculator.html" style="color:var(--ink);font-weight:600">Try the Calculator</a> — play out every result and push the scenario straight to your predictions.
       </p>
     </div>
   </main>
@@ -107,7 +107,7 @@
 
     const ROUNDS_META = [
       { id:'round1', icon:'ti-help-octagon', title:'Pre-Tournament',      desc:'Winner, runner-up, beaten semi-finalists, golden boot, top scorer & more.', points:150, questions:13, page:'round1.html' },
-      { id:'round2', icon:'ti-layout-grid', title:'Group Winners',         desc:'Predict the winner and runner-up of all 12 groups (A"“L). Bonus points for perfection.', points:240, questions:24, page:'round2.html' },
+      { id:'round2', icon:'ti-layout-grid', title:'Group Winners',         desc:'Predict the winner and runner-up of all 12 groups (A–L). Bonus points for perfection.', points:240, questions:24, page:'round2.html' },
       { id:'round3', icon:'ti-ball-football', title:'Group Stage Scores',  desc:'Exact score predictions for all 72 group stage matches. 7pts exact, 5pts result.', points:504, questions:72, page:'round3.html' },
       { id:'round4', icon:'ti-flame',        title:'Round of 32',          desc:'Predict scores for the 16 knockout matches. Teams revealed once drawn.', points:112, questions:16, page:'round4.html' },
       { id:'round5', icon:'ti-bolt',         title:'Round of 16',          desc:'8 matches. Exact score = 7pts, correct result = 5pts.', points:56, questions:8, page:'round5.html' },
@@ -135,7 +135,7 @@
       try {
         const scores = await DB.getScores();
         const rank = scores.findIndex(s => s.user_id === userId) + 1;
-        document.getElementById('yourRank').textContent = rank > 0 ? `#${rank}` : '"”';
+        document.getElementById('yourRank').textContent = rank > 0 ? `#${rank}` : '—';
       } catch (_) {}
 
       await DB.initRoundOverrides();

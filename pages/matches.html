@@ -1133,7 +1133,8 @@
       const away = awayCode ? getTeam(awayCode) : { flag: '🏳️', name: 'TBD', code: 'TBD' };
       const exactPts = m.id === 104 ? 10 : 7;
       const resultPts = m.id === 104 ? 7 : 5;
-      return buildMatchRowHtml(m.id, m.date, home, away, result, predMap[m.id] || [], m.match_label, '', '', exactPts, resultPts);
+      const probBarHtml = (homeCode && awayCode) ? buildProbBar(m.id, homeCode, awayCode, result) : '';
+      return buildMatchRowHtml(m.id, m.date, home, away, result, predMap[m.id] || [], m.match_label, '', '', exactPts, resultPts, probBarHtml);
     }
 
     function buildMatchRowHtml(id, date, home, away, result, preds, label, venue, city, exactPts, resultPts, probBarHtml = '') {

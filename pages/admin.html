@@ -502,7 +502,7 @@
           const statusBadge = `<span style="font-size:0.72rem;font-weight:700;padding:0.15rem 0.5rem;border-radius:9999px;${statusColor}">${log.status}</span>`;
           const dur = log.duration_ms ? `${(log.duration_ms / 1000).toFixed(1)}s` : '—';
           const err = log.error_message
-            ? `<span style="color:#b91c1c;font-size:0.78rem" title="${log.error_message}">${log.error_message.slice(0, 60)}${log.error_message.length > 60 ? '"¦' : ''}</span>`
+            ? `<span style="color:#b91c1c;font-size:0.78rem" title="${log.error_message}">${log.error_message.slice(0, 60)}${log.error_message.length > 60 ? '…' : ''}</span>`
             : '—';
           return `<tr style="border-bottom:1px solid var(--grey-100)">
             <td style="padding:0.55rem 1rem;white-space:nowrap;color:var(--grey-600)">${timeStr}</td>
@@ -570,7 +570,7 @@
       const btn = document.getElementById('seedBracketBtn');
       const statusEl = document.getElementById('seedBracketStatus');
       btn.disabled = true;
-      btn.innerHTML = '<i class="ti ti-loader"></i> Seeding"¦';
+      btn.innerHTML = '<i class="ti ti-loader"></i> Seeding…';
       statusEl.innerHTML = '';
       try {
         const sb = DB.initSupabase();
@@ -936,8 +936,8 @@
     function asNormName(s) {
       if (!s) return '';
       return String(s).toLowerCase()
-        .normalize('NFD').replace(/[Ì€-Í¯]/g, '')
-        .replace(/[''Ê¼'\-]/g, ' ')
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/['‘’ʼ\-]/g, ' ')
         .replace(/[^a-z0-9\s]/g, '')
         .replace(/\s+/g, ' ').trim();
     }
@@ -1194,7 +1194,7 @@
           </div>
           <div class="as-input-row">
             <span class="as-qkey">Q1.6</span><label>Golden Boot winner (name)</label>
-            <input type="text" id="asQ16" class="form-control" placeholder="e.g. MbappÃ©">
+            <input type="text" id="asQ16" class="form-control" placeholder="e.g. Mbappé">
           </div>
           <div class="as-input-row">
             <span class="as-qkey">Q1.7</span><label>Golden Boot goals</label>
@@ -1385,7 +1385,7 @@
         const r1 = asScoreUser_R1(p1, _asComputed, _asAdminAnswers || {}, _asNameMatches);
         const r2 = ScoringEngine.calculateRound2(p2, _asComputed.r2);
         rows.push({
-          name:  nameMap[uid] || uid.substring(0,8) + '"¦',
+          name:  nameMap[uid] || uid.substring(0,8) + '…',
           r1Old: exist.round1_points ?? null,
           r1New: r1.points,
           r2Old: exist.round2_points ?? null,
@@ -1400,7 +1400,7 @@
         const d = nw - old;
         const s = d > 0 ? `<span style="color:#5c7000">+${d}</span>`
                 : d < 0 ? `<span style="color:#ef4444">${d}</span>`
-                :          '<span style="color:var(--grey-400)">Â±0</span>';
+                :          '<span style="color:var(--grey-400)">±0</span>';
         return `<td style="text-align:right">${s}</td>`;
       };
 
@@ -1559,8 +1559,8 @@
         const cPred = predict(r,'crowd_home','crowd_draw','crowd_away');
         const bPred = predict(r,'blend_home','blend_draw','blend_away');
         const tick = v => v === r.actual_outcome
-          ? '<span style="color:#5c7000;font-weight:700">âœ“</span>'
-          : '<span style="color:var(--grey-400)">âœ—</span>';
+          ? '<span style="color:#5c7000;font-weight:700">✓</span>'
+          : '<span style="color:var(--grey-400)">✗</span>';
         const fp = (v, label) => v != null ? `${(v*100).toFixed(0)}%` : label;
         return `<tr>
           <td style="font-size:0.8rem;font-weight:600">${teams.h} v ${teams.a}</td>
@@ -1604,7 +1604,7 @@
             <div style="font-size:1.5rem;font-family:var(--font-serif)">${pct(blendCorrect,resolved.length)}</div>
           </div>
           <div class="card" style="padding:0.875rem 1.25rem;flex:1;min-width:130px">
-            <div style="font-size:0.68rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--grey-400);margin-bottom:0.25rem">Blend Brier â†“</div>
+            <div style="font-size:0.68rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--grey-400);margin-bottom:0.25rem">Blend Brier ↓</div>
             <div style="font-size:1.5rem;font-family:var(--font-serif)">${blendBrier}</div>
           </div>
         </div>
@@ -1617,7 +1617,7 @@
               ${tdH('center')}Matches</th>
               ${tdH('center')}Correct</th>
               ${tdH('center')}Accuracy</th>
-              ${tdH('center')}Brier â†“</th>
+              ${tdH('center')}Brier ↓</th>
             </tr></thead>
             <tbody>
               <tr>
@@ -1655,7 +1655,7 @@
                 ${tdH('center')}Count</th>
                 ${tdH('center')}Avg predicted</th>
                 ${tdH('center')}Actual hit rate</th>
-                ${tdH('center')}Î” (gap)</th>
+                ${tdH('center')}Δ (gap)</th>
               </tr></thead>
               <tbody>${calBucketRows}</tbody>
             </table>
@@ -1673,9 +1673,9 @@
                 ${tdH()}Match</th>
                 ${tdH('center')}Score</th>
                 ${tdH('center')}Outcome</th>
-                ${tdH('center')}Elo âœ“?</th>
-                ${tdH('center')}Crowd âœ“?</th>
-                ${tdH('center')}Blend âœ“?</th>
+                ${tdH('center')}Elo ✓?</th>
+                ${tdH('center')}Crowd ✓?</th>
+                ${tdH('center')}Blend ✓?</th>
               </tr></thead>
               <tbody style="font-size:0.8rem">${matchRows}</tbody>
             </table>

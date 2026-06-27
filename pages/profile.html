@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WC2026 — My Profile</title>
+  <title>WC2026 â€” My Profile</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
-  <link rel="stylesheet" href="../css/style.css?v=8">
+  <link rel="stylesheet" href="../css/style.css?v=29">
   <style>
     .profile-card {
       max-width: 480px;
@@ -135,11 +135,11 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="../js/config.js?v=8"></script>
-  <script src="../js/data.js?v=8"></script>
-  <script src="../js/supabase-client.js?v=8"></script>
-  <script src="../js/scoring.js?v=8"></script>
-  <script src="../js/ui.js?v=8"></script>
+  <script src="../js/config.js?v=29"></script>
+  <script src="../js/data.js?v=29"></script>
+  <script src="../js/supabase-client.js?v=29"></script>
+  <script src="../js/scoring.js?v=29"></script>
+  <script src="../js/ui.js?v=29"></script>
   <script>
     DB.initSupabase();
     Nav.render('profile');
@@ -233,33 +233,33 @@
           canvas.height = Math.round(h * scale);
           canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
           canvas.toBlob(blob => {
-            if (!blob) { reject(new Error('Canvas export failed — try a different image.')); return; }
+            if (!blob) { reject(new Error('Canvas export failed â€” try a different image.')); return; }
             resolve(new File([blob], 'avatar.jpg', { type: 'image/jpeg' }));
           }, 'image/jpeg', 0.85);
         };
 
         img.onerror = () => {
           URL.revokeObjectURL(objectUrl);
-          reject(new Error("Couldn't read that image — try a JPG or PNG."));
+          reject(new Error("Couldn't read that image â€” try a JPG or PNG."));
         };
 
         img.src = objectUrl;
       });
     }
 
-    // Photo file selection → resize → preview
+    // Photo file selection â†’ resize â†’ preview
     document.getElementById('photoInput').addEventListener('change', async function () {
       const file = this.files[0];
       if (!file) return;
 
-      // Loose guard before resize — real photos are never this large
+      // Loose guard before resize â€” real photos are never this large
       if (file.size > 20 * 1024 * 1024) {
         showAlert('File is too large (max 20 MB).');
         this.value = '';
         return;
       }
 
-      showAlert('Resizing…', 'info');
+      showAlert('Resizingâ€¦', 'info');
       try {
         const resized = await resizeImage(file);
         pendingFile = resized;
@@ -269,7 +269,7 @@
         document.getElementById('removePhotoBtn').classList.remove('hidden');
         document.getElementById('profileAlert').innerHTML = '';
       } catch (err) {
-        showAlert(err.message || "Couldn't process that image — try a JPG or PNG.");
+        showAlert(err.message || "Couldn't process that image â€” try a JPG or PNG.");
         this.value = '';
       }
     });

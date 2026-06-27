@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WC2026 — Match Centre</title>
+  <title>WC2026 â€” Match Centre</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
-  <link rel="stylesheet" href="../css/style.css?v=26">
+  <link rel="stylesheet" href="../css/style.css?v=29">
   <style>
     .round-section { margin-bottom: 2.5rem; }
 
@@ -442,13 +442,13 @@
   <div id="matchPredModal"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="../js/config.js?v=26"></script>
-  <script src="../js/data.js?v=26"></script>
-  <script src="../js/supabase-client.js?v=26"></script>
-  <script src="../js/scoring.js?v=26"></script>
-  <script src="../js/elo.js?v=1"></script>
-  <script src="../js/match-probs.js?v=1"></script>
-  <script src="../js/ui.js?v=26"></script>
+  <script src="../js/config.js?v=29"></script>
+  <script src="../js/data.js?v=29"></script>
+  <script src="../js/supabase-client.js?v=29"></script>
+  <script src="../js/scoring.js?v=29"></script>
+  <script src="../js/elo.js?v=29"></script>
+  <script src="../js/match-probs.js?v=29"></script>
+  <script src="../js/ui.js?v=29"></script>
   <script>
     DB.initSupabase();
     Nav.render('matches');
@@ -462,9 +462,9 @@
     let memberCache      = {};
     let currentSort      = 'kickoff';
     let allProfiles      = [];
-    let eloRatings       = {};  // teamCode → Elo rating
-    let crowdPickMap     = {};  // matchId  → { homeWin, draw, awayWin, pickCount } | null
-    let calibrationMap   = {};  // matchId  → model_calibration row (pre-kickoff snapshot)
+    let eloRatings       = {};  // teamCode â†’ Elo rating
+    let crowdPickMap     = {};  // matchId  â†’ { homeWin, draw, awayWin, pickCount } | null
+    let calibrationMap   = {};  // matchId  â†’ model_calibration row (pre-kickoff snapshot)
     const probExpanded   = new Set(); // matchIds currently expanded
 
     async function load() {
@@ -494,13 +494,13 @@
         .then(({ data }) => { (data || []).forEach(r => { eloRatings[r.team_code] = Number(r.rating); }); })
         .catch(() => {});
 
-      // ---- Pre-kickoff model snapshots — used to freeze the prob bar for live/finished matches ----
+      // ---- Pre-kickoff model snapshots â€” used to freeze the prob bar for live/finished matches ----
       const calibrationPromise = sb.from('model_calibration')
         .select('match_id,blend_home,blend_draw,blend_away,elo_home,elo_draw,elo_away,crowd_home,crowd_draw,crowd_away,crowd_n')
         .then(({ data }) => { (data || []).forEach(r => { calibrationMap[r.match_id] = r; }); })
         .catch(() => {});
 
-      // ---- Crowd picks for upcoming group matches (aggregated only — no user IDs) ----
+      // ---- Crowd picks for upcoming group matches (aggregated only â€” no user IDs) ----
       const upcomingGroupIds = GROUP_FIXTURES
         .filter(f => now < new Date(`${f[1]}T${f[2]}:00Z`).getTime())
         .map(f => f[0]);
@@ -543,10 +543,10 @@
         .map(p => ({ ...p, profiles: ownProfile }));
 
       // allPreds: all-user data for locked matches + own-only for pre-kickoff
-      // Others' pre-kickoff predictions are never fetched — enforcement is at query level above
+      // Others' pre-kickoff predictions are never fetched â€” enforcement is at query level above
       allPreds = [...lockedPreds, ...ownPreKickoffPreds];
 
-      // crowdPickMap for kicked-off matches — derive from already-fetched lockedPreds
+      // crowdPickMap for kicked-off matches â€” derive from already-fetched lockedPreds
       // (the crowdPromise above only queries upcoming matches)
       const lockedByMatch = {};
       lockedPreds.forEach(p => {
@@ -624,7 +624,7 @@
       const gf = GROUP_FIXTURES.find(f => f[0] === matchId);
       if (gf) {
         home = getTeam(gf[4]); away = getTeam(gf[5]);
-        matchLabel = `Match ${matchId} · Group ${gf[3]}`;
+        matchLabel = `Match ${matchId} Â· Group ${gf[3]}`;
         matchDate  = gf[1];
       } else {
         for (const round of Object.values(KNOCKOUT_ROUNDS)) {
@@ -646,7 +646,7 @@
       const hasResult     = result && result.home_score !== null;
       const isLiveModal   = result?.status === 'IN_PLAY' || result?.status === 'PAUSED' || result?.status === 'LIVE';
       const modalScoreHtml = hasResult
-        ? ` · ${isLiveModal ? '<span class="live-badge sm"><span class="live-dot-sm"></span>LIVE</span> ' : ''}<strong>${result.home_score}–${result.away_score}</strong>`
+        ? ` Â· ${isLiveModal ? '<span class="live-badge sm"><span class="live-dot-sm"></span>LIVE</span> ' : ''}<strong>${result.home_score}â€“${result.away_score}</strong>`
         : '';
 
       const privateLeagues = myLeagues.filter(l => !l.is_global);
@@ -669,7 +669,7 @@
                 <span style="color:var(--grey-400);font-weight:400;font-size:0.8rem">vs</span>
                 <span>${away.name}</span>${away.code ? teamFlagImg(away.code) : ''}
               </div>
-              <div class="mpred-meta">${matchLabel}${matchDate ? ' · ' + formatDate(matchDate) : ''}${modalScoreHtml}</div>
+              <div class="mpred-meta">${matchLabel}${matchDate ? ' Â· ' + formatDate(matchDate) : ''}${modalScoreHtml}</div>
               <button class="mpred-close" onclick="closeMatchModal()"><i class="ti ti-x"></i></button>
             </div>
             ${leagueBarHtml}
@@ -709,7 +709,7 @@
           ? `<div class="mpred-row mpred-you">
               ${renderAvatar(myPredRow.profiles, 'avatar', 'width:32px;height:32px;font-size:0.85rem')}
               <span class="mpred-name">You <span class="you-badge">You</span></span>
-              <span class="mpred-score">${myVal.home}–${myVal.away}</span>
+              <span class="mpred-score">${myVal.home}â€“${myVal.away}</span>
             </div>`
           : `<div class="mpred-row mpred-you" style="color:var(--grey-400)">
               <i class="ti ti-circle-dashed" style="font-size:1.5rem;flex-shrink:0"></i>
@@ -737,7 +737,7 @@
       const isMatchFinished = result?.status === 'FINISHED';
       const isMatchLive     = result?.status === 'IN_PLAY' || result?.status === 'PAUSED' || result?.status === 'LIVE';
 
-      // Auto-defaults (4-4) only apply once the match is fully finished — not during live play
+      // Auto-defaults (4-4) only apply once the match is fully finished â€” not during live play
       if (isMatchFinished && allProfiles.length) {
         const predictedSet = new Set(matchPreds.map(p => p.user_id));
         const pool = memberIds ? allProfiles.filter(pr => memberIds.includes(pr.id)) : allProfiles;
@@ -762,9 +762,9 @@
 
       let statusNote = '';
       if (isMatchLive) {
-        statusNote = `<div class="mpred-status-note live-note"><i class="ti ti-live-view"></i> Match in progress — picks are locked and will score at full time</div>`;
+        statusNote = `<div class="mpred-status-note live-note"><i class="ti ti-live-view"></i> Match in progress â€” picks are locked and will score at full time</div>`;
       } else if (!isMatchFinished) {
-        statusNote = `<div class="mpred-status-note pending-note"><i class="ti ti-clock"></i> Awaiting result — all picks are saved and will score once the match finishes</div>`;
+        statusNote = `<div class="mpred-status-note pending-note"><i class="ti ti-clock"></i> Awaiting result â€” all picks are saved and will score once the match finishes</div>`;
       }
 
       bodyEl.innerHTML = statusNote + matchPreds.map(p => {
@@ -785,7 +785,7 @@
           return `<div class="mpred-row mpred-auto${isYou ? ' mpred-you' : ''}${isAiAuto ? ' ai-player-row' : ''}">
             ${renderAvatar(p.profiles, 'avatar', 'width:32px;height:32px;font-size:0.85rem')}
             <span class="mpred-name">${p.profiles?.display_name || 'Player'}${isYou ? ' <span class="you-badge">You</span>' : ''}${isAiAuto ? ' <span class="ai-tag">AI</span>' : ''} <span class="auto-badge">auto</span></span>
-            <span class="mpred-score">4–4</span>
+            <span class="mpred-score">4â€“4</span>
             ${chip}
           </div>`;
         }
@@ -809,7 +809,7 @@
         return `<div class="mpred-row${isYou ? ' mpred-you' : ''}${isAiRow ? ' ai-player-row' : ''}">
           ${renderAvatar(p.profiles, 'avatar', 'width:32px;height:32px;font-size:0.85rem')}
           <span class="mpred-name">${p.profiles?.display_name || 'Player'}${isYou ? ' <span class="you-badge">You</span>' : ''}${isAiRow ? ' <span class="ai-tag">AI</span>' : ''}</span>
-          <span class="mpred-score">${val !== null ? `${val.home}–${val.away}` : '—'}</span>
+          <span class="mpred-score">${val !== null ? `${val.home}â€“${val.away}` : 'â€”'}</span>
           ${chipHtml}
         </div>`;
       }).join('');
@@ -1124,15 +1124,15 @@
       const away = getTeam(awayCode);
       const result = results[id];
       const probBarHtml = buildProbBar(id, homeCode, awayCode, result);
-      return buildMatchRowHtml(id, date, home, away, result, predMap[id] || [], `Match ${id} · Group ${group}`, venue, city, 7, 5, probBarHtml);
+      return buildMatchRowHtml(id, date, home, away, result, predMap[id] || [], `Match ${id} Â· Group ${group}`, venue, city, 7, 5, probBarHtml);
     }
 
     function buildKoMatchRow(m, predMap, results) {
       const result = results[m.id];
       const homeCode = m.home_team || result?.home_team || null;
       const awayCode = m.away_team || result?.away_team || null;
-      const home = homeCode ? getTeam(homeCode) : { flag: '🏳️', name: 'TBD', code: 'TBD' };
-      const away = awayCode ? getTeam(awayCode) : { flag: '🏳️', name: 'TBD', code: 'TBD' };
+      const home = homeCode ? getTeam(homeCode) : { flag: 'ðŸ³ï¸', name: 'TBD', code: 'TBD' };
+      const away = awayCode ? getTeam(awayCode) : { flag: 'ðŸ³ï¸', name: 'TBD', code: 'TBD' };
       const exactPts = m.id === 104 ? 10 : 7;
       const resultPts = m.id === 104 ? 7 : 5;
       const probBarHtml = (homeCode && awayCode) ? buildProbBar(m.id, homeCode, awayCode, result) : '';
@@ -1152,19 +1152,19 @@
 
       if (isLive) {
         statusBadge = `<div class="live-badge"><div class="live-dot-sm"></div>LIVE</div>`;
-        scoreLine = `<div class="match-scoreline live">${result.home_score} – ${result.away_score}</div>`;
+        scoreLine = `<div class="match-scoreline live">${result.home_score} â€“ ${result.away_score}</div>`;
       } else if (isFinished) {
         statusBadge = `<span class="finished-badge">FT</span>`;
-        scoreLine = `<div class="match-scoreline">${result.home_score} – ${result.away_score}</div>`;
+        scoreLine = `<div class="match-scoreline">${result.home_score} â€“ ${result.away_score}</div>`;
       }
 
       let predsHtml = '';
       const autoPill = isFinished && currentUserId && !preds.some(p => p.userId === currentUserId)
-        ? `<span class="pred-pill auto"><span class="pred-name"><strong>You</strong>:</span>4–4 <span class="auto-tag">auto</span></span>`
+        ? `<span class="pred-pill auto"><span class="pred-name"><strong>You</strong>:</span>4â€“4 <span class="auto-tag">auto</span></span>`
         : '';
       if (preds.length > 0 || autoPill) {
         const pills = [autoPill, ...preds.map(p => {
-          const predText = `${p.home}–${p.away}`;
+          const predText = `${p.home}â€“${p.away}`;
           let cls = '';
           if (isFinished) {
             const actH = result.home_score, actA = result.away_score;

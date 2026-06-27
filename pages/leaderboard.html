@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WC2026 — Leaderboard</title>
+  <title>WC2026 â€” Leaderboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
-  <link rel="stylesheet" href="../css/style.css?v=8">
+  <link rel="stylesheet" href="../css/style.css?v=29">
 </head>
 <body>
   <nav class="nav" id="main-nav"></nav>
@@ -34,11 +34,11 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="../js/config.js?v=8"></script>
-  <script src="../js/data.js?v=8"></script>
-  <script src="../js/supabase-client.js?v=8"></script>
-  <script src="../js/scoring.js?v=8"></script>
-  <script src="../js/ui.js?v=8"></script>
+  <script src="../js/config.js?v=29"></script>
+  <script src="../js/data.js?v=29"></script>
+  <script src="../js/supabase-client.js?v=29"></script>
+  <script src="../js/scoring.js?v=29"></script>
+  <script src="../js/ui.js?v=29"></script>
   <script>
     DB.initSupabase();
     Nav.render('leaderboard');
@@ -88,7 +88,7 @@
       const globalLabel  = globalLeague ? globalLeague.name : 'Global';
 
       const opts = [
-        `<option value="global">${globalLabel} — All Players</option>`,
+        `<option value="global">${globalLabel} â€” All Players</option>`,
         ...privateLeagues.map(l => {
           const n = l.member_count || 1;
           return `<option value="${l.id}">${l.name} (${n} ${n === 1 ? 'player' : 'players'})</option>`;
@@ -231,7 +231,7 @@
 
         const roundPts = rounds.map(r => {
           const pts = s[r + '_points'];
-          return `<td class="round-col hide-mobile">${pts != null ? pts : '—'}</td>`;
+          return `<td class="round-col hide-mobile">${pts != null ? pts : 'â€”'}</td>`;
         }).join('');
 
         return `

@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WC2026 — Round 3: Group Stage Scores</title>
+  <title>WC2026 â€” Round 3: Group Stage Scores</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
-  <link rel="stylesheet" href="../css/style.css?v=8">
+  <link rel="stylesheet" href="../css/style.css?v=29">
   <style>
     .score-teams {
       display: flex;
@@ -91,7 +91,7 @@
       .score-inputs { order: 3; flex: 0 0 100%; justify-content: center; }
     }
 
-    /* Per-match lock pills — compact variant */
+    /* Per-match lock pills â€” compact variant */
     @keyframes lockPulse {
       0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(200,241,53,0.55); }
       50%       { opacity: 0.82; box-shadow: 0 0 0 5px rgba(200,241,53,0); }
@@ -390,11 +390,11 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="../js/config.js?v=8"></script>
-  <script src="../js/data.js?v=8"></script>
-  <script src="../js/supabase-client.js?v=8"></script>
-  <script src="../js/scoring.js?v=8"></script>
-  <script src="../js/ui.js?v=8"></script>
+  <script src="../js/config.js?v=29"></script>
+  <script src="../js/data.js?v=29"></script>
+  <script src="../js/supabase-client.js?v=29"></script>
+  <script src="../js/scoring.js?v=29"></script>
+  <script src="../js/ui.js?v=29"></script>
   <script>
     DB.initSupabase();
     Nav.render('predictions');
@@ -641,17 +641,17 @@
         if (!isNaN(pH) && !isNaN(pA)) {
           if (pH === actH && pA === actA) {
             cardClass = 'exact';
-            resultHtml = `<div class="result-actual" style="color:var(--green)"><i class="ti ti-check"></i> Exact! Result: ${actH}–${actA} &middot; +7 pts</div>`;
+            resultHtml = `<div class="result-actual" style="color:var(--green)"><i class="ti ti-check"></i> Exact! Result: ${actH}â€“${actA} &middot; +7 pts</div>`;
           } else if (Math.sign(pH - pA) === Math.sign(actH - actA)) {
             cardClass = 'result';
-            resultHtml = `<div class="result-actual" style="color:#5a6e00"><i class="ti ti-check"></i> Result! Score: ${actH}–${actA} &middot; +5 pts</div>`;
+            resultHtml = `<div class="result-actual" style="color:#5a6e00"><i class="ti ti-check"></i> Result! Score: ${actH}â€“${actA} &middot; +5 pts</div>`;
           } else {
             cardClass = 'wrong';
-            resultHtml = `<div class="result-actual" style="color:var(--red)"><i class="ti ti-x"></i> Wrong. Result: ${actH}–${actA}</div>`;
+            resultHtml = `<div class="result-actual" style="color:var(--red)"><i class="ti ti-x"></i> Wrong. Result: ${actH}â€“${actA}</div>`;
           }
         }
       } else if (hasResult) {
-        resultHtml = `<div class="result-actual">Result: ${result.home_score}–${result.away_score}</div>`;
+        resultHtml = `<div class="result-actual">Result: ${result.home_score}â€“${result.away_score}</div>`;
       }
 
       return `
@@ -669,7 +669,7 @@
               <input type="number" id="${idPrefix}h_${id}" class="score-num" min="0" max="20"
                 inputmode="numeric" pattern="[0-9]*"
                 value="${homeVal}" placeholder="0" ${matchLocked ? 'disabled' : ''}>
-              <span class="score-sep">–</span>
+              <span class="score-sep">â€“</span>
               <input type="number" id="${idPrefix}a_${id}" class="score-num" min="0" max="20"
                 inputmode="numeric" pattern="[0-9]*"
                 value="${awayVal}" placeholder="0" ${matchLocked ? 'disabled' : ''}>
@@ -707,7 +707,7 @@
             <td>${s.P}</td><td>${s.W}</td><td>${s.D}</td><td>${s.L}</td>
             <td class="col-gf">${s.GF}</td>
             <td class="col-ga">${s.GA}</td>
-            <td class="col-gd ${gdClass}">${s.P > 0 ? gdStr : '—'}</td>
+            <td class="col-gd ${gdClass}">${s.P > 0 ? gdStr : 'â€”'}</td>
             <td class="pts-cell">${s.Pts}</td>
           </tr>`;
       }).join('');
@@ -742,8 +742,8 @@
         </div>
         <div class="pred-tables-grid">${grid}</div>
         <div class="legend">
-          <div class="legend-item"><div class="legend-stripe" style="background:var(--lime-dark)"></div><span>Top 2 — advance to R32</span></div>
-          <div class="legend-item"><div class="legend-stripe" style="background:#a3e635"></div><span>3rd place — may advance</span></div>
+          <div class="legend-item"><div class="legend-stripe" style="background:var(--lime-dark)"></div><span>Top 2 â€” advance to R32</span></div>
+          <div class="legend-item"><div class="legend-stripe" style="background:#a3e635"></div><span>3rd place â€” may advance</span></div>
         </div>`;
     }
 
@@ -818,7 +818,7 @@
                 ${teamFlagImg(awayCode)}
               </div>
               <div class="pred-modal-meta">Group ${group} &middot; ${formatDate(date)}</div>
-              ${hasResult ? `<div class="pred-modal-meta" style="color:var(--ink);font-weight:700;margin-top:0.2rem">Result: ${result.home_score}–${result.away_score}</div>` : ''}
+              ${hasResult ? `<div class="pred-modal-meta" style="color:var(--ink);font-weight:700;margin-top:0.2rem">Result: ${result.home_score}â€“${result.away_score}</div>` : ''}
               <button class="pred-modal-close" id="modalCloseBtn" aria-label="Close"><i class="ti ti-x"></i></button>
             </div>
             ${leagueBarHtml}
@@ -849,7 +849,7 @@
       if (!bodyEl) return;
       bodyEl.innerHTML = `<div style="padding:2.5rem;text-align:center"><div class="spinner" style="margin:0 auto"></div></div>`;
 
-      // Per-match kickoff enforcement — others' picks only visible after the match starts
+      // Per-match kickoff enforcement â€” others' picks only visible after the match starts
       const fixture = GROUP_FIXTURES.find(f => f[0] === matchId);
       const kickoff = fixture ? new Date(`${fixture[1]}T${fixture[2]}:00Z`) : null;
       if (!kickoff || Date.now() < kickoff.getTime()) {
@@ -857,7 +857,7 @@
         const myHtml = (myPred && myPred.home !== undefined)
           ? `<div class="player-pred-row is-you">
               <span class="player-pred-name" style="font-weight:600">You</span>
-              <span class="player-pred-score">${myPred.home}–${myPred.away}</span>
+              <span class="player-pred-score">${myPred.home}â€“${myPred.away}</span>
             </div>`
           : `<div style="padding:1rem 1.25rem;color:var(--grey-400)">You haven't predicted this match yet.</div>`;
         bodyEl.innerHTML = myHtml +
@@ -920,14 +920,14 @@
 
         bodyEl.innerHTML = rows.map(row => {
           const isYou = row.uid === userId;
-          let scoreHtml = `<span class="player-pred-score no-pred">—</span>`;
+          let scoreHtml = `<span class="player-pred-score no-pred">â€”</span>`;
           let chipHtml = '';
 
           if (row.value !== null) {
             let val;
             try { val = JSON.parse(row.value); } catch {}
             if (val && val.home !== undefined && val.away !== undefined) {
-              scoreHtml = `<span class="player-pred-score">${val.home}–${val.away}</span>`;
+              scoreHtml = `<span class="player-pred-score">${val.home}â€“${val.away}</span>`;
               if (hasResult) {
                 const actH = result.home_score, actA = result.away_score;
                 const pH = parseInt(val.home), pA = parseInt(val.away);
@@ -972,7 +972,7 @@
     document.getElementById('saveBtn')?.addEventListener('click', savePredictions);
     DB.subscribeToMatchResults(async () => {
       // Update result data and re-render displays in place.
-      // Do NOT call load() — that resets `saved` and wipes unsaved typed predictions.
+      // Do NOT call load() â€” that resets `saved` and wipes unsaved typed predictions.
       try {
         const fresh = await DB.getMatchResults();
         fresh.forEach(r => { results[r.match_id] = r; });

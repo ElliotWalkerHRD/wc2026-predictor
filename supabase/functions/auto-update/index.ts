@@ -235,7 +235,11 @@ serve(async (req) => {
 
     const upserts: any[] = [];
     for (const match of apiMatches) {
-      if (match.score?.fullTime?.home == null) continue;
+      const status: string = match.status;
+      const isLive     = status === "IN_PLAY" || status === "PAUSED";
+      const isFinished = match.score?.fullTime?.home != null;
+      if (!isLive && !isFinished) continue; // skip TIMED/SCHEDULED/etc.
+
       const stage: string = match.stage;
       let ourId: number | null = null;
 
@@ -252,11 +256,19 @@ serve(async (req) => {
       }
       if (ourId == null) continue;
 
+      // For live matches fullTime is null — use halfTime score, or fall back to 0-0
+      const homeScore: number = match.score?.fullTime?.home
+        ?? match.score?.halfTime?.home
+        ?? 0;
+      const awayScore: number = match.score?.fullTime?.away
+        ?? match.score?.halfTime?.away
+        ?? 0;
+
       upserts.push({
         match_id:   ourId,
-        home_score: match.score.fullTime.home,
-        away_score: match.score.fullTime.away,
-        status:     match.status,
+        home_score: homeScore,
+        away_score: awayScore,
+        status,
         updated_at: new Date().toISOString(),
       });
     }

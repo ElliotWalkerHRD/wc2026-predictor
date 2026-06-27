@@ -620,7 +620,7 @@
 
       const result        = allResults[matchId];
       const hasResult     = result && result.home_score !== null;
-      const isLiveModal   = result?.status === 'IN_PLAY' || result?.status === 'PAUSED';
+      const isLiveModal   = result?.status === 'IN_PLAY' || result?.status === 'PAUSED' || result?.status === 'LIVE';
       const modalScoreHtml = hasResult
         ? ` · ${isLiveModal ? '<span class="live-badge sm"><span class="live-dot-sm"></span>LIVE</span> ' : ''}<strong>${result.home_score}–${result.away_score}</strong>`
         : '';
@@ -924,7 +924,7 @@
 
     function buildProbBar(matchId, homeCode, awayCode, result) {
       const isFinished = result?.status === 'FINISHED';
-      const isLive     = result?.status === 'IN_PLAY' || result?.status === 'PAUSED';
+      const isLive     = result?.status === 'IN_PLAY' || result?.status === 'PAUSED' || result?.status === 'LIVE';
       if (isFinished || isLive) return '';
 
       const homeR = eloRatings[homeCode];
@@ -1029,7 +1029,7 @@
 
     function buildMatchRowHtml(id, date, home, away, result, preds, label, venue, city, exactPts, resultPts, probBarHtml = '') {
       const hasResult  = result && result.home_score !== null;
-      const isLive     = result?.status === 'IN_PLAY' || result?.status === 'PAUSED';
+      const isLive     = result?.status === 'IN_PLAY' || result?.status === 'PAUSED' || result?.status === 'LIVE';
       const isFinished = hasResult && result.status === 'FINISHED';
       const kickoff = getMatchKickoff(id);
 
@@ -1135,7 +1135,7 @@
       // Priority 1: any live match
       let target = rows.find(r => {
         const res = allResults[parseInt(r.dataset.matchId)];
-        return res?.status === 'IN_PLAY' || res?.status === 'PAUSED';
+        return res?.status === 'IN_PLAY' || res?.status === 'PAUSED' || res?.status === 'LIVE';
       });
 
       if (!target) {

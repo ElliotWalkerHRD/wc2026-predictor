@@ -236,7 +236,7 @@ serve(async (req) => {
     const upserts: any[] = [];
     for (const match of apiMatches) {
       const status: string = match.status;
-      const isLive     = status === "IN_PLAY" || status === "PAUSED";
+      const isLive     = status === "IN_PLAY" || status === "PAUSED" || status === "LIVE";
       const isFinished = match.score?.fullTime?.home != null;
       if (!isLive && !isFinished) continue; // skip TIMED/SCHEDULED/etc.
 

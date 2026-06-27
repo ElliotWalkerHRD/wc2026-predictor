@@ -724,7 +724,8 @@ serve(async (req) => {
   }
 
   // ---- Step 5: R32 bracket seeding ----
-  // Runs whenever all 12 groups are FINISHED. Idempotent: safe to re-run.
+  // Direct matches (W/R sides only) seed per-match as soon as their groups finish.
+  // Third-place slots need ALL 12 groups for cross-group ranking — unavoidable.
   let bracketSeeded = 0;
   try {
     const GROUPS_ALL = ["A","B","C","D","E","F","G","H","I","J","K","L"];
@@ -766,16 +767,38 @@ serve(async (req) => {
       allThird.push({ group: grp, code: srt[2][0], pts: srt[2][1].pts, gd: srt[2][1].gd, gf: srt[2][1].gf });
     }
 
-    if (!GROUPS_ALL.every(g => gStandings[g] !== null)) {
-      console.log("[auto-update] bracket: groups not yet complete, skipping");
-    } else {
-      // Rank 3rd-place teams best-to-worst; qualify top 8
+    // ---- Direct matches: seed as soon as both dependent groups are complete ----
+    type WRSide = ['W'|'R', string];
+    const resolveWR = (side: WRSide): string | null => {
+      const s = gStandings[side[1]];
+      return side[0] === 'W' ? (s?.winner ?? null) : (s?.runnerUp ?? null);
+    };
+    // [matchId, homeSide, homeDepGroups, awaySide, awayDepGroups]
+    const R32_DIRECT: [number, WRSide, string[], WRSide, string[]][] = [
+      [73, ['R','A'], ['A'], ['R','B'], ['B']],
+      [75, ['W','F'], ['F'], ['R','C'], ['C']],
+      [76, ['W','C'], ['C'], ['R','F'], ['F']],
+      [78, ['R','E'], ['E'], ['R','I'], ['I']],
+      [83, ['R','K'], ['K'], ['R','L'], ['L']],
+      [84, ['W','H'], ['H'], ['R','J'], ['J']],
+      [86, ['W','J'], ['J'], ['R','H'], ['H']],
+      [88, ['R','D'], ['D'], ['R','G'], ['G']],
+    ];
+    const seedUpserts: any[] = [];
+    for (const [id, hSide, hDeps, aSide, aDeps] of R32_DIRECT) {
+      if (![...hDeps, ...aDeps].every(g => gStandings[g] !== null)) continue;
+      const ht = resolveWR(hSide), at = resolveWR(aSide);
+      if (ht && at) seedUpserts.push({ match_id: id, home_team: ht, away_team: at });
+    }
+
+    // ---- Third-place slots: need ALL groups (cross-group ranking shifts late results) ----
+    const allComplete = GROUPS_ALL.every(g => gStandings[g] !== null);
+    if (allComplete) {
       allThird.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
       const qualGroups = allThird.slice(0, 8).map(t => t.group);
       const thirdTeam: Record<string, string> = {};
       allThird.slice(0, 8).forEach(t => { thirdTeam[t.group] = t.code; });
 
-      // Bipartite matching: assign qualifying 3rd-place teams to R32 slots
       const THIRD_ELIG: Record<number, Set<string>> = {
         74: new Set(['A','B','C','D','F']),
         77: new Set(['C','D','F','G','H']),
@@ -800,46 +823,36 @@ serve(async (req) => {
         }
         return false;
       }
-      // Tightest-constrained groups first → canonical assignment
       const byDegree = [...qualGroups].sort((a, b) =>
         slotIds.filter(s => THIRD_ELIG[s].has(a)).length -
         slotIds.filter(s => THIRD_ELIG[s].has(b)).length
       );
       for (const g of byDegree) augmentBracket(g, new Set());
 
-      type Side = ['W'|'R', string] | ['3', number];
-      const resolveTeam = (side: Side): string | null => {
-        if (side[0] === 'W') return gStandings[side[1] as string]?.winner ?? null;
-        if (side[0] === 'R') return gStandings[side[1] as string]?.runnerUp ?? null;
-        const ag = slotToGroup[side[1] as number];
-        return ag ? (thirdTeam[ag] ?? null) : null;
-      };
-
-      const R32: [number, Side, Side][] = [
-        [73, ['R','A'], ['R','B']],  [74, ['W','E'], ['3', 74]],
-        [75, ['W','F'], ['R','C']],  [76, ['W','C'], ['R','F']],
-        [77, ['W','I'], ['3', 77]],  [78, ['R','E'], ['R','I']],
-        [79, ['W','A'], ['3', 79]],  [80, ['W','L'], ['3', 80]],
-        [81, ['W','D'], ['3', 81]],  [82, ['W','G'], ['3', 82]],
-        [83, ['R','K'], ['R','L']],  [84, ['W','H'], ['R','J']],
-        [85, ['W','B'], ['3', 85]],  [86, ['W','J'], ['R','H']],
-        [87, ['W','K'], ['3', 87]],  [88, ['R','D'], ['R','G']],
+      // [matchId, homeWinnerGroup, thirdSlotId]
+      const R32_THIRD: [number, string, number][] = [
+        [74, 'E', 74], [77, 'I', 77], [79, 'A', 79], [80, 'L', 80],
+        [81, 'D', 81], [82, 'G', 82], [85, 'B', 85], [87, 'K', 87],
       ];
-
-      const seedUpserts = R32.flatMap(([id, hSide, aSide]) => {
-        const ht = resolveTeam(hSide), at = resolveTeam(aSide);
-        return ht && at ? [{ match_id: id, home_team: ht, away_team: at }] : [];
-      });
-
-      if (seedUpserts.length > 0) {
-        const { error: seedErr } = await supabaseAdmin
-          .from("match_results")
-          .upsert(seedUpserts, { onConflict: "match_id" });
-        if (seedErr) throw seedErr;
-        bracketSeeded = seedUpserts.length;
+      for (const [id, winGrp, slot] of R32_THIRD) {
+        const ht = gStandings[winGrp]?.winner ?? null;
+        const ag = slotToGroup[slot];
+        const at = ag ? (thirdTeam[ag] ?? null) : null;
+        if (ht && at) seedUpserts.push({ match_id: id, home_team: ht, away_team: at });
       }
-      console.log(`[auto-update] bracket: ${bracketSeeded}/16 R32 matches seeded`);
+    } else {
+      const pending = GROUPS_ALL.filter(g => gStandings[g] === null);
+      console.log(`[auto-update] bracket: 3rd-place slots await groups ${pending.join(',')}`);
     }
+
+    if (seedUpserts.length > 0) {
+      const { error: seedErr } = await supabaseAdmin
+        .from("match_results")
+        .upsert(seedUpserts, { onConflict: "match_id" });
+      if (seedErr) throw seedErr;
+      bracketSeeded = seedUpserts.length;
+    }
+    console.log(`[auto-update] bracket: ${bracketSeeded} R32 matches seeded`);
   } catch (e: any) {
     console.error("[auto-update] bracket seeding error (non-fatal):", e.message);
   }

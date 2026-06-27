@@ -549,15 +549,21 @@
       85: new Set(['E','F','G','I','J']),
       87: new Set(['D','E','I','J','L']),
     };
-    const R32_FIXTURES_DEF = [
-      [73, ['R','A'], ['R','B']],  [74, ['W','E'], ['3', 74]],
-      [75, ['W','F'], ['R','C']],  [76, ['W','C'], ['R','F']],
-      [77, ['W','I'], ['3', 77]],  [78, ['R','E'], ['R','I']],
-      [79, ['W','A'], ['3', 79]],  [80, ['W','L'], ['3', 80]],
-      [81, ['W','D'], ['3', 81]],  [82, ['W','G'], ['3', 82]],
-      [83, ['R','K'], ['R','L']],  [84, ['W','H'], ['R','J']],
-      [85, ['W','B'], ['3', 85]],  [86, ['W','J'], ['R','H']],
-      [87, ['W','K'], ['3', 87]],  [88, ['R','D'], ['R','G']],
+    // Direct R32 matches: [matchId, homeSide, homeDepGroups, awaySide, awayDepGroups]
+    const R32_DIRECT_DEF = [
+      [73, ['R','A'], ['A'], ['R','B'], ['B']],
+      [75, ['W','F'], ['F'], ['R','C'], ['C']],
+      [76, ['W','C'], ['C'], ['R','F'], ['F']],
+      [78, ['R','E'], ['E'], ['R','I'], ['I']],
+      [83, ['R','K'], ['K'], ['R','L'], ['L']],
+      [84, ['W','H'], ['H'], ['R','J'], ['J']],
+      [86, ['W','J'], ['J'], ['R','H'], ['H']],
+      [88, ['R','D'], ['D'], ['R','G'], ['G']],
+    ];
+    // Third-place R32 matches: [matchId, homeWinnerGroup, thirdSlotId]
+    const R32_THIRD_DEF = [
+      [74, 'E', 74], [77, 'I', 77], [79, 'A', 79], [80, 'L', 80],
+      [81, 'D', 81], [82, 'G', 82], [85, 'B', 85], [87, 'K', 87],
     ];
 
     document.getElementById('seedBracketBtn').addEventListener('click', async () => {
@@ -603,47 +609,55 @@
           allThird.push({ group: grp, code: srt[2][0], ...srt[2][1] });
         }
 
-        const incomplete = GROUPS_ALL.filter(g => gStandings[g] === null);
-        if (incomplete.length > 0) {
+        // Seed direct matches per-match as soon as their specific groups finish
+        const resolveWR = ([typ, grp]) =>
+          typ === 'W' ? (gStandings[grp]?.winner ?? null) : (gStandings[grp]?.runnerUp ?? null);
+
+        const upserts = [];
+        for (const [id, hSide, hDeps, aSide, aDeps] of R32_DIRECT_DEF) {
+          if (![...hDeps, ...aDeps].every(g => gStandings[g] !== null)) continue;
+          const ht = resolveWR(hSide), at = resolveWR(aSide);
+          if (ht && at) upserts.push({ match_id: id, home_team: ht, away_team: at });
+        }
+
+        // Third-place slots only when ALL groups complete (cross-group ranking)
+        const allComplete = GROUPS_ALL.every(g => gStandings[g] !== null);
+        if (allComplete) {
+          allThird.sort((a,b) => b.pts-a.pts || b.gd-a.gd || b.gf-a.gf);
+          const qualGroups = allThird.slice(0, 8).map(t => t.group);
+          const thirdTeam = {};
+          allThird.slice(0, 8).forEach(t => { thirdTeam[t.group] = t.code; });
+
+          const slotIds = Object.keys(THIRD_ELIG).map(Number);
+          const slotToGroup = {};
+          function augment(grp, seen) {
+            for (const slot of slotIds) {
+              if (seen.has(slot)) continue;
+              if (!THIRD_ELIG[slot].has(grp)) continue;
+              seen.add(slot);
+              if (!slotToGroup[slot] || augment(slotToGroup[slot], seen)) {
+                slotToGroup[slot] = grp; return true;
+              }
+            }
+            return false;
+          }
+          const byDegree = [...qualGroups].sort((a,b) =>
+            slotIds.filter(s => THIRD_ELIG[s].has(a)).length - slotIds.filter(s => THIRD_ELIG[s].has(b)).length
+          );
+          for (const g of byDegree) augment(g, new Set());
+
+          for (const [id, winGrp, slot] of R32_THIRD_DEF) {
+            const ht = gStandings[winGrp]?.winner ?? null;
+            const ag = slotToGroup[slot];
+            const at = ag ? (thirdTeam[ag] ?? null) : null;
+            if (ht && at) upserts.push({ match_id: id, home_team: ht, away_team: at });
+          }
+        } else {
+          const pending = GROUPS_ALL.filter(g => gStandings[g] === null);
           statusEl.innerHTML = `<div class="alert alert-info" style="margin-top:0"><i class="ti ti-info-circle"></i>
-            Groups ${incomplete.join(', ')} not yet complete. Seeding partial bracket (${16 - incomplete.length * 2}+ matches may resolve).
+            3rd-place slots await groups: ${pending.join(', ')} — seeding direct matches only.
           </div>`;
         }
-
-        allThird.sort((a,b) => b.pts-a.pts || b.gd-a.gd || b.gf-a.gf);
-        const qualGroups = allThird.filter((_,i) => i < 8).map(t => t.group);
-        const thirdTeam = {};
-        allThird.slice(0, 8).forEach(t => { thirdTeam[t.group] = t.code; });
-
-        const slotIds = Object.keys(THIRD_ELIG).map(Number);
-        const slotToGroup = {};
-        function augment(grp, seen) {
-          for (const slot of slotIds) {
-            if (seen.has(slot)) continue;
-            if (!THIRD_ELIG[slot].has(grp)) continue;
-            seen.add(slot);
-            if (!slotToGroup[slot] || augment(slotToGroup[slot], seen)) {
-              slotToGroup[slot] = grp; return true;
-            }
-          }
-          return false;
-        }
-        const byDegree = [...qualGroups].sort((a,b) =>
-          slotIds.filter(s => THIRD_ELIG[s].has(a)).length - slotIds.filter(s => THIRD_ELIG[s].has(b)).length
-        );
-        for (const g of byDegree) augment(g, new Set());
-
-        const resolveTeam = ([typ, ref]) => {
-          if (typ === 'W') return gStandings[ref]?.winner ?? null;
-          if (typ === 'R') return gStandings[ref]?.runnerUp ?? null;
-          const ag = slotToGroup[ref];
-          return ag ? (thirdTeam[ag] ?? null) : null;
-        };
-
-        const upserts = R32_FIXTURES_DEF.flatMap(([id, hSide, aSide]) => {
-          const ht = resolveTeam(hSide), at = resolveTeam(aSide);
-          return ht && at ? [{ match_id: id, home_team: ht, away_team: at }] : [];
-        });
 
         if (upserts.length === 0) {
           statusEl.innerHTML = `<div class="alert alert-info" style="margin-top:0"><i class="ti ti-info-circle"></i> No R32 slots could be resolved yet — groups may be incomplete.</div>`;

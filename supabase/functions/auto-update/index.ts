@@ -723,6 +723,127 @@ serve(async (req) => {
     console.error("[auto-update] calibration error (non-fatal):", e.message);
   }
 
+  // ---- Step 5: R32 bracket seeding ----
+  // Runs whenever all 12 groups are FINISHED. Idempotent: safe to re-run.
+  let bracketSeeded = 0;
+  try {
+    const GROUPS_ALL = ["A","B","C","D","E","F","G","H","I","J","K","L"];
+    const groupIds = GROUP_FIXTURES.map(([id]) => id);
+
+    const { data: groupResults, error: grpErr } = await supabaseAdmin
+      .from("match_results")
+      .select("match_id, home_score, away_score, status")
+      .in("match_id", groupIds);
+    if (grpErr) throw grpErr;
+
+    const grpMap: Record<number, any> = {};
+    (groupResults || []).forEach((r: any) => { grpMap[r.match_id] = r; });
+
+    const gStandings: Record<string, { winner: string; runnerUp: string; third: string } | null> = {};
+    const allThird: { group: string; code: string; pts: number; gd: number; gf: number }[] = [];
+
+    for (const grp of GROUPS_ALL) {
+      const fixtures = GROUP_FIXTURES.filter(([, g]) => g === grp);
+      if (!fixtures.every(([id]) => grpMap[id]?.status === 'FINISHED')) {
+        gStandings[grp] = null; continue;
+      }
+      const teams: Record<string, { pts: number; gd: number; gf: number }> = {};
+      for (const [id, , hm, aw] of fixtures) {
+        const r = grpMap[id];
+        if (!teams[hm]) teams[hm] = { pts: 0, gd: 0, gf: 0 };
+        if (!teams[aw]) teams[aw] = { pts: 0, gd: 0, gf: 0 };
+        const hg = r.home_score as number, ag = r.away_score as number;
+        teams[hm].gf += hg; teams[hm].gd += hg - ag;
+        teams[aw].gf += ag; teams[aw].gd += ag - hg;
+        if (hg > ag) { teams[hm].pts += 3; }
+        else if (hg === ag) { teams[hm].pts += 1; teams[aw].pts += 1; }
+        else { teams[aw].pts += 3; }
+      }
+      const srt = Object.entries(teams).sort(([, a], [, b]) =>
+        b.pts - a.pts || b.gd - a.gd || b.gf - a.gf
+      );
+      gStandings[grp] = { winner: srt[0][0], runnerUp: srt[1][0], third: srt[2][0] };
+      allThird.push({ group: grp, code: srt[2][0], pts: srt[2][1].pts, gd: srt[2][1].gd, gf: srt[2][1].gf });
+    }
+
+    if (!GROUPS_ALL.every(g => gStandings[g] !== null)) {
+      console.log("[auto-update] bracket: groups not yet complete, skipping");
+    } else {
+      // Rank 3rd-place teams best-to-worst; qualify top 8
+      allThird.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+      const qualGroups = allThird.slice(0, 8).map(t => t.group);
+      const thirdTeam: Record<string, string> = {};
+      allThird.slice(0, 8).forEach(t => { thirdTeam[t.group] = t.code; });
+
+      // Bipartite matching: assign qualifying 3rd-place teams to R32 slots
+      const THIRD_ELIG: Record<number, Set<string>> = {
+        74: new Set(['A','B','C','D','F']),
+        77: new Set(['C','D','F','G','H']),
+        79: new Set(['C','E','F','H','I']),
+        80: new Set(['E','H','I','J','K']),
+        81: new Set(['B','E','F','I','J']),
+        82: new Set(['A','E','H','I','J']),
+        85: new Set(['E','F','G','I','J']),
+        87: new Set(['D','E','I','J','L']),
+      };
+      const slotIds = Object.keys(THIRD_ELIG).map(Number);
+      const slotToGroup: Record<number, string> = {};
+
+      function augmentBracket(grp: string, seen: Set<number>): boolean {
+        for (const slot of slotIds) {
+          if (seen.has(slot)) continue;
+          if (!THIRD_ELIG[slot].has(grp)) continue;
+          seen.add(slot);
+          if (!slotToGroup[slot] || augmentBracket(slotToGroup[slot], seen)) {
+            slotToGroup[slot] = grp; return true;
+          }
+        }
+        return false;
+      }
+      // Tightest-constrained groups first → canonical assignment
+      const byDegree = [...qualGroups].sort((a, b) =>
+        slotIds.filter(s => THIRD_ELIG[s].has(a)).length -
+        slotIds.filter(s => THIRD_ELIG[s].has(b)).length
+      );
+      for (const g of byDegree) augmentBracket(g, new Set());
+
+      type Side = ['W'|'R', string] | ['3', number];
+      const resolveTeam = (side: Side): string | null => {
+        if (side[0] === 'W') return gStandings[side[1] as string]?.winner ?? null;
+        if (side[0] === 'R') return gStandings[side[1] as string]?.runnerUp ?? null;
+        const ag = slotToGroup[side[1] as number];
+        return ag ? (thirdTeam[ag] ?? null) : null;
+      };
+
+      const R32: [number, Side, Side][] = [
+        [73, ['R','A'], ['R','B']],  [74, ['W','E'], ['3', 74]],
+        [75, ['W','F'], ['R','C']],  [76, ['W','C'], ['R','F']],
+        [77, ['W','I'], ['3', 77]],  [78, ['R','E'], ['R','I']],
+        [79, ['W','A'], ['3', 79]],  [80, ['W','L'], ['3', 80]],
+        [81, ['W','D'], ['3', 81]],  [82, ['W','G'], ['3', 82]],
+        [83, ['R','K'], ['R','L']],  [84, ['W','H'], ['R','J']],
+        [85, ['W','B'], ['3', 85]],  [86, ['W','J'], ['R','H']],
+        [87, ['W','K'], ['3', 87]],  [88, ['R','D'], ['R','G']],
+      ];
+
+      const seedUpserts = R32.flatMap(([id, hSide, aSide]) => {
+        const ht = resolveTeam(hSide), at = resolveTeam(aSide);
+        return ht && at ? [{ match_id: id, home_team: ht, away_team: at }] : [];
+      });
+
+      if (seedUpserts.length > 0) {
+        const { error: seedErr } = await supabaseAdmin
+          .from("match_results")
+          .upsert(seedUpserts, { onConflict: "match_id" });
+        if (seedErr) throw seedErr;
+        bracketSeeded = seedUpserts.length;
+      }
+      console.log(`[auto-update] bracket: ${bracketSeeded}/16 R32 matches seeded`);
+    }
+  } catch (e: any) {
+    console.error("[auto-update] bracket seeding error (non-fatal):", e.message);
+  }
+
   // ---- Log success ----
   const durationMs = Date.now() - startMs;
   await writeLog(supabaseAdmin, {
@@ -742,6 +863,7 @@ serve(async (req) => {
       elo_matches_applied: eloMatchesApplied,
       calib_snapshotted: calibSnapshotted,
       calib_resolved: calibResolved,
+      bracket_seeded: bracketSeeded,
       duration_ms: durationMs,
     }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } }

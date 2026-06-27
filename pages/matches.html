@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
-  <link rel="stylesheet" href="../css/style.css?v=25">
+  <link rel="stylesheet" href="../css/style.css?v=26">
   <style>
     .round-section { margin-bottom: 2.5rem; }
 
@@ -442,13 +442,13 @@
   <div id="matchPredModal"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="../js/config.js?v=25"></script>
-  <script src="../js/data.js?v=25"></script>
-  <script src="../js/supabase-client.js?v=25"></script>
-  <script src="../js/scoring.js?v=25"></script>
+  <script src="../js/config.js?v=26"></script>
+  <script src="../js/data.js?v=26"></script>
+  <script src="../js/supabase-client.js?v=26"></script>
+  <script src="../js/scoring.js?v=26"></script>
   <script src="../js/elo.js?v=1"></script>
   <script src="../js/match-probs.js?v=1"></script>
-  <script src="../js/ui.js?v=25"></script>
+  <script src="../js/ui.js?v=26"></script>
   <script>
     DB.initSupabase();
     Nav.render('matches');
@@ -630,8 +630,11 @@
         for (const round of Object.values(KNOCKOUT_ROUNDS)) {
           const m = round.matches?.find(m => m.id === matchId);
           if (m) {
-            home      = m.home_team ? getTeam(m.home_team) : home;
-            away      = m.away_team ? getTeam(m.away_team) : away;
+            const dbRes = allResults[matchId];
+            const homeCode = m.home_team || dbRes?.home_team || null;
+            const awayCode = m.away_team || dbRes?.away_team || null;
+            home      = homeCode ? getTeam(homeCode) : home;
+            away      = awayCode ? getTeam(awayCode) : away;
             matchLabel = m.match_label || matchLabel;
             matchDate  = m.date || '';
             break;
@@ -1124,8 +1127,10 @@
 
     function buildKoMatchRow(m, predMap, results) {
       const result = results[m.id];
-      const home = m.home_team ? getTeam(m.home_team) : { flag: '🏳️', name: 'TBD', code: 'TBD' };
-      const away = m.away_team ? getTeam(m.away_team) : { flag: '🏳️', name: 'TBD', code: 'TBD' };
+      const homeCode = m.home_team || result?.home_team || null;
+      const awayCode = m.away_team || result?.away_team || null;
+      const home = homeCode ? getTeam(homeCode) : { flag: '🏳️', name: 'TBD', code: 'TBD' };
+      const away = awayCode ? getTeam(awayCode) : { flag: '🏳️', name: 'TBD', code: 'TBD' };
       const exactPts = m.id === 104 ? 10 : 7;
       const resultPts = m.id === 104 ? 7 : 5;
       return buildMatchRowHtml(m.id, m.date, home, away, result, predMap[m.id] || [], m.match_label, '', '', exactPts, resultPts);

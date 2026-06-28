@@ -226,6 +226,23 @@ serve(async (req) => {
       groupLookup.set(`${group}:${away}:${home}`, id);
     }
 
+    // Knockout team lookup: prefer team codes over positional alignment.
+    const koTeamLookup = new Map<string, number>();
+    {
+      const { data: koRows } = await supabaseAdmin
+        .from("match_results")
+        .select("match_id, home_team, away_team")
+        .gte("match_id", 73)
+        .not("home_team", "is", null);
+      for (const km of (koRows ?? [])) {
+        const h = norm(km.home_team), a = norm(km.away_team);
+        if (h && a) {
+          koTeamLookup.set(`${h}:${a}`, km.match_id);
+          koTeamLookup.set(`${a}:${h}`, km.match_id);
+        }
+      }
+    }
+
     const apiByStage = new Map<string, any[]>();
     for (const m of apiMatches) {
       if (!apiByStage.has(m.stage)) apiByStage.set(m.stage, []);
@@ -249,10 +266,15 @@ serve(async (req) => {
         const a = norm(match.awayTeam?.tla);
         if (g && h && a) ourId = groupLookup.get(`${g}:${h}:${a}`) ?? null;
       } else if (KNOCKOUT_IDS[stage]) {
-        const bucket = apiByStage.get(stage) ?? [];
-        const pos    = bucket.findIndex((m: any) => m.id === match.id);
-        const ourIds = KNOCKOUT_IDS[stage];
-        if (pos >= 0 && pos < ourIds.length) ourId = ourIds[pos];
+        const h = norm(match.homeTeam?.tla);
+        const a = norm(match.awayTeam?.tla);
+        if (h && a) ourId = koTeamLookup.get(`${h}:${a}`) ?? null;
+        if (ourId == null) {
+          const bucket = apiByStage.get(stage) ?? [];
+          const pos    = bucket.findIndex((m: any) => m.id === match.id);
+          const ourIds = KNOCKOUT_IDS[stage];
+          if (pos >= 0 && pos < ourIds.length) ourId = ourIds[pos];
+        }
       }
       if (ourId == null) continue;
 

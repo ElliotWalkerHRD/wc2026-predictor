@@ -175,6 +175,25 @@ serve(async (req) => {
 
   console.log("5 api done " + apiMatches.length);
 
+  // ---- Build knockout team lookup from seeded match_results ----
+  // Bracket seeding writes home_team/away_team once groups finish, giving us a
+  // robust team-code based mapping (same approach as group matches).
+  const koTeamLookup = new Map<string, number>();
+  try {
+    const { data: koRows } = await supabaseAdmin
+      .from("match_results")
+      .select("match_id, home_team, away_team")
+      .gte("match_id", 73)
+      .not("home_team", "is", null);
+    for (const km of (koRows ?? [])) {
+      const h = norm(km.home_team), a = norm(km.away_team);
+      if (h && a) {
+        koTeamLookup.set(`${h}:${a}`, km.match_id);
+        koTeamLookup.set(`${a}:${h}`, km.match_id); // tolerate API home/away inversion
+      }
+    }
+  } catch { /* non-fatal — fall back to positional alignment */ }
+
   // ---- Build group-stage lookup: "GROUP:HOME:AWAY" → our match id ----
   // Both orientations stored so a home/away inversion in the API is tolerated.
   const groupLookup = new Map<string, number>();
@@ -210,12 +229,17 @@ serve(async (req) => {
       const a = norm(match.awayTeam?.tla);
       if (g && h && a) ourId = groupLookup.get(`${g}:${h}:${a}`) ?? null;
     } else if (KNOCKOUT_IDS[stage]) {
-      // Positional: index of this API match (sorted by API id) within its stage
-      // maps to the same index in our sequential knockout id list.
-      const bucket = apiByStage.get(stage) ?? [];
-      const pos    = bucket.findIndex((m: any) => m.id === match.id);
-      const ourIds = KNOCKOUT_IDS[stage];
-      if (pos >= 0 && pos < ourIds.length) ourId = ourIds[pos];
+      // Primary: team-code lookup against seeded match_results (robust, same as group matches).
+      const h = norm(match.homeTeam?.tla);
+      const a = norm(match.awayTeam?.tla);
+      if (h && a) ourId = koTeamLookup.get(`${h}:${a}`) ?? null;
+      // Fallback: positional alignment for TBD/unseeded slots where teams aren't known yet.
+      if (ourId == null) {
+        const bucket = apiByStage.get(stage) ?? [];
+        const pos    = bucket.findIndex((m: any) => m.id === match.id);
+        const ourIds = KNOCKOUT_IDS[stage];
+        if (pos >= 0 && pos < ourIds.length) ourId = ourIds[pos];
+      }
     }
 
     if (ourId == null) {

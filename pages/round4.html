@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
-  <link rel="stylesheet" href="../css/style.css?v=41">
+  <link rel="stylesheet" href="../css/style.css?v=42">
   <style>
     .ko-card-top {
       display: flex;
@@ -20,7 +20,7 @@
       justify-content: space-between;
       margin-bottom: 0.75rem;
     }
-    .ko-match-label { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--grey-400); }
+    .ko-match-label { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--grey-400); }
     .ko-teams-row {
       display: flex;
       align-items: center;
@@ -86,6 +86,66 @@
     .lock-pill--open   { background: rgba(200,241,53,0.18); color: #5c7000; border: 1px solid rgba(200,241,53,0.45); }
     .lock-pill--locked { background: var(--grey-100); color: var(--grey-500); border: 1px solid var(--grey-200); }
     .lock-pill--open.urgent { animation: lockPulse 1.8s ease-in-out infinite; }
+
+    /* ---- View picks button ---- */
+    .view-picks-btn {
+      display: flex; align-items: center; justify-content: center; gap: 0.35rem;
+      width: 100%; margin-top: 0.5rem; padding: 0.35rem;
+      background: none; border: 1px solid var(--grey-200);
+      border-radius: var(--radius-md);
+      font-size: 0.72rem; font-weight: 600; color: var(--grey-500);
+      cursor: pointer; transition: background 0.12s, color 0.12s;
+    }
+    .view-picks-btn:hover { background: var(--grey-100); color: var(--ink); }
+    /* ---- Pick comparison modal ---- */
+    .pred-modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+      z-index: 1000; display: flex; align-items: flex-end; justify-content: center;
+      backdrop-filter: blur(2px);
+    }
+    @media (min-width: 560px) { .pred-modal-overlay { align-items: center; padding: 1.5rem; } }
+    .pred-modal-panel {
+      background: var(--white); border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      width: 100%; max-height: 85vh; overflow: hidden;
+      display: flex; flex-direction: column; box-shadow: 0 -4px 32px rgba(0,0,0,0.18);
+    }
+    @media (min-width: 560px) { .pred-modal-panel { border-radius: var(--radius-lg); max-width: 460px; max-height: 80vh; } }
+    .pred-modal-header {
+      position: relative; padding: 1rem 3rem 0.875rem 1.25rem;
+      border-bottom: 1px solid var(--grey-200); flex-shrink: 0;
+    }
+    .pred-modal-teams {
+      display: flex; align-items: center; gap: 0.4rem;
+      font-size: 0.92rem; font-weight: 700; margin-bottom: 0.25rem;
+    }
+    .pred-modal-meta { font-size: 0.72rem; color: var(--grey-500); margin-top: 0.15rem; }
+    .pred-modal-close {
+      position: absolute; top: 0.875rem; right: 1rem;
+      background: none; border: none; cursor: pointer; color: var(--grey-500);
+      padding: 0.25rem; border-radius: var(--radius-sm); font-size: 1.1rem; line-height: 1;
+    }
+    .pred-modal-close:hover { background: var(--grey-100); }
+    .pred-modal-league-bar {
+      padding: 0.5rem 1.25rem; border-bottom: 1px solid var(--grey-100);
+      flex-shrink: 0; display: flex; align-items: center; gap: 0.5rem;
+    }
+    .pred-modal-body { overflow-y: auto; flex: 1; }
+    .player-pred-row {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.625rem 1.25rem; border-bottom: 1px solid var(--grey-100);
+    }
+    .player-pred-row:last-child { border-bottom: none; }
+    .player-pred-row.is-you { background: rgba(200,241,53,0.08); }
+    .player-pred-name {
+      flex: 1; font-size: 0.875rem; font-weight: 600;
+      min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .player-pred-score { font-family: var(--font-serif); font-size: 1.05rem; color: var(--ink); flex-shrink: 0; min-width: 44px; text-align: center; }
+    .player-pred-score.no-pred { font-family: var(--font-sans); font-size: 0.75rem; color: var(--grey-400); font-weight: 400; }
+    .pred-chip { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.04em; padding: 0.12rem 0.42rem; border-radius: 9999px; flex-shrink: 0; }
+    .pred-chip.exact  { background: rgba(34,197,94,0.15); color: #15803d; }
+    .pred-chip.result { background: rgba(200,241,53,0.3); color: #5c7000; }
+    .pred-chip.wrong  { background: rgba(239,68,68,0.12); color: #b91c1c; }
   </style>
 </head>
 <body>
@@ -127,11 +187,11 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="../js/config.js?v=41"></script>
-  <script src="../js/data.js?v=41"></script>
-  <script src="../js/supabase-client.js?v=41"></script>
-  <script src="../js/scoring.js?v=41"></script>
-  <script src="../js/ui.js?v=41"></script>
+  <script src="../js/config.js?v=42"></script>
+  <script src="../js/data.js?v=42"></script>
+  <script src="../js/supabase-client.js?v=42"></script>
+  <script src="../js/scoring.js?v=42"></script>
+  <script src="../js/ui.js?v=42"></script>
   <script>
     DB.initSupabase();
     Nav.render('predictions');
@@ -164,6 +224,10 @@
     let saved = {};
     let results = {};
     let locked = false;
+    let leagues          = [];
+    let activePredLeague = 'global';
+    let memberCache      = {};
+    let profileCache     = {};
 
     function getMatchKey(id) { return `m${id}`; }
 
@@ -171,6 +235,8 @@
       const session = await requireAuthFromPages();
       if (!session) return;
       userId = session.user.id;
+
+      leagues = await DB.getMyLeagues(userId).catch(() => []);
 
       await DB.initRoundOverrides();
       locked = DB.isRoundLocked(roundId);
@@ -196,8 +262,8 @@
     }
 
     function matchLockPill(m) {
-      if (!m.date || !m.time) return '<span class="chip chip-grey">Upcoming</span>';
-      const lockDate = new Date(m.date + 'T' + m.time + ':00Z');
+      if (!m.kickoff_utc) return '<span class="chip chip-grey">Upcoming</span>';
+      const lockDate = new Date(m.kickoff_utc);
       const diff = lockDate.getTime() - Date.now();
       if (diff <= 0) {
         return `<div class="lock-pill lock-pill--locked lock-pill--sm"><i class="ti ti-lock"></i><span>Kicked off</span></div>`;
@@ -241,13 +307,11 @@
         const homeVal = pred.home !== undefined ? pred.home : '';
         const awayVal = pred.away !== undefined ? pred.away : '';
 
-        const homeCode = m.home_team || results[m.id]?.home_team || null;
-        const awayCode = m.away_team || results[m.id]?.away_team || null;
-        const homeTeam = homeCode ? getTeam(homeCode) : null;
-        const awayTeam = awayCode ? getTeam(awayCode) : null;
+        const homeTeam = m.home_team ? getTeam(m.home_team) : null;
+        const awayTeam = m.away_team ? getTeam(m.away_team) : null;
         const hasTeams  = homeTeam && awayTeam;
         const hasResult = result && result.home_score !== null;
-        const matchLocked = locked || (m.date && m.time ? _now >= new Date(m.date + 'T' + m.time + ':00Z').getTime() : false);
+        const matchLocked = locked || (m.kickoff_utc ? _now >= new Date(m.kickoff_utc).getTime() : false);
 
         let teamRowHtml = '';
         if (hasTeams) {
@@ -313,8 +377,8 @@
           resultHtml = `<div class="ko-result">Result: <strong>${result.home_score}–${result.away_score}</strong></div>`;
         }
 
-        const kickoffLocal = m.date && m.time
-          ? new Date(m.date + 'T' + m.time + ':00Z').toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+        const kickoffLocal = m.kickoff_utc
+          ? new Date(m.kickoff_utc).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
           : formatDate(m.date || '2026-07-01');
 
         const headerRight = hasResult
@@ -329,9 +393,166 @@
             </div>
             ${teamRowHtml}
             ${resultHtml}
+            ${matchLocked ? `<button class="view-picks-btn" data-match="${m.id}"><i class="ti ti-eye"></i> See picks</button>` : ''}
           </div>
         `;
       }).join('');
+    }
+
+    async function openMatchModal(matchId) {
+      const m = roundData?.matches?.find(m => m.id === matchId);
+      const dbRes = results[matchId];
+      const homeCode = m?.home_team || dbRes?.home_team || null;
+      const awayCode = m?.away_team || dbRes?.away_team || null;
+      const home = homeCode ? (getTeam(homeCode) || { name: homeCode }) : { name: 'TBD' };
+      const away = awayCode ? (getTeam(awayCode) || { name: awayCode }) : { name: 'TBD' };
+      const result = results[matchId];
+      const hasResult = result && result.home_score !== null;
+
+      const privateLeagues = leagues.filter(l => !l.is_global);
+      const leagueBarHtml = privateLeagues.length ? `
+        <div class="pred-modal-league-bar">
+          <i class="ti ti-users-group" style="color:var(--grey-400)"></i>
+          <select id="modalLeaguePicker" class="form-control" style="min-width:160px;max-width:240px;font-size:0.82rem;padding:0.25rem 0.6rem;height:auto">
+            <option value="global">All Players</option>
+            ${privateLeagues.map(l =>
+              `<option value="${l.id}" ${activePredLeague === l.id ? 'selected' : ''}>${l.name}</option>`
+            ).join('')}
+          </select>
+        </div>
+      ` : '';
+
+      document.getElementById('pickModal').innerHTML = `
+        <div class="pred-modal-overlay" id="modalOverlay">
+          <div class="pred-modal-panel" role="dialog" aria-modal="true">
+            <div class="pred-modal-header">
+              <div class="pred-modal-teams">
+                ${homeCode ? teamFlagImg(homeCode) : ''}
+                <span>${home.name}</span>
+                <span style="color:var(--grey-400);font-weight:400;font-size:0.8rem;margin:0 0.1rem">vs</span>
+                <span>${away.name}</span>
+                ${awayCode ? teamFlagImg(awayCode) : ''}
+              </div>
+              <div class="pred-modal-meta">${m?.match_label || `Match ${matchId}`}${m?.date ? ' · ' + formatDate(m.date) : ''}</div>
+              ${hasResult ? `<div class="pred-modal-meta" style="color:var(--ink);font-weight:700;margin-top:0.2rem">Result: ${result.home_score}–${result.away_score}</div>` : ''}
+              <button class="pred-modal-close" id="modalCloseBtn" aria-label="Close"><i class="ti ti-x"></i></button>
+            </div>
+            ${leagueBarHtml}
+            <div id="modalBody" class="pred-modal-body">
+              <div style="padding:2.5rem;text-align:center"><div class="spinner" style="margin:0 auto"></div></div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('modalOverlay').addEventListener('click', e => {
+        if (e.target === e.currentTarget) closeModal();
+      });
+      document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+
+      if (privateLeagues.length) {
+        document.getElementById('modalLeaguePicker').addEventListener('change', e => {
+          activePredLeague = e.target.value;
+          loadModalBody(matchId, hasResult, result);
+        });
+      }
+
+      await loadModalBody(matchId, hasResult, result);
+    }
+
+    async function loadModalBody(matchId, hasResult, result) {
+      const bodyEl = document.getElementById('modalBody');
+      if (!bodyEl) return;
+      bodyEl.innerHTML = `<div style="padding:2.5rem;text-align:center"><div class="spinner" style="margin:0 auto"></div></div>`;
+
+      try {
+        let memberIds = null;
+        if (activePredLeague !== 'global') {
+          if (!memberCache[activePredLeague]) {
+            memberCache[activePredLeague] = await DB.getLeagueMemberIds(activePredLeague).catch(() => []);
+          }
+          memberIds = memberCache[activePredLeague];
+        }
+
+        const preds = await DB.getMatchPredictions(matchId, { userIds: memberIds, currentUserId: userId, isLocked: true });
+        const predMap = {};
+        preds.forEach(p => { predMap[p.user_id] = p; });
+
+        let rows;
+        if (memberIds) {
+          const missing = memberIds.filter(id => !predMap[id] && !profileCache[id]);
+          if (missing.length) {
+            const profiles = await DB.getProfiles(missing).catch(() => []);
+            profiles.forEach(p => { profileCache[p.id] = p; });
+          }
+          rows = memberIds.map(uid => {
+            const pred = predMap[uid];
+            return {
+              uid,
+              profile: pred ? pred.profiles : (profileCache[uid] || { display_name: 'Player', avatar_color: '#c8f135' }),
+              value: pred ? pred.value : null
+            };
+          });
+        } else {
+          rows = preds.map(p => ({ uid: p.user_id, profile: p.profiles, value: p.value }));
+        }
+
+        rows.sort((a, b) => {
+          if (a.uid === userId) return -1;
+          if (b.uid === userId) return 1;
+          return (a.profile?.display_name || '').localeCompare(b.profile?.display_name || '');
+        });
+
+        if (!rows.length) {
+          bodyEl.innerHTML = `
+            <div style="padding:2.5rem 1.25rem;text-align:center">
+              <i class="ti ti-user-x" style="font-size:2rem;color:var(--grey-300);display:block;margin-bottom:0.75rem"></i>
+              <p style="font-weight:600;color:var(--grey-500)">No predictions for this match yet.</p>
+            </div>
+          `;
+          return;
+        }
+
+        bodyEl.innerHTML = rows.map(row => {
+          const isYou = row.uid === userId;
+          let scoreHtml = `<span class="player-pred-score no-pred">—</span>`;
+          let chipHtml = '';
+          if (row.value !== null) {
+            let val;
+            try { val = JSON.parse(row.value); } catch {}
+            if (val && val.home !== undefined && val.away !== undefined) {
+              scoreHtml = `<span class="player-pred-score">${val.home}–${val.away}</span>`;
+              if (hasResult) {
+                const actH = result.home_score, actA = result.away_score;
+                const pH = parseInt(val.home), pA = parseInt(val.away);
+                if (pH === actH && pA === actA)
+                  chipHtml = `<span class="pred-chip exact">Exact</span>`;
+                else if (Math.sign(pH - pA) === Math.sign(actH - actA))
+                  chipHtml = `<span class="pred-chip result">Result</span>`;
+                else
+                  chipHtml = `<span class="pred-chip wrong">Wrong</span>`;
+              }
+            }
+          }
+          return `
+            <div class="player-pred-row ${isYou ? 'is-you' : ''}">
+              ${renderAvatar(row.profile, 'avatar', 'width:30px;height:30px;font-size:0.78rem')}
+              <span class="player-pred-name">${row.profile?.display_name || 'Player'}${isYou ? ' <span class="you-badge">You</span>' : ''}</span>
+              ${scoreHtml}
+              ${chipHtml}
+            </div>
+          `;
+        }).join('');
+
+      } catch (err) {
+        const b = document.getElementById('modalBody');
+        if (b) b.innerHTML = `<div class="alert alert-error" style="margin:1rem"><i class="ti ti-alert-triangle"></i> ${err.message}</div>`;
+      }
+    }
+
+    function closeModal() {
+      const el = document.getElementById('pickModal');
+      if (el) el.innerHTML = '';
     }
 
     async function savePredictions() {
@@ -364,6 +585,12 @@
     }
 
     document.getElementById('saveBtn')?.addEventListener('click', savePredictions);
+    document.getElementById('matchesContent').addEventListener('click', e => {
+      const btn = e.target.closest('.view-picks-btn');
+      if (!btn) return;
+      openMatchModal(parseInt(btn.dataset.match));
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
     DB.subscribeToMatchResults(async () => {
       // Do NOT call load() — it resets `saved` and wipes unsaved typed picks.
       // Snapshot current inputs first so typed-but-unsaved values survive the re-render.
@@ -384,5 +611,6 @@
     });
     load();
   </script>
+  <div id="pickModal"></div>
 </body>
 </html>

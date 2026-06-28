@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
-  <link rel="stylesheet" href="../css/style.css?v=41">
+  <link rel="stylesheet" href="../css/style.css?v=42">
   <style>
     .round-tabs {
       display: flex;
@@ -286,11 +286,11 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="../js/config.js?v=41"></script>
-  <script src="../js/data.js?v=41"></script>
-  <script src="../js/supabase-client.js?v=41"></script>
-  <script src="../js/scoring.js?v=41"></script>
-  <script src="../js/ui.js?v=41"></script>
+  <script src="../js/config.js?v=42"></script>
+  <script src="../js/data.js?v=42"></script>
+  <script src="../js/supabase-client.js?v=42"></script>
+  <script src="../js/scoring.js?v=42"></script>
+  <script src="../js/ui.js?v=42"></script>
   <script>
     DB.initSupabase();
     Nav.render('mypreds');
@@ -300,6 +300,9 @@
     let allResults = {};
     let userScore = null;
     let scores = [];
+    let computedAnswers = {};
+    let r1Breakdown     = {};
+    let r1Saved         = {};
     let userId = null;
 
     async function load() {
@@ -323,6 +326,14 @@
         if (!allPreds[p.round]) allPreds[p.round] = [];
         allPreds[p.round].push(p);
       });
+
+      r1Saved = {};
+      (allPreds['round1'] || []).forEach(p => {
+        try { r1Saved[p.question_key] = JSON.parse(p.value); }
+        catch { r1Saved[p.question_key] = p.value; }
+      });
+      computedAnswers = computeR1Answers(results);
+      r1Breakdown = ScoringEngine.calculateRound1(r1Saved, computedAnswers).breakdown;
 
       if (userScore) {
         document.getElementById('sumTotal').textContent = userScore.total_points || 0;
@@ -431,6 +442,112 @@
       panel.innerHTML = content ? totalBar + content : emptyState;
     }
 
+    function computeR1Answers(matchResults) {
+      const rMap = {};
+      matchResults.forEach(r => { rMap[r.match_id] = r; });
+
+      // Use integer keys to match the local computePredGroup which uses predMap[f[0]] (integer match id)
+      const smAll = {};
+      matchResults.forEach(r => {
+        if (r.status === 'FINISHED')
+          smAll[r.match_id] = { home: r.home_score, away: r.away_score };
+      });
+
+      const r1 = {};
+      const finishedCount = GROUP_FIXTURES.filter(([id]) => rMap[id]?.status === 'FINISHED').length;
+      const allGroupDone = finishedCount === 72;
+
+      const hosts = new Set(['USA','CAN','MEX']), watched = ['ENG','FRA','BRA','ARG'];
+      let totalGoals = 0, hostGoals = 0;
+      const nGoals = Object.fromEntries(watched.map(c => [c, 0]));
+
+      GROUP_FIXTURES.forEach(([id,,,, hc, ac]) => {
+        const r = rMap[id];
+        if (!r || r.status !== 'FINISHED') return;
+        totalGoals += r.home_score + r.away_score;
+        if (hosts.has(hc)) hostGoals += r.home_score;
+        if (hosts.has(ac)) hostGoals += r.away_score;
+        if (nGoals[hc] !== undefined) nGoals[hc] += r.home_score;
+        if (nGoals[ac] !== undefined) nGoals[ac] += r.away_score;
+      });
+
+      if (allGroupDone) {
+        r1['1.8']  = hostGoals;
+        r1['1.11'] = totalGoals;
+        r1['1.9']  = watched.reduce((b, c) => nGoals[c] > nGoals[b] ? c : b);
+
+        const gSt = {};
+        let hg = null, minGap = Infinity;
+        for (const g of Object.keys(GROUPS)) {
+          const st = computePredGroup(g, smAll);
+          gSt[g] = st;
+          if (st.length < 4 || st[3].P === 0) continue;
+          const gap = st[0].Pts - st[3].Pts;
+          const prevFourth = hg ? gSt[hg][3] : null;
+          if (gap < minGap || (gap === minGap && st[3].GD > (prevFourth?.GD ?? -Infinity))) {
+            minGap = gap; hg = g;
+          }
+        }
+        if (hg) r1['1.12'] = hg;
+      }
+
+      const finalM = KNOCKOUT_ROUNDS.final?.matches?.[0];
+      const finalR = rMap[104];
+      if (finalM?.home_team && finalM?.away_team && finalR?.status === 'FINISHED') {
+        const [h, a] = [finalR.home_score, finalR.away_score];
+        if (h !== a) {
+          r1['1.1'] = h > a ? finalM.home_team : finalM.away_team;
+          r1['1.2'] = h > a ? finalM.away_team : finalM.home_team;
+        }
+      }
+
+      const beaten = [];
+      for (const sm of (KNOCKOUT_ROUNDS.semifinals?.matches || [])) {
+        const sr = rMap[sm.id];
+        if (!sm.home_team || !sm.away_team || sr?.status !== 'FINISHED') continue;
+        const [h, a] = [sr.home_score, sr.away_score];
+        if (h !== a) beaten.push(h > a ? sm.away_team : sm.home_team);
+      }
+      if (beaten.length === 2) r1['1.3'] = beaten;
+
+      return r1;
+    }
+
+    function r1AnswerInfo(qKey) {
+      // admin-entered questions are never available client-side
+      if (['1.4','1.5','1.6','1.7','1.10'].includes(qKey)) return { answerAvailable: false };
+
+      let answerAvailable = false, answerDisplay = '';
+      if (qKey === '1.1' || qKey === '1.2') {
+        answerAvailable = computedAnswers[qKey] != null;
+        if (answerAvailable) {
+          const t = getTeam(computedAnswers[qKey]);
+          answerDisplay = t ? `${teamFlagImg(t.code)} ${t.name}` : computedAnswers[qKey];
+        }
+      } else if (qKey === '1.3a' || qKey === '1.3b') {
+        answerAvailable = Array.isArray(computedAnswers['1.3']) && computedAnswers['1.3'].length === 2;
+        if (answerAvailable) {
+          answerDisplay = computedAnswers['1.3'].map(code => {
+            const t = getTeam(code);
+            return t ? `${teamFlagImg(t.code)} ${t.name}` : code;
+          }).join(' &middot; ');
+        }
+      } else if (qKey === '1.9') {
+        answerAvailable = computedAnswers['1.9'] != null;
+        if (answerAvailable) {
+          const t = getTeam(computedAnswers['1.9']);
+          answerDisplay = t ? `${teamFlagImg(t.code)} ${t.name}` : computedAnswers['1.9'];
+        }
+      } else if (qKey === '1.8' || qKey === '1.11') {
+        answerAvailable = computedAnswers[qKey] != null;
+        if (answerAvailable) answerDisplay = String(computedAnswers[qKey]);
+      } else if (qKey === '1.12') {
+        answerAvailable = computedAnswers['1.12'] != null;
+        if (answerAvailable) answerDisplay = `Group ${computedAnswers['1.12']}`;
+      }
+      return { answerAvailable, answerDisplay };
+    }
+
     function renderRound1Panel(preds) {
       const R1_LABELS = {
         '1.1':  'Tournament winner',
@@ -461,6 +578,24 @@
         if (['1.1','1.2','1.3a','1.3b','1.9'].includes(p.question_key)) {
           const t = getTeam(val);
           displayVal = t ? `${teamFlagImg(val)} ${t.name}` : val;
+        } else if (p.question_key === '1.12') {
+          displayVal = `Group ${val}`;
+        }
+
+        const { answerAvailable, answerDisplay } = r1AnswerInfo(p.question_key);
+        let actualRow, ptsNum, ptsClass;
+        if (!answerAvailable) {
+          actualRow = `<div class="r2-actual-row" style="font-style:italic;color:var(--grey-400)">
+            <i class="ti ti-clock" style="font-size:0.75rem"></i>Not yet decided&hellip;
+          </div>`;
+          ptsNum = '?'; ptsClass = 'zero';
+        } else {
+          const pts = r1Breakdown[p.question_key] ?? 0;
+          actualRow = `<div class="r2-actual-row">
+            <span class="r2-actual-lbl">Answer</span>
+            ${answerDisplay}
+          </div>`;
+          ptsNum = pts; ptsClass = pts > 0 ? 'positive' : 'zero';
         }
 
         return `
@@ -468,9 +603,10 @@
             <div>
               <div class="pred-question">${R1_LABELS[p.question_key] || p.question_key}</div>
               <div class="pred-answer">${displayVal}</div>
+              ${actualRow}
             </div>
             <div class="pred-pts">
-              <div class="pts-number zero">?</div>
+              <div class="pts-number ${ptsClass}">${ptsNum}</div>
               <div class="pts-label">pts</div>
             </div>
           </div>
@@ -824,6 +960,8 @@
         allResults = {};
         r.forEach(res => { allResults[res.match_id] = res; });
         DB.patchKnockoutBracket(r);
+        computedAnswers = computeR1Answers(r);
+        r1Breakdown = ScoringEngine.calculateRound1(r1Saved, computedAnswers).breakdown;
         renderActivePanel();
       });
     });

@@ -653,12 +653,9 @@ select.form-control option {
 /* ---- Knockout match cards ---- */
 .knockout-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 0.875rem;
 }
-
-@media (min-width: 560px) { .knockout-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (min-width: 920px) { .knockout-grid { grid-template-columns: repeat(3, 1fr); } }
 
 .ko-card {
   background: var(--white);
@@ -667,6 +664,7 @@ select.form-control option {
   padding: 1.125rem;
   transition: border-color 0.15s;
   box-shadow: var(--shadow-sm);
+  min-width: 0;
 }
 
 .ko-card:focus-within { border-color: var(--ink); }

@@ -29,6 +29,7 @@
     }
     .ko-team {
       flex: 1;
+      min-width: 0;
       display: flex;
       align-items: center;
       gap: 0.35rem;
@@ -36,12 +37,14 @@
       font-weight: 600;
     }
     .ko-team.away { flex-direction: row-reverse; text-align: right; }
+    .ko-team > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .ko-team-flag { font-size: 1.3rem; }
     .ko-score-inputs {
       display: flex;
       align-items: center;
       gap: 0.35rem;
       justify-content: center;
+      flex-shrink: 0;
     }
     .score-num {
       width: 46px;

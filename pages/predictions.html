@@ -143,6 +143,8 @@
       } catch (_) {}
 
       await DB.initRoundOverrides();
+      const _bracketResults = await DB.getMatchResults().catch(() => []);
+      DB.patchKnockoutBracket(_bracketResults);
       const openRounds = ROUNDS_META.filter(r => !DB.isRoundLocked(r.id) && bracketReady(r.id)).length;
       document.getElementById('roundsOpen').textContent = openRounds;
 

@@ -498,6 +498,20 @@ function getRoundLockDate(round) {
   return CONFIG.ROUND_LOCKS[round] ? new Date(CONFIG.ROUND_LOCKS[round]) : null;
 }
 
+// Patch in-memory KNOCKOUT_ROUNDS with home_team/away_team from DB match_results rows.
+// Must be called before bracketReady() so the round-open check reflects seeded teams.
+function patchKnockoutBracket(results) {
+  const rMap = {};
+  results.forEach(r => { rMap[r.match_id] = r; });
+  for (const round of Object.values(KNOCKOUT_ROUNDS)) {
+    for (const m of round.matches || []) {
+      const r = rMap[m.id];
+      if (r?.home_team) m.home_team = r.home_team;
+      if (r?.away_team) m.away_team = r.away_team;
+    }
+  }
+}
+
 // Export to global
 window.DB = {
   signUp, signIn, signOut, getSession, getCurrentUser, onAuthChange,
@@ -508,6 +522,7 @@ window.DB = {
   validateInviteCode, getInviteCodes, createInviteCode,
   subscribeToLeaderboard, subscribeToMatchResults,
   recalculateScores, isRoundLocked, getRoundLockDate,
+  patchKnockoutBracket,
   initRoundOverrides, setRoundOverride,
   getMyLeagues, createLeague, joinLeague, leaveLeague, getLeagueMemberIds, validateLeagueCode,
   getAutoUpdateEnabled, setAutoUpdateEnabled, getAutomationLogs,

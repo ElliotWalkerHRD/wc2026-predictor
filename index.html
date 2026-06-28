@@ -696,7 +696,9 @@
       window.addEventListener('pagehide', () => clearInterval(_cdGrid));
     }
 
-    DB.initRoundOverrides().then(renderRoundLockGrid);
+    DB.initRoundOverrides()
+      .then(() => DB.getMatchResults().catch(() => []))
+      .then(results => { DB.patchKnockoutBracket(results); renderRoundLockGrid(); });
   </script>
 </body>
 </html>

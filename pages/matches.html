@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
-  <link rel="stylesheet" href="../css/style.css?v=30">
+  <link rel="stylesheet" href="../css/style.css?v=38">
   <style>
     .round-section { margin-bottom: 2.5rem; }
 
@@ -446,13 +446,13 @@
   <div id="matchPredModal"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="../js/config.js?v=30"></script>
-  <script src="../js/data.js?v=30"></script>
-  <script src="../js/supabase-client.js?v=30"></script>
-  <script src="../js/scoring.js?v=30"></script>
-  <script src="../js/elo.js?v=30"></script>
-  <script src="../js/match-probs.js?v=30"></script>
-  <script src="../js/ui.js?v=30"></script>
+  <script src="../js/config.js?v=38"></script>
+  <script src="../js/data.js?v=38"></script>
+  <script src="../js/supabase-client.js?v=38"></script>
+  <script src="../js/scoring.js?v=38"></script>
+  <script src="../js/elo.js?v=38"></script>
+  <script src="../js/match-probs.js?v=38"></script>
+  <script src="../js/ui.js?v=38"></script>
   <script>
     DB.initSupabase();
     Nav.render('matches');
@@ -1149,7 +1149,10 @@
       const exactPts = m.id === 104 ? 10 : 7;
       const resultPts = m.id === 104 ? 7 : 5;
       const probBarHtml = (homeCode && awayCode) ? buildProbBar(m.id, homeCode, awayCode, result) : '';
-      return buildMatchRowHtml(m.id, m.date, home, away, result, predMap[m.id] || [], m.match_label, '', '', exactPts, resultPts, probBarHtml);
+      const roundName = m.id <= 88 ? 'Round of 32' : m.id <= 96 ? 'Round of 16'
+        : m.id <= 100 ? 'Quarter-final' : m.id <= 102 ? 'Semi-final'
+        : m.id === 103 ? 'Third place' : 'Final';
+      return buildMatchRowHtml(m.id, m.date, home, away, result, predMap[m.id] || [], `${m.match_label} · ${roundName}`, m.venue, m.city, exactPts, resultPts, probBarHtml);
     }
 
     function buildMatchRowHtml(id, date, home, away, result, preds, label, venue, city, exactPts, resultPts, probBarHtml = '') {

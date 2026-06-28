@@ -315,6 +315,7 @@
       ]);
 
       results.forEach(r => { allResults[r.match_id] = r; });
+      DB.patchKnockoutBracket(results);
       userScore = uScore;
       scores = allScores;
 
@@ -822,6 +823,7 @@
       DB.getMatchResults().then(r => {
         allResults = {};
         r.forEach(res => { allResults[res.match_id] = res; });
+        DB.patchKnockoutBracket(r);
         renderActivePanel();
       });
     });

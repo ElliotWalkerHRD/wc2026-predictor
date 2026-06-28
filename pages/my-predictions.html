@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
-  <link rel="stylesheet" href="../css/style.css?v=42">
+  <link rel="stylesheet" href="../css/style.css?v=45">
   <style>
     .round-tabs {
       display: flex;
@@ -286,11 +286,11 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="../js/config.js?v=42"></script>
-  <script src="../js/data.js?v=42"></script>
-  <script src="../js/supabase-client.js?v=42"></script>
-  <script src="../js/scoring.js?v=42"></script>
-  <script src="../js/ui.js?v=42"></script>
+  <script src="../js/config.js?v=45"></script>
+  <script src="../js/data.js?v=45"></script>
+  <script src="../js/supabase-client.js?v=45"></script>
+  <script src="../js/scoring.js?v=45"></script>
+  <script src="../js/ui.js?v=45"></script>
   <script>
     DB.initSupabase();
     Nav.render('mypreds');
@@ -793,8 +793,10 @@
             koMatch = (ko.matches || []).find(m => m.id === matchId);
             if (koMatch) break;
           }
-          homeTeam = koMatch?.home_team ? getTeam(koMatch.home_team) : { code: 'TBD', name: 'TBD' };
-          awayTeam = koMatch?.away_team ? getTeam(koMatch.away_team) : { code: 'TBD', name: 'TBD' };
+          const homeCode = koMatch?.home_team || result?.home_team || null;
+          const awayCode = koMatch?.away_team || result?.away_team || null;
+          homeTeam = homeCode ? getTeam(homeCode) : { code: 'TBD', name: 'TBD' };
+          awayTeam = awayCode ? getTeam(awayCode) : { code: 'TBD', name: 'TBD' };
         }
 
         let pts = 0, scoreClass = '', indicator = '';

@@ -879,11 +879,24 @@ serve(async (req) => {
     }
 
     if (seedUpserts.length > 0) {
-      const { error: seedErr } = await supabaseAdmin
+      // Never overwrite slots that already have both teams set (preserves manual corrections).
+      const allSlotIds = seedUpserts.map((u: any) => u.match_id);
+      const { data: existingSeeded } = await supabaseAdmin
         .from("match_results")
-        .upsert(seedUpserts, { onConflict: "match_id" });
-      if (seedErr) throw seedErr;
-      bracketSeeded = seedUpserts.length;
+        .select("match_id")
+        .in("match_id", allSlotIds)
+        .not("home_team", "is", null)
+        .not("away_team", "is", null);
+      const alreadySet = new Set<number>((existingSeeded ?? []).map((r: any) => r.match_id));
+      const freshUpserts = seedUpserts.filter((u: any) => !alreadySet.has(u.match_id));
+
+      if (freshUpserts.length > 0) {
+        const { error: seedErr } = await supabaseAdmin
+          .from("match_results")
+          .upsert(freshUpserts, { onConflict: "match_id" });
+        if (seedErr) throw seedErr;
+        bracketSeeded = freshUpserts.length;
+      }
     }
     console.log(`[auto-update] bracket: ${bracketSeeded} R32 matches seeded`);
   } catch (e: any) {

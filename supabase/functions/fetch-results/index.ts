@@ -228,13 +228,13 @@ serve(async (req) => {
       const h = norm(match.homeTeam?.tla);
       const a = norm(match.awayTeam?.tla);
       if (g && h && a) ourId = groupLookup.get(`${g}:${h}:${a}`) ?? null;
-    } else if (KNOCKOUT_IDS[stage]) {
-      // Primary: team-code lookup against seeded match_results (robust, same as group matches).
+    } else {
+      // Any non-group stage: team-code lookup works regardless of API stage name.
       const h = norm(match.homeTeam?.tla);
       const a = norm(match.awayTeam?.tla);
       if (h && a) ourId = koTeamLookup.get(`${h}:${a}`) ?? null;
-      // Fallback: positional alignment for TBD/unseeded slots where teams aren't known yet.
-      if (ourId == null) {
+      // Positional fallback only for known stage names (future rounds, unseeded slots).
+      if (ourId == null && KNOCKOUT_IDS[stage]) {
         const bucket = apiByStage.get(stage) ?? [];
         const pos    = bucket.findIndex((m: any) => m.id === match.id);
         const ourIds = KNOCKOUT_IDS[stage];

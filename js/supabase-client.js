@@ -506,8 +506,10 @@ function patchKnockoutBracket(results) {
   for (const round of Object.values(KNOCKOUT_ROUNDS)) {
     for (const m of round.matches || []) {
       const r = rMap[m.id];
-      if (r?.home_team) m.home_team = r.home_team;
-      if (r?.away_team) m.away_team = r.away_team;
+      if (r) {
+        m.home_team = r.home_team ?? m.home_team;
+        m.away_team = r.away_team ?? m.away_team;
+      }
     }
   }
 }

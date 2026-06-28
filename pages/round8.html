@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
-  <link rel="stylesheet" href="../css/style.css?v=38">
+  <link rel="stylesheet" href="../css/style.css?v=39">
   <style>
     .ko-card-top {
       display: flex;
@@ -116,11 +116,11 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="../js/config.js?v=38"></script>
-  <script src="../js/data.js?v=38"></script>
-  <script src="../js/supabase-client.js?v=38"></script>
-  <script src="../js/scoring.js?v=38"></script>
-  <script src="../js/ui.js?v=38"></script>
+  <script src="../js/config.js?v=39"></script>
+  <script src="../js/data.js?v=39"></script>
+  <script src="../js/supabase-client.js?v=39"></script>
+  <script src="../js/scoring.js?v=39"></script>
+  <script src="../js/ui.js?v=39"></script>
   <script>
     DB.initSupabase();
     Nav.render('predictions');
@@ -190,8 +190,10 @@
         const homeVal = pred.home !== undefined ? pred.home : '';
         const awayVal = pred.away !== undefined ? pred.away : '';
 
-        const homeTeam = m.home_team ? getTeam(m.home_team) : null;
-        const awayTeam = m.away_team ? getTeam(m.away_team) : null;
+        const homeCode = m.home_team || results[m.id]?.home_team || null;
+        const awayCode = m.away_team || results[m.id]?.away_team || null;
+        const homeTeam = homeCode ? getTeam(homeCode) : null;
+        const awayTeam = awayCode ? getTeam(awayCode) : null;
         const hasTeams  = homeTeam && awayTeam;
         const hasResult = result && result.home_score !== null;
 

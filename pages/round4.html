@@ -359,7 +359,24 @@
     }
 
     document.getElementById('saveBtn')?.addEventListener('click', savePredictions);
-    DB.subscribeToMatchResults(() => load());
+    DB.subscribeToMatchResults(async () => {
+      // Do NOT call load() — it resets `saved` and wipes unsaved typed picks.
+      // Snapshot current inputs first so typed-but-unsaved values survive the re-render.
+      if (roundData) {
+        roundData.matches.forEach(m => {
+          const hEl = document.getElementById(`h_${m.id}`);
+          const aEl = document.getElementById(`a_${m.id}`);
+          if (hEl && aEl) saved[getMatchKey(m.id)] = { home: hEl.value, away: aEl.value };
+        });
+      }
+      try {
+        const fresh = await DB.getMatchResults();
+        fresh.forEach(r => { results[r.match_id] = r; });
+        DB.patchKnockoutBracket(fresh);
+        renderMatches();
+        tickMatchLocks();
+      } catch (e) { console.error(`[${roundId}] live result refresh failed:`, e); }
+    });
     load();
   </script>
 </body>

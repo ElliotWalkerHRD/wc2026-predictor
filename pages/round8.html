@@ -141,7 +141,7 @@
 
     const roundData = KNOCKOUT_ROUNDS[roundKey];
     if (roundData) {
-      document.getElementById('pageSubtitle').textContent =
+      document.getElementById('pageSubtitle').innerHTML =
         `${roundData.matches.length} matches &middot; Up to ${roundData.matches.length * exactPts} pts`;
     }
 

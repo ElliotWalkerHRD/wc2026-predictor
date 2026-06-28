@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
-  <link rel="stylesheet" href="../css/style.css?v=40">
+  <link rel="stylesheet" href="../css/style.css?v=41">
   <style>
     .round-section { margin-bottom: 2.5rem; }
 
@@ -446,13 +446,13 @@
   <div id="matchPredModal"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="../js/config.js?v=40"></script>
-  <script src="../js/data.js?v=40"></script>
-  <script src="../js/supabase-client.js?v=40"></script>
-  <script src="../js/scoring.js?v=40"></script>
-  <script src="../js/elo.js?v=40"></script>
-  <script src="../js/match-probs.js?v=40"></script>
-  <script src="../js/ui.js?v=40"></script>
+  <script src="../js/config.js?v=41"></script>
+  <script src="../js/data.js?v=41"></script>
+  <script src="../js/supabase-client.js?v=41"></script>
+  <script src="../js/scoring.js?v=41"></script>
+  <script src="../js/elo.js?v=41"></script>
+  <script src="../js/match-probs.js?v=41"></script>
+  <script src="../js/ui.js?v=41"></script>
   <script>
     DB.initSupabase();
     Nav.render('matches');
@@ -511,8 +511,8 @@
       const upcomingKoIds = Object.values(KNOCKOUT_ROUNDS)
         .flatMap(r => r.matches || [])
         .filter(m => {
-          if (m.kickoff_utc) return now < new Date(m.kickoff_utc).getTime();
           if (m.date && m.time) return now < new Date(`${m.date}T${m.time}:00Z`).getTime();
+          if (m.kickoff_utc) return now < new Date(m.kickoff_utc).getTime();
           return true;
         })
         .map(m => m.id);

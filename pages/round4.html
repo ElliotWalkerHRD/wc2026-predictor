@@ -180,6 +180,7 @@
     function renderMatches() {
       const container = document.getElementById('matchesContent');
       if (!roundData) { container.innerHTML = '<p class="text-muted">No matches found.</p>'; return; }
+      const _now = Date.now();
 
       container.innerHTML = roundData.matches.map(m => {
         const result  = results[m.id];
@@ -191,6 +192,7 @@
         const awayTeam = m.away_team ? getTeam(m.away_team) : null;
         const hasTeams  = homeTeam && awayTeam;
         const hasResult = result && result.home_score !== null;
+        const matchLocked = locked || (m.kickoff_utc ? _now >= new Date(m.kickoff_utc).getTime() : false);
 
         let teamRowHtml = '';
         if (hasTeams) {
@@ -203,11 +205,11 @@
               <div class="ko-score-inputs">
                 <input type="number" id="h_${m.id}" class="score-num" min="0" max="20"
                   inputmode="numeric" pattern="[0-9]*"
-                  value="${homeVal}" placeholder="0" ${locked ? 'disabled' : ''}>
+                  value="${homeVal}" placeholder="0" ${matchLocked ? 'disabled' : ''}>
                 <span class="score-sep">–</span>
                 <input type="number" id="a_${m.id}" class="score-num" min="0" max="20"
                   inputmode="numeric" pattern="[0-9]*"
-                  value="${awayVal}" placeholder="0" ${locked ? 'disabled' : ''}>
+                  value="${awayVal}" placeholder="0" ${matchLocked ? 'disabled' : ''}>
               </div>
               <div class="ko-team away">
                 ${teamFlagImg(awayTeam.code)}
@@ -219,7 +221,7 @@
           teamRowHtml = `
             <div class="tbd-notice">
               <i class="ti ti-clock"></i> Teams TBD — ${m.note || 'Drawn once qualified'}
-              ${!locked ? `
+              ${!matchLocked ? `
                 <div class="ko-score-inputs" style="justify-content:center;margin-top:0.625rem">
                   <input type="number" id="h_${m.id}" class="score-num" min="0" max="20"
                     inputmode="numeric" pattern="[0-9]*"
@@ -256,11 +258,17 @@
           resultHtml = `<div class="ko-result">Result: <strong>${result.home_score}–${result.away_score}</strong></div>`;
         }
 
+        const statusChip = hasResult
+          ? '<span class="finished-badge">Final</span>'
+          : matchLocked
+            ? '<span class="chip chip-grey" style="color:#b45309;background:rgba(245,158,11,0.1);border-color:rgba(245,158,11,0.25)">Kicked off</span>'
+            : '<span class="chip chip-grey">Upcoming</span>';
+
         return `
-          <div class="ko-card ${!hasTeams && !locked ? 'tbd' : ''}">
+          <div class="ko-card ${!hasTeams && !matchLocked ? 'tbd' : ''}">
             <div class="ko-card-top">
               <span class="ko-match-label">${m.match_label} &middot; ${formatDate(m.date || '2026-07-01')}</span>
-              ${hasResult ? '<span class="finished-badge">Final</span>' : '<span class="chip chip-grey">Upcoming</span>'}
+              ${statusChip}
             </div>
             ${teamRowHtml}
             ${resultHtml}
@@ -279,7 +287,7 @@
         roundData.matches.forEach(m => {
           const hEl = document.getElementById(`h_${m.id}`);
           const aEl = document.getElementById(`a_${m.id}`);
-          if (!hEl || !aEl || hEl.value === '' || aEl.value === '') return;
+          if (!hEl || !aEl || hEl.disabled || hEl.value === '' || aEl.value === '') return;
           updates.push(DB.savePrediction(userId, roundId, getMatchKey(m.id), {
             home: parseInt(hEl.value), away: parseInt(aEl.value)
           }));

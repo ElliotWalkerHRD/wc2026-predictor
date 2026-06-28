@@ -51,7 +51,7 @@ const ScoringEngine = {
     }
 
     // 1.5 Top scorer goals exact (10pts)
-    if (predictions['1.5'] && answers['1.5']) {
+    if (predictions['1.5'] != null && answers['1.5'] != null) {
       const scored = parseInt(predictions['1.5']) === parseInt(answers['1.5']);
       points += scored ? 10 : 0;
       breakdown['1.5'] = scored ? 10 : 0;
@@ -65,14 +65,14 @@ const ScoringEngine = {
     }
 
     // 1.7 Golden boot goals (10pts)
-    if (predictions['1.7'] && answers['1.7']) {
+    if (predictions['1.7'] != null && answers['1.7'] != null) {
       const scored = parseInt(predictions['1.7']) === parseInt(answers['1.7']);
       points += scored ? 10 : 0;
       breakdown['1.7'] = scored ? 10 : 0;
     }
 
     // 1.8 Host nations group stage goals (5pts exact, 3pts within 3)
-    if (predictions['1.8'] && answers['1.8']) {
+    if (predictions['1.8'] != null && answers['1.8'] != null) {
       const diff = Math.abs(parseInt(predictions['1.8']) - parseInt(answers['1.8']));
       if (diff === 0) { points += 5; breakdown['1.8'] = 5; }
       else if (diff <= 3) { points += 3; breakdown['1.8'] = 3; }
@@ -87,14 +87,14 @@ const ScoringEngine = {
     }
 
     // 1.10 Red cards in group stage (5pts exact)
-    if (predictions['1.10'] && answers['1.10']) {
+    if (predictions['1.10'] != null && answers['1.10'] != null) {
       const scored = parseInt(predictions['1.10']) === parseInt(answers['1.10']);
       points += scored ? 5 : 0;
       breakdown['1.10'] = scored ? 5 : 0;
     }
 
     // 1.11 Total goals group stage (10pts exact, 5pts within 10)
-    if (predictions['1.11'] && answers['1.11']) {
+    if (predictions['1.11'] != null && answers['1.11'] != null) {
       const diff = Math.abs(parseInt(predictions['1.11']) - parseInt(answers['1.11']));
       if (diff === 0) { points += 10; breakdown['1.11'] = 10; }
       else if (diff <= 10) { points += 5; breakdown['1.11'] = 5; }

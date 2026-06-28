@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
-  <link rel="stylesheet" href="../css/style.css?v=30">
+  <link rel="stylesheet" href="../css/style.css?v=46">
   <style>
     .admin-panel { display: none; }
     .admin-panel.active { display: block; }
@@ -349,11 +349,11 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="../js/config.js?v=30"></script>
-  <script src="../js/data.js?v=30"></script>
-  <script src="../js/supabase-client.js?v=30"></script>
-  <script src="../js/scoring.js?v=30"></script>
-  <script src="../js/ui.js?v=30"></script>
+  <script src="../js/config.js?v=46"></script>
+  <script src="../js/data.js?v=46"></script>
+  <script src="../js/supabase-client.js?v=46"></script>
+  <script src="../js/scoring.js?v=46"></script>
+  <script src="../js/ui.js?v=46"></script>
   <script>
     DB.initSupabase();
     Nav.render('admin');
@@ -1426,6 +1426,15 @@
       btn.disabled = true;
       btn.innerHTML = '<i class="ti ti-loader"></i> Committing&hellip;';
 
+      // Re-read all manual inputs fresh so Commit always uses current field values,
+      // even if Preview was clicked before the fields were filled in.
+      const freshAnswers = Object.assign({}, _asAdminAnswers || {});
+      const _q14  = document.getElementById('asQ14')?.value.trim();    if (_q14)         freshAnswers['1.4']  = _q14;
+      const _q15  = document.getElementById('asQ15')?.value;           if (_q15  !== '') freshAnswers['1.5']  = parseInt(_q15);
+      const _q16  = document.getElementById('asQ16')?.value.trim();    if (_q16)         freshAnswers['1.6']  = _q16;
+      const _q17  = document.getElementById('asQ17')?.value;           if (_q17  !== '') freshAnswers['1.7']  = parseInt(_q17);
+      const _q110 = document.getElementById('asQ110')?.value;          if (_q110 !== '') freshAnswers['1.10'] = parseInt(_q110);
+
       const sb = DB.initSupabase();
       const existMap = {};
       _asScores.forEach(s => { existMap[s.user_id] = s; });
@@ -1436,7 +1445,7 @@
 
       for (const uid of allUids) {
         const p1 = _asUserPreds1[uid] || {}, p2 = _asUserPreds2[uid] || {};
-        const r1 = asScoreUser_R1(p1, _asComputed, _asAdminAnswers || {}, _asNameMatches);
+        const r1 = asScoreUser_R1(p1, _asComputed, freshAnswers, _asNameMatches);
         const r2 = ScoringEngine.calculateRound2(p2, _asComputed.r2);
         const exist = existMap[uid];
 

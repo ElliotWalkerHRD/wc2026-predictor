@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
-  <link rel="stylesheet" href="../css/style.css?v=42">
+  <link rel="stylesheet" href="../css/style.css?v=47">
   <style>
     .ko-card-top {
       display: flex;
@@ -304,31 +304,31 @@
         }
 
         let resultHtml = '';
+        let cardClass = !hasTeams && !locked ? 'tbd' : '';
         if (hasResult && homeVal !== '' && awayVal !== '') {
           const actH = result.home_score, actA = result.away_score;
           const pH = parseInt(homeVal), pA = parseInt(awayVal);
-          let pts = 0, label = '<i class="ti ti-x"></i> Wrong';
           if (!isNaN(pH) && !isNaN(pA)) {
-            if (pH === actH && pA === actA) { pts = exactPts; label = '<i class="ti ti-check"></i> Exact!'; }
-            else if (Math.sign(pH - pA) === Math.sign(actH - actA)) { pts = resultPts; label = '<i class="ti ti-check"></i> Result'; }
+            if (pH === actH && pA === actA) {
+              cardClass = 'exact';
+              resultHtml = `<div class="ko-result" style="color:var(--green)"><i class="ti ti-check"></i> Exact! Result: ${actH}–${actA} &middot; +${exactPts} pts</div>`;
+            } else if (Math.sign(pH - pA) === Math.sign(actH - actA)) {
+              cardClass = 'result';
+              resultHtml = `<div class="ko-result" style="color:#5a6e00"><i class="ti ti-check"></i> Result! Score: ${actH}–${actA} &middot; +${resultPts} pts</div>`;
+            } else {
+              cardClass = 'wrong';
+              resultHtml = `<div class="ko-result" style="color:var(--red)"><i class="ti ti-x"></i> Wrong. Result: ${actH}–${actA}</div>`;
+            }
           }
-          resultHtml = `
-            <div class="ko-result">
-              Result: <strong>${actH}–${actA}</strong>
-              ${pts > 0
-                ? `<span style="color:var(--green);margin-left:0.4rem">+${pts} pts &middot; ${label}</span>`
-                : `<span style="color:var(--red);margin-left:0.4rem">${label}</span>`}
-            </div>
-          `;
         } else if (hasResult) {
-          resultHtml = `<div class="ko-result">Result: <strong>${result.home_score}–${result.away_score}</strong></div>`;
+          resultHtml = `<div class="ko-result">Result: ${result.home_score}–${result.away_score}</div>`;
         }
 
         return `
-          <div class="ko-card ${!hasTeams && !locked ? 'tbd' : ''}">
+          <div class="ko-card ${cardClass}">
             <div class="ko-card-top">
               <span class="ko-match-label">${m.match_label} &middot; ${formatDate(m.date || '2026-07-01')}</span>
-              ${hasResult ? '<span class="finished-badge">Final</span>' : '<span class="chip chip-grey">Upcoming</span>'}
+              ${locked ? `<div class="lock-pill lock-pill--locked lock-pill--sm"><i class="ti ti-lock"></i><span>Locked</span></div>` : '<span class="chip chip-grey">Upcoming</span>'}
             </div>
             ${teamRowHtml}
             ${resultHtml}

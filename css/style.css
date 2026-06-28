@@ -668,7 +668,10 @@ select.form-control option {
 }
 
 .ko-card:focus-within { border-color: var(--ink); }
-.ko-card.tbd { opacity: 0.6; }
+.ko-card.tbd    { opacity: 0.6; }
+.ko-card.exact  { border-color: var(--green); }
+.ko-card.result { border-color: var(--lime-dark); }
+.ko-card.wrong  { border-color: var(--red); }
 
 /* ---- Group predict grid ---- */
 .group-predict-grid {

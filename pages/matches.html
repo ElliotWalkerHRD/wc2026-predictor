@@ -504,14 +504,23 @@
         .then(({ data }) => { (data || []).forEach(r => { calibrationMap[r.match_id] = r; }); })
         .catch(() => {});
 
-      // ---- Crowd picks for upcoming group matches (aggregated only — no user IDs) ----
+      // ---- Crowd picks for upcoming group + knockout matches (aggregated only — no user IDs) ----
       const upcomingGroupIds = GROUP_FIXTURES
         .filter(f => now < new Date(`${f[1]}T${f[2]}:00Z`).getTime())
         .map(f => f[0]);
-      const crowdPromise = upcomingGroupIds.length
+      const upcomingKoIds = Object.values(KNOCKOUT_ROUNDS)
+        .flatMap(r => r.matches || [])
+        .filter(m => {
+          if (m.kickoff_utc) return now < new Date(m.kickoff_utc).getTime();
+          if (m.date && m.time) return now < new Date(`${m.date}T${m.time}:00Z`).getTime();
+          return true;
+        })
+        .map(m => m.id);
+      const upcomingCrowdIds = [...upcomingGroupIds, ...upcomingKoIds];
+      const crowdPromise = upcomingCrowdIds.length
         ? sb.from('predictions')
             .select('question_key,value')
-            .in('question_key', upcomingGroupIds.map(id => `m${id}`))
+            .in('question_key', upcomingCrowdIds.map(id => `m${id}`))
             .then(({ data }) => {
               if (!data) return;
               const byMatch = {};
@@ -520,7 +529,7 @@
                 if (!byMatch[mid]) byMatch[mid] = [];
                 byMatch[mid].push(p);
               });
-              upcomingGroupIds.forEach(id => {
+              upcomingCrowdIds.forEach(id => {
                 crowdPickMap[id] = MatchProbs.computeCrowdPicks(byMatch[id] || []);
               });
             })

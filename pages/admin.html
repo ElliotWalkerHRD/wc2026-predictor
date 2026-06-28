@@ -940,8 +940,8 @@
     function asNormName(s) {
       if (!s) return '';
       return String(s).toLowerCase()
-        .normalize('NFD').replace(/[Ì€-Í¯]/g, '')
-        .replace(/[â€˜â€™Ê¼'\-]/g, ' ')
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/[’ʼ'\-]/g, ' ')
         .replace(/[^a-z0-9\s]/g, '')
         .replace(/\s+/g, ' ').trim();
     }

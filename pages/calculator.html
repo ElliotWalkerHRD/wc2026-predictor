@@ -1115,6 +1115,8 @@ function attachPopulateListeners(el) {
 
   _userId = session.user.id;
   await DB.initRoundOverrides();
+  const _initResults = await DB.getMatchResults().catch(() => []);
+  DB.patchKnockoutBracket(_initResults);
   scoreMap = loadScenario();
   recompute();
   renderApp();

@@ -173,6 +173,7 @@
       });
 
       matchResults.forEach(r => { results[r.match_id] = r; });
+      DB.patchKnockoutBracket(matchResults);
       renderMatches();
     }
 

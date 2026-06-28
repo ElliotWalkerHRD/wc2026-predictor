@@ -217,6 +217,7 @@
       text-decoration: none;
       color: inherit;
       transition: box-shadow 0.15s, transform 0.15s;
+      min-width: 0;
     }
     .round-lock-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
     .round-lock-card.is-locked { background: var(--grey-100); }
@@ -243,6 +244,7 @@
       border-radius: 9999px;
       margin-top: 0.25rem;
       width: fit-content;
+      max-width: 100%;
     }
     .lock-badge--open     { background: rgba(200,241,53,0.2); color: #5c7000; }
     .lock-badge--locked   { background: var(--grey-200); color: var(--grey-500); }

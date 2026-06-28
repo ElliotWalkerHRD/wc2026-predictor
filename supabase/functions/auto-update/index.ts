@@ -812,22 +812,31 @@ serve(async (req) => {
       const slotIds = Object.keys(THIRD_ELIG).map(Number);
       const slotToGroup: Record<number, string> = {};
 
-      function augmentBracket(grp: string, seen: Set<number>): boolean {
-        for (const slot of slotIds) {
-          if (seen.has(slot)) continue;
-          if (!THIRD_ELIG[slot].has(grp)) continue;
-          seen.add(slot);
-          if (!slotToGroup[slot] || augmentBracket(slotToGroup[slot], seen)) {
-            slotToGroup[slot] = grp; return true;
+      const THIRD_PLACE_TABLE: Record<string, Record<number, string>> = {
+        'BDEFIJKL': { 74:'D', 77:'F', 79:'E', 80:'K', 81:'B', 82:'I', 85:'J', 87:'L' },
+      };
+      const qualGroupsSorted = qualGroups.slice().sort().join('');
+      if (THIRD_PLACE_TABLE[qualGroupsSorted]) {
+        Object.assign(slotToGroup, THIRD_PLACE_TABLE[qualGroupsSorted]);
+      } else {
+        console.warn(`[auto-update] No FIFA table entry for qualifying set: ${qualGroupsSorted} — falling back to bipartite matching (may differ from official bracket)`);
+        const augmentBracket = (grp: string, seen: Set<number>): boolean => {
+          for (const slot of slotIds) {
+            if (seen.has(slot)) continue;
+            if (!THIRD_ELIG[slot].has(grp)) continue;
+            seen.add(slot);
+            if (!slotToGroup[slot] || augmentBracket(slotToGroup[slot], seen)) {
+              slotToGroup[slot] = grp; return true;
+            }
           }
-        }
-        return false;
+          return false;
+        };
+        const byDegree = [...qualGroups].sort((a, b) =>
+          slotIds.filter(s => THIRD_ELIG[s].has(a)).length -
+          slotIds.filter(s => THIRD_ELIG[s].has(b)).length
+        );
+        for (const g of byDegree) augmentBracket(g, new Set());
       }
-      const byDegree = [...qualGroups].sort((a, b) =>
-        slotIds.filter(s => THIRD_ELIG[s].has(a)).length -
-        slotIds.filter(s => THIRD_ELIG[s].has(b)).length
-      );
-      for (const g of byDegree) augmentBracket(g, new Set());
 
       // [matchId, homeWinnerGroup, thirdSlotId]
       const R32_THIRD: [number, string, number][] = [

@@ -1625,7 +1625,7 @@
       const blendBrier = brier(resolved, 'blend_home', 'blend_draw', 'blend_away');
       const crowdBrier = crowdRows.length ? brier(crowdRows, 'crowd_home', 'crowd_draw', 'crowd_away') : null;
 
-      // ---- Calibration buckets (blend layer) ----
+      // ---- Calibration buckets — bucketed by blend confidence, all three layers compared ----
       const BUCKETS = [
         { label: '33–45%', min: 0.33, max: 0.45 },
         { label: '45–55%', min: 0.45, max: 0.55 },
@@ -1635,19 +1635,39 @@
       ];
 
       const buckets = BUCKETS.map(b => {
-        const mRows = resolved.filter(r => {
+        const bRows = resolved.filter(r => {
           const mx = Math.max(r.blend_home, r.blend_draw, r.blend_away);
           return mx >= b.min && mx < b.max;
         });
-        if (!mRows.length) return { ...b, count: 0, avgP: null, hitRate: null };
-        const avgP = mRows.reduce((s,r) => s + Math.max(r.blend_home,r.blend_draw,r.blend_away), 0) / mRows.length;
-        const hits = mRows.filter(r => predict(r,'blend_home','blend_draw','blend_away') === r.actual_outcome).length;
-        return { ...b, count: mRows.length, avgP, hitRate: hits / mRows.length };
+        if (!bRows.length) return { ...b, count: 0 };
+        const avgP     = bRows.reduce((s,r) => s + Math.max(r.blend_home,r.blend_draw,r.blend_away), 0) / bRows.length;
+        const eloHits  = bRows.filter(r => predict(r,'elo_home','elo_draw','elo_away')     === r.actual_outcome).length;
+        const crowdB   = bRows.filter(r => r.crowd_n > 0);
+        const crowdHit = crowdB.length > 0
+          ? crowdB.filter(r => predict(r,'crowd_home','crowd_draw','crowd_away') === r.actual_outcome).length / crowdB.length
+          : null;
+        const blendHits = bRows.filter(r => predict(r,'blend_home','blend_draw','blend_away') === r.actual_outcome).length;
+        return {
+          ...b, count: bRows.length, avgP,
+          eloHit:   eloHits  / bRows.length,
+          crowdHit, crowdN: crowdB.length,
+          blendHit: blendHits / bRows.length,
+        };
       });
 
       // ---- Per-match table ----
       const TEAM_NAMES = {};
       GROUP_FIXTURES.forEach(f => { TEAM_NAMES[f[0]] = { h: f[4], a: f[5] }; });
+      // Resolve knockout team codes from match_results (not stored in GROUP_FIXTURES)
+      const koCalIds = resolved.filter(r => r.match_id >= 73).map(r => r.match_id);
+      if (koCalIds.length > 0) {
+        const { data: koRes } = await sb.from('match_results')
+          .select('match_id, home_team, away_team').in('match_id', koCalIds);
+        for (const kr of (koRes || [])) {
+          if (kr.home_team && kr.away_team)
+            TEAM_NAMES[kr.match_id] = { h: kr.home_team, a: kr.away_team };
+        }
+      }
 
       const matchRows = resolved.map(r => {
         const teams = TEAM_NAMES[r.match_id] || { h: '?', a: '?' };
@@ -1670,18 +1690,23 @@
       }).join('');
 
       // ---- Render ----
-      const calBucketRows = buckets.filter(b => b.count > 0).map(b => `
-        <tr>
+      const hp = v => v == null ? '<span style="color:var(--grey-300)">—</span>' : `${(v*100).toFixed(0)}%`;
+      const calBucketRows = buckets.filter(b => b.count > 0).map(b => {
+        const gap = b.blendHit - b.avgP;
+        return `<tr>
           <td>${b.label}</td>
           <td style="text-align:center">${b.count}</td>
-          <td style="text-align:center">${(b.avgP*100).toFixed(1)}%</td>
-          <td style="text-align:center">${(b.hitRate*100).toFixed(1)}%</td>
+          <td style="text-align:center;color:var(--grey-500)">${(b.avgP*100).toFixed(1)}%</td>
+          <td style="text-align:center">${hp(b.eloHit)}</td>
+          <td style="text-align:center">${hp(b.crowdHit)}${b.crowdN < b.count ? `<span style="font-size:0.65rem;color:var(--grey-400)"> (${b.crowdN})</span>` : ''}</td>
+          <td style="text-align:center;font-weight:600">${hp(b.blendHit)}</td>
           <td style="text-align:center">
-            <span style="color:${Math.abs(b.avgP - b.hitRate) < 0.1 ? '#5c7000' : Math.abs(b.avgP - b.hitRate) < 0.2 ? 'var(--ink)' : 'var(--red)'}">
-              ${b.hitRate >= b.avgP ? '+' : ''}${((b.hitRate - b.avgP)*100).toFixed(1)}pp
+            <span style="color:${Math.abs(gap) < 0.1 ? '#5c7000' : Math.abs(gap) < 0.2 ? 'var(--ink)' : 'var(--red)'}">
+              ${gap >= 0 ? '+' : ''}${(gap*100).toFixed(1)}pp
             </span>
           </td>
-        </tr>`).join('');
+        </tr>`;
+      }).join('');
 
       const tdH = s => `<th style="font-size:0.72rem;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:var(--grey-500);padding:0.5rem 0.75rem;border-bottom:1px solid var(--grey-300);text-align:${s||'left'}">`
       const card = (html, mb) => `<div class="card" style="padding:1.25rem;margin-bottom:${mb||'1rem'}">${html}</div>`;
@@ -1706,7 +1731,14 @@
           </div>
         </div>
 
-        <h3 style="font-size:0.78rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--grey-500);margin-bottom:0.5rem">Accuracy by layer</h3>
+        ${resolved.length < 50 ? `
+          <div style="background:rgba(200,241,53,0.1);border:1px solid rgba(200,241,53,0.4);border-radius:var(--radius-md);padding:0.625rem 1rem;margin-bottom:1rem;font-size:0.825rem">
+            <i class="ti ti-info-circle" style="vertical-align:-0.1em"></i>
+            <strong>Small sample (N​=​${resolved.length}).</strong>
+            Numbers are indicative only — patterns stabilise around 30–50 matches.
+          </div>` : ''}
+
+        <h3 style="font-size:0.78rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--grey-500);margin-bottom:0.5rem">Accuracy by layer (N​=​${resolved.length} resolved matches)</h3>
         ${card(`
           <table style="width:100%;border-collapse:collapse;font-size:0.85rem">
             <thead><tr>
@@ -1744,21 +1776,25 @@
         `)}
 
         ${calBucketRows ? `
-          <h3 style="font-size:0.78rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--grey-500);margin-bottom:0.5rem">Blend calibration by confidence</h3>
+          <h3 style="font-size:0.78rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--grey-500);margin-bottom:0.5rem">Calibration by confidence bucket (all layers)</h3>
           ${card(`
-            <table style="width:100%;border-collapse:collapse;font-size:0.85rem">
-              <thead><tr>
-                ${tdH()}Confidence</th>
-                ${tdH('center')}Count</th>
-                ${tdH('center')}Avg predicted</th>
-                ${tdH('center')}Actual hit rate</th>
-                ${tdH('center')}Δ (gap)</th>
-              </tr></thead>
-              <tbody>${calBucketRows}</tbody>
-            </table>
+            <div style="overflow-x:auto">
+              <table style="width:100%;border-collapse:collapse;font-size:0.85rem">
+                <thead><tr>
+                  ${tdH()}Blend confidence</th>
+                  ${tdH('center')}N</th>
+                  ${tdH('center')}Avg pred</th>
+                  ${tdH('center')}Elo hit%</th>
+                  ${tdH('center')}Crowd hit%</th>
+                  ${tdH('center')}Blend hit%</th>
+                  ${tdH('center')}Blend gap</th>
+                </tr></thead>
+                <tbody>${calBucketRows}</tbody>
+              </table>
+            </div>
             <p style="font-size:0.72rem;color:var(--grey-400);margin-top:0.6rem">
-              Confidence = max probability across home/draw/away for each match.
-              Gap close to 0pp = well calibrated. Negative = model over-confident.
+              Matches bucketed by blend's max predicted probability. Crowd hit% excludes matches with no picks (count shown in parentheses if less than N).
+              Blend gap = blend hit rate minus avg predicted; close to 0pp = well calibrated; negative = over-confident.
             </p>
           `)}` : ''}
 

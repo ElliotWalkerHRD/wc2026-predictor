@@ -1174,6 +1174,18 @@
         scoreLine = `<div class="match-scoreline">${result.home_score} – ${result.away_score}</div>`;
       }
 
+      let aetHtml = '';
+      if (isFinished && result.ft_home != null) {
+        if (result.pens_home != null) {
+          const winnerName = result.pens_home > result.pens_away ? (home?.name || 'Home') : (away?.name || 'Away');
+          const bigP = Math.max(result.pens_home, result.pens_away);
+          const smlP = Math.min(result.pens_home, result.pens_away);
+          aetHtml = `<div class="ko-aet">AET ${result.ft_home}–${result.ft_away} · ${winnerName} won ${bigP}–${smlP} on pens</div>`;
+        } else {
+          aetHtml = `<div class="ko-aet">AET: ${result.ft_home}–${result.ft_away}</div>`;
+        }
+      }
+
       let predsHtml = '';
       const autoPill = isFinished && currentUserId && !preds.some(p => p.userId === currentUserId)
         ? `<span class="pred-pill auto"><span class="pred-name"><strong>You</strong>:</span>4–4 <span class="auto-tag">auto</span></span>`
@@ -1217,6 +1229,7 @@
             </div>
             <div class="match-score-centre">
               ${scoreLine}
+              ${aetHtml}
               ${statusBadge}
             </div>
             <div class="match-team-block right">

@@ -672,6 +672,13 @@ select.form-control option {
 .ko-card.exact  { border-color: var(--green); }
 .ko-card.result { border-color: var(--lime-dark); }
 .ko-card.wrong  { border-color: var(--red); }
+.ko-aet {
+  text-align: center;
+  font-size: 0.68rem;
+  color: var(--grey-400);
+  margin-top: 0.2rem;
+  font-weight: 500;
+}
 
 /* ---- Group predict grid ---- */
 .group-predict-grid {

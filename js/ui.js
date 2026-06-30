@@ -268,7 +268,11 @@ function bracketReady(id) {
   const key = ROUND_TO_KO[id];
   if (!key) return true; // rounds 1-3 have no KO bracket — always ready
   const ms = KNOCKOUT_ROUNDS[key]?.matches || [];
-  return ms.length > 0 && ms.every(m => m.home_team && m.away_team);
+  if (ms.length === 0) return false;
+  // R32 seeds all at once (group stage completes) — require every slot filled.
+  // R16 onwards seeds per-match as each feeder finishes — open as soon as one match has both teams.
+  if (id === 'round4') return ms.every(m => m.home_team && m.away_team);
+  return ms.some(m => m.home_team && m.away_team);
 }
 
 window.Toast = Toast;

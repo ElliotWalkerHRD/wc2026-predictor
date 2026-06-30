@@ -250,6 +250,18 @@
       const container = document.getElementById('matchesContent');
       if (!roundData) { container.innerHTML = '<p class="text-muted">No matches found.</p>'; return; }
 
+      const anyTeamsSet = roundData.matches.some(m => m.home_team && m.away_team);
+      if (!anyTeamsSet) {
+        container.innerHTML = `
+          <div style="text-align:center;padding:3rem 1rem;color:var(--grey-500)">
+            <i class="ti ti-tournament" style="font-size:2.5rem;display:block;margin-bottom:0.75rem;color:var(--grey-300)"></i>
+            <p style="font-weight:600;margin-bottom:0.25rem">Matchups not yet confirmed</p>
+            <p style="font-size:0.875rem">Round of 16 teams will appear here as Round of 32 results come in.</p>
+          </div>`;
+        document.getElementById('stickySave').style.display = 'none';
+        return;
+      }
+
       container.innerHTML = roundData.matches.map(m => {
         const result  = results[m.id];
         const pred    = saved[getMatchKey(m.id)] || {};
@@ -260,6 +272,9 @@
         const awayTeam = m.away_team ? getTeam(m.away_team) : null;
         const hasTeams  = homeTeam && awayTeam;
         const hasResult = result && result.home_score !== null;
+        // Lock this individual match if the round is globally locked OR the match has kicked off
+        const matchKickedOff = result && ['IN_PLAY','PAUSED','LIVE','FINISHED'].includes(result.status);
+        const matchLocked = locked || matchKickedOff;
 
         let teamRowHtml = '';
         if (hasTeams) {
@@ -272,11 +287,11 @@
               <div class="ko-score-inputs">
                 <input type="number" id="h_${m.id}" class="score-num" min="0" max="20"
                   inputmode="numeric" pattern="[0-9]*"
-                  value="${homeVal}" placeholder="0" ${locked ? 'disabled' : ''}>
+                  value="${homeVal}" placeholder="0" ${matchLocked ? 'disabled' : ''}>
                 <span class="score-sep">–</span>
                 <input type="number" id="a_${m.id}" class="score-num" min="0" max="20"
                   inputmode="numeric" pattern="[0-9]*"
-                  value="${awayVal}" placeholder="0" ${locked ? 'disabled' : ''}>
+                  value="${awayVal}" placeholder="0" ${matchLocked ? 'disabled' : ''}>
               </div>
               <div class="ko-team away">
                 ${teamFlagImg(awayTeam.code)}
@@ -288,24 +303,12 @@
           teamRowHtml = `
             <div class="tbd-notice">
               <i class="ti ti-clock"></i> Teams TBD — ${m.note || 'Drawn once qualified'}
-              ${!locked ? `
-                <div class="ko-score-inputs" style="justify-content:center;margin-top:0.625rem">
-                  <input type="number" id="h_${m.id}" class="score-num" min="0" max="20"
-                    inputmode="numeric" pattern="[0-9]*"
-                    value="${homeVal}" placeholder="–" style="opacity:0.5">
-                  <span class="score-sep">–</span>
-                  <input type="number" id="a_${m.id}" class="score-num" min="0" max="20"
-                    inputmode="numeric" pattern="[0-9]*"
-                    value="${awayVal}" placeholder="–" style="opacity:0.5">
-                </div>
-                <small style="font-size:0.68rem;color:var(--grey-400)">You can enter score now or wait</small>
-              ` : ''}
             </div>
           `;
         }
 
         let resultHtml = '';
-        let cardClass = !hasTeams && !locked ? 'tbd' : '';
+        let cardClass = !hasTeams ? 'tbd' : '';
         if (hasResult && homeVal !== '' && awayVal !== '') {
           const actH = result.home_score, actA = result.away_score;
           const pH = parseInt(homeVal), pA = parseInt(awayVal);
@@ -342,12 +345,12 @@
           <div class="ko-card ${cardClass}">
             <div class="ko-card-top">
               <span class="ko-match-label">${m.match_label} &middot; ${formatDate(m.date || '2026-07-01')}</span>
-              ${locked ? `<div class="lock-pill lock-pill--locked lock-pill--sm"><i class="ti ti-lock"></i><span>Locked</span></div>` : '<span class="chip chip-grey">Upcoming</span>'}
+              ${matchLocked ? `<div class="lock-pill lock-pill--locked lock-pill--sm"><i class="ti ti-lock"></i><span>Locked</span></div>` : '<span class="chip chip-grey">Upcoming</span>'}
             </div>
             ${teamRowHtml}
             ${resultHtml}
             ${aetHtml}
-            ${locked ? `<button class="view-picks-btn" data-match="${m.id}"><i class="ti ti-eye"></i> See picks</button>` : ''}
+            ${matchLocked ? `<button class="view-picks-btn" data-match="${m.id}"><i class="ti ti-eye"></i> See picks</button>` : ''}
           </div>
         `;
       }).join('');

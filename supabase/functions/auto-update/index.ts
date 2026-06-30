@@ -919,6 +919,59 @@ serve(async (req) => {
     console.error("[auto-update] bracket seeding error (non-fatal):", e.message);
   }
 
+  // ---- Step 6: Propagate knockout winners into next-round slots ----
+  // Winner priority: penalty shootout > after-ET score > 90-min score
+  // [targetMatchId, homeSourceMatchId, awaySourceMatchId]
+  const KO_FEED_MAP: [number, number, number][] = [
+    [89, 74, 77], [90, 73, 75], [91, 76, 78], [92, 79, 80],
+    [93, 83, 84], [94, 81, 82], [95, 86, 88], [96, 85, 87],
+    [97, 89, 90], [98, 93, 94], [99, 91, 92], [100, 95, 96],
+    [101, 97, 98], [102, 99, 100],
+    [104, 101, 102],
+  ];
+  function getKoWinner(r: any): string | null {
+    if (!r || r.status !== 'FINISHED') return null;
+    if (r.pens_home != null) return r.pens_home > r.pens_away ? r.home_team : r.away_team;
+    if (r.ft_home   != null) return r.ft_home  > r.ft_away   ? r.home_team : r.away_team;
+    if (r.home_score != null && r.away_score != null && r.home_score !== r.away_score)
+      return r.home_score > r.away_score ? r.home_team : r.away_team;
+    return null;
+  }
+  let koWinnersSeeded = 0;
+  try {
+    const allKoIds = [...Object.values(KNOCKOUT_IDS).flat()];
+    const { data: koRows, error: koErr } = await supabaseAdmin
+      .from('match_results')
+      .select('match_id,home_team,away_team,home_score,away_score,ft_home,ft_away,pens_home,pens_away,status')
+      .in('match_id', allKoIds);
+    if (koErr) throw koErr;
+
+    const koMap: Record<number, any> = {};
+    (koRows ?? []).forEach((r: any) => { koMap[r.match_id] = r; });
+
+    const propUpserts: any[] = [];
+    for (const [target, homeSrc, awaySrc] of KO_FEED_MAP) {
+      const homeWinner = getKoWinner(koMap[homeSrc]);
+      const awayWinner = getKoWinner(koMap[awaySrc]);
+      if (!homeWinner && !awayWinner) continue;
+      const u: any = { match_id: target, updated_at: new Date().toISOString() };
+      if (homeWinner) u.home_team = homeWinner;
+      if (awayWinner) u.away_team = awayWinner;
+      propUpserts.push(u);
+    }
+
+    if (propUpserts.length > 0) {
+      const { error: propErr } = await supabaseAdmin
+        .from('match_results')
+        .upsert(propUpserts, { onConflict: 'match_id' });
+      if (propErr) throw propErr;
+      koWinnersSeeded = propUpserts.length;
+    }
+    console.log(`[auto-update] ko-propagate: ${koWinnersSeeded} slots updated`);
+  } catch (e: any) {
+    console.error("[auto-update] ko-propagate error (non-fatal):", e.message);
+  }
+
   // ---- Log success ----
   const durationMs = Date.now() - startMs;
   await writeLog(supabaseAdmin, {
@@ -939,6 +992,7 @@ serve(async (req) => {
       calib_snapshotted: calibSnapshotted,
       calib_resolved: calibResolved,
       bracket_seeded: bracketSeeded,
+      ko_winners_seeded: koWinnersSeeded,
       duration_ms: durationMs,
     }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } }

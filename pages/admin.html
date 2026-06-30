@@ -304,6 +304,24 @@
               <div id="seedBracketStatus" style="margin-top:0.75rem"></div>
             </div>
 
+            <!-- Knockout winner propagation card -->
+            <div class="card mt-4" style="padding:1.25rem 1.5rem">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+                <div>
+                  <div style="font-weight:700;margin-bottom:0.2rem">Seed Next Round</div>
+                  <div style="font-size:0.82rem;color:var(--grey-500);max-width:420px">
+                    Reads finished knockout results and writes the advancing team into each next-round slot
+                    (R32→R16, R16→QF, QF→SF, SF→Final). Idempotent — safe to run multiple times.
+                    Auto-runs every 2 min via cron; use this to force immediately after a match finishes.
+                  </div>
+                </div>
+                <button class="btn btn-outline btn-sm" id="seedNextRoundBtn" style="white-space:nowrap">
+                  <i class="ti ti-arrow-right"></i> Seed next round
+                </button>
+              </div>
+              <div id="seedNextRoundStatus" style="margin-top:0.75rem"></div>
+            </div>
+
             <div style="margin-top:1rem;font-size:0.78rem;color:var(--grey-400)">
               <i class="ti ti-info-circle"></i>
               To disable the cron job entirely (vs. just toggling the kill-switch):
@@ -680,6 +698,72 @@
       } finally {
         btn.disabled = false;
         btn.innerHTML = '<i class="ti ti-tournament"></i> Seed bracket';
+      }
+    });
+
+    document.getElementById('seedNextRoundBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('seedNextRoundBtn');
+      const statusEl = document.getElementById('seedNextRoundStatus');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="ti ti-loader"></i> Seeding…';
+      statusEl.innerHTML = '';
+      try {
+        const sb = DB.initSupabase();
+        const allKoIds = [73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,
+                          89,90,91,92,93,94,95,96,97,98,99,100,101,102,104];
+        const { data: koResults, error: koErr } = await sb
+          .from('match_results')
+          .select('match_id,home_team,away_team,home_score,away_score,ft_home,ft_away,pens_home,pens_away,status')
+          .in('match_id', allKoIds);
+        if (koErr) throw koErr;
+
+        const koMap = {};
+        (koResults || []).forEach(r => { koMap[r.match_id] = r; });
+
+        function getKoWinner(r) {
+          if (!r || r.status !== 'FINISHED') return null;
+          if (r.pens_home != null) return r.pens_home > r.pens_away ? r.home_team : r.away_team;
+          if (r.ft_home   != null) return r.ft_home  > r.ft_away   ? r.home_team : r.away_team;
+          if (r.home_score != null && r.away_score != null && r.home_score !== r.away_score)
+            return r.home_score > r.away_score ? r.home_team : r.away_team;
+          return null;
+        }
+
+        const FEED_MAP = [
+          [89, 74, 77], [90, 73, 75], [91, 76, 78], [92, 79, 80],
+          [93, 83, 84], [94, 81, 82], [95, 86, 88], [96, 85, 87],
+          [97, 89, 90], [98, 93, 94], [99, 91, 92], [100, 95, 96],
+          [101, 97, 98], [102, 99, 100], [104, 101, 102],
+        ];
+
+        const upserts = [];
+        for (const [target, homeSrc, awaySrc] of FEED_MAP) {
+          const homeWinner = getKoWinner(koMap[homeSrc]);
+          const awayWinner = getKoWinner(koMap[awaySrc]);
+          if (!homeWinner && !awayWinner) continue;
+          const u = { match_id: target, updated_at: new Date().toISOString() };
+          if (homeWinner) u.home_team = homeWinner;
+          if (awayWinner) u.away_team = awayWinner;
+          upserts.push(u);
+        }
+
+        if (upserts.length === 0) {
+          statusEl.innerHTML = `<div class="alert alert-info" style="margin-top:0"><i class="ti ti-info-circle"></i> No new winners to propagate — no knockout matches finished yet.</div>`;
+          return;
+        }
+
+        const { error: upsertErr } = await sb.from('match_results').upsert(upserts, { onConflict: 'match_id' });
+        if (upsertErr) throw upsertErr;
+
+        statusEl.innerHTML = `<div class="alert alert-success" style="margin-top:0"><i class="ti ti-check"></i>
+          Propagated ${upserts.length} slot${upserts.length === 1 ? '' : 's'}:
+          ${upserts.map(u => `M${u.match_id}: ${[u.home_team, u.away_team].filter(Boolean).join(' vs ')}`).join(' &nbsp;&middot;&nbsp; ')}
+        </div>`;
+      } catch (e) {
+        statusEl.innerHTML = `<div class="alert alert-error" style="margin-top:0"><i class="ti ti-alert-triangle"></i> ${e.message}</div>`;
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ti ti-arrow-right"></i> Seed next round';
       }
     });
 

@@ -490,10 +490,30 @@
       const res = resultMap[m.id];
       const hasResult = res && res.home_score != null;
 
+      // Display score: prefer AET (ft_home/ft_away), fall back to 90-min
+      const dispH = res?.ft_home  ?? res?.home_score ?? null;
+      const dispA = res?.ft_away  ?? res?.away_score ?? null;
+
+      // Winner: pens > AET > 90-min
       let homeWon = null, awayWon = null;
       if (hasResult) {
-        if (res.home_score > res.away_score)      { homeWon = true;  awayWon = false; }
-        else if (res.home_score < res.away_score) { homeWon = false; awayWon = true; }
+        if (res.pens_home != null) {
+          homeWon = res.pens_home > res.pens_away; awayWon = !homeWon;
+        } else if (res.ft_home != null) {
+          if (res.ft_home > res.ft_away)      { homeWon = true;  awayWon = false; }
+          else if (res.ft_home < res.ft_away) { homeWon = false; awayWon = true; }
+        } else {
+          if (res.home_score > res.away_score)      { homeWon = true;  awayWon = false; }
+          else if (res.home_score < res.away_score) { homeWon = false; awayWon = true; }
+        }
+      }
+
+      // Extra annotation shown in bracket-meta
+      let extraMeta = '';
+      if (hasResult && res.pens_home != null) {
+        extraMeta = ` &middot; <span style="color:var(--grey-500);font-size:0.7rem">${res.pens_home}–${res.pens_away} pens</span>`;
+      } else if (hasResult && res.ft_home != null) {
+        extraMeta = ` &middot; <span style="color:var(--grey-500);font-size:0.7rem">AET</span>`;
       }
 
       // Neither team known yet and no result — show compact placeholder
@@ -521,13 +541,13 @@
         <div class="bracket-match${hasResult ? ' has-result' : ''}">
           <div class="bracket-team-row${homeWon ? ' winner' : ''}">
             <div class="bracket-team-info">${homeInfo}</div>
-            <span class="bracket-score">${hasResult ? res.home_score : ''}</span>
+            <span class="bracket-score">${hasResult ? dispH : ''}</span>
           </div>
           <div class="bracket-team-row${awayWon ? ' winner' : ''}">
             <div class="bracket-team-info">${awayInfo}</div>
-            <span class="bracket-score">${hasResult ? res.away_score : ''}</span>
+            <span class="bracket-score">${hasResult ? dispA : ''}</span>
           </div>
-          <div class="bracket-meta">${m.match_label} &middot; ${fmtShortDate(m.date)}</div>
+          <div class="bracket-meta">${m.match_label} &middot; ${fmtShortDate(m.date)}${extraMeta}</div>
         </div>`;
     }
 

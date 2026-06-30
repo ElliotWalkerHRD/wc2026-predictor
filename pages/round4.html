@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
-  <link rel="stylesheet" href="../css/style.css?v=47">
+  <link rel="stylesheet" href="../css/style.css?v=49">
   <style>
     .ko-card-top {
       display: flex;
@@ -381,6 +381,19 @@
           resultHtml = `<div class="ko-result" style="color:var(--red)">Live: ${result.home_score}–${result.away_score}</div>`;
         }
 
+        // AET/pens info line — display only, does not affect scoring
+        let aetHtml = '';
+        if (isFinished && result.ft_home != null) {
+          if (result.pens_home != null) {
+            const winnerName = result.pens_home > result.pens_away ? (homeTeam?.name || 'Home') : (awayTeam?.name || 'Away');
+            const bigP = Math.max(result.pens_home, result.pens_away);
+            const smlP = Math.min(result.pens_home, result.pens_away);
+            aetHtml = `<div class="ko-aet">AET ${result.ft_home}–${result.ft_away} &middot; ${winnerName} won ${bigP}–${smlP} on pens</div>`;
+          } else {
+            aetHtml = `<div class="ko-aet">AET: ${result.ft_home}–${result.ft_away}</div>`;
+          }
+        }
+
         const kickoffLocal = m.date && m.time
           ? new Date(m.date + 'T' + m.time + ':00Z').toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
           : formatDate(m.date || '2026-07-01');
@@ -397,6 +410,7 @@
             </div>
             ${teamRowHtml}
             ${resultHtml}
+            ${aetHtml}
             ${matchLocked ? `<button class="view-picks-btn" data-match="${m.id}"><i class="ti ti-eye"></i> See picks</button>` : ''}
           </div>
         `;
@@ -438,7 +452,7 @@
                 ${awayCode ? teamFlagImg(awayCode) : ''}
               </div>
               <div class="pred-modal-meta">${m?.match_label || `Match ${matchId}`}${m?.date ? ' · ' + formatDate(m.date) : ''}</div>
-              ${hasResult ? `<div class="pred-modal-meta" style="color:var(--ink);font-weight:700;margin-top:0.2rem">Result: ${result.home_score}–${result.away_score}</div>` : ''}
+              ${hasResult ? `<div class="pred-modal-meta" style="color:var(--ink);font-weight:700;margin-top:0.2rem">Result: ${result.home_score}–${result.away_score}</div>${result.ft_home != null ? `<div class="pred-modal-meta" style="font-size:0.78rem;color:var(--grey-400);margin-top:0.15rem">${result.pens_home != null ? \`AET \${result.ft_home}–\${result.ft_away} · \${result.pens_home > result.pens_away ? home.name : away.name} won \${Math.max(result.pens_home,result.pens_away)}–\${Math.min(result.pens_home,result.pens_away)} on pens\` : \`AET: \${result.ft_home}–\${result.ft_away}\`}</div>` : ''}` : ''}
               <button class="pred-modal-close" id="modalCloseBtn" aria-label="Close"><i class="ti ti-x"></i></button>
             </div>
             ${leagueBarHtml}

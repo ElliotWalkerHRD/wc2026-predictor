@@ -253,18 +253,34 @@ serve(async (req) => {
       continue;
     }
 
-    // For live matches fullTime is null — use halfTime score, or fall back to 0-0
-    const homeScore: number = match.score?.fullTime?.home
+    // For knockout ET/penalty matches, regularTime holds the 90-min score;
+    // for normal-time matches regularTime is null so fall back to fullTime.
+    // For live matches fullTime is null — use halfTime score, or fall back to 0-0.
+    const reg      = match.score?.regularTime;
+    const ft       = match.score?.fullTime;
+    const duration = match.score?.duration; // REGULAR | EXTRA_TIME | PENALTY_SHOOTOUT
+    const homeScore: number = (reg?.home != null ? reg.home : ft?.home)
       ?? match.score?.halfTime?.home
       ?? 0;
-    const awayScore: number = match.score?.fullTime?.away
+    const awayScore: number = (reg?.away != null ? reg.away : ft?.away)
       ?? match.score?.halfTime?.away
       ?? 0;
+
+    // Capture after-ET and penalty info for display only — NOT used in scoring
+    const wentToET = duration === 'EXTRA_TIME' || duration === 'PENALTY_SHOOTOUT';
+    const ftHome:   number | null = wentToET ? (ft?.home   ?? null) : null;
+    const ftAway:   number | null = wentToET ? (ft?.away   ?? null) : null;
+    const pensHome: number | null = match.score?.penalties?.home ?? null;
+    const pensAway: number | null = match.score?.penalties?.away ?? null;
 
     upserts.push({
       match_id:   ourId,
       home_score: homeScore,
       away_score: awayScore,
+      ft_home:    ftHome,
+      ft_away:    ftAway,
+      pens_home:  pensHome,
+      pens_away:  pensAway,
       status,
       updated_at: new Date().toISOString(),
     });

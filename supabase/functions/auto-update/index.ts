@@ -119,6 +119,14 @@ const CAL_BLEND_ELO   = 0.70;
 const CAL_BLEND_CROWD = 0.30;
 const CAL_MIN_CROWD   = 10;
 
+// Form layer: last FORM_WINDOW matches, decay λ=FORM_DECAY per match back, raw W/D/L (no Elo).
+// Virtual Elo offset: vRating = 1500 ± (F − 0.5) × FORM_SCALE, then eloThreeWay(vH, vA).
+const FORM_WINDOW = 7;
+const FORM_DECAY  = 0.75;
+const FORM_SCALE  = 200;
+
+interface FormEntry { id: number; home: string; away: string; hg: number; ag: number; }
+
 function eloThreeWay(homeR: number, awayR: number): { home: number; draw: number; away: number } {
   const dr     = homeR - awayR;
   const eA     = 1 / (1 + Math.pow(10, -dr / 400));
@@ -128,6 +136,29 @@ function eloThreeWay(homeR: number, awayR: number): { home: number; draw: number
   const wD     = Math.max(0, rawD);
   const tot    = wA + wD + wB;
   return { home: wA / tot, draw: wD / tot, away: wB / tot };
+}
+
+function getFormScore(team: string, beforeId: number, history: FormEntry[]): number {
+  const past = history.filter(m => m.id < beforeId && (m.home === team || m.away === team));
+  const win  = past.slice(-FORM_WINDOW);
+  if (!win.length) return 0.5;
+  let wSum = 0, wTot = 0;
+  for (let i = 0; i < win.length; i++) {
+    const k = win.length - 1 - i;
+    const w = Math.pow(FORM_DECAY, k);
+    const m = win[i];
+    const pts = (m.home === team ? m.hg > m.ag : m.ag > m.hg) ? 1.0
+              : m.hg === m.ag ? 0.5 : 0.0;
+    wSum += w * pts; wTot += w;
+  }
+  return wTot > 0 ? wSum / wTot : 0.5;
+}
+
+function computeFormProbs(fH: number, fA: number): { home: number; draw: number; away: number } {
+  // Map form score [0,1] → virtual rating → eloThreeWay (no Elo ratings used here)
+  const vH = ELO_BASE + (fH - 0.5) * FORM_SCALE;
+  const vA = ELO_BASE + (fA - 0.5) * FORM_SCALE;
+  return eloThreeWay(vH, vA);
 }
 
 function blendCalib(
@@ -675,6 +706,13 @@ serve(async (req) => {
       (allResults ?? []).map((r: any) => [r.match_id, r])
     );
 
+    // Build form history from completed group-stage matches (ids 1-72)
+    const formHistory: FormEntry[] = [];
+    for (const [fid, , fh, fa] of GROUP_FIXTURES) {
+      const r = resMap.get(fid);
+      if (r?.home_score != null) formHistory.push({ id: fid, home: fh, away: fa, hg: r.home_score, ag: r.away_score });
+    }
+
     // ---- Part A: snapshot upcoming matches ----
     const unsnapped = allCalIds.filter(id => {
       if (calMap.has(id)) return false;
@@ -733,6 +771,11 @@ serve(async (req) => {
         const crowd  = crowdN > 0 ? { home: hw / crowdN, draw: d / crowdN, away: aw / crowdN } : null;
         const blend  = blendCalib(elo, crowd, crowdN);
 
+        // Form layer: recency-weighted W/D/L, last 7 matches, λ=0.75 per match back
+        const fH   = getFormScore(homeCode, id, formHistory);
+        const fA   = getFormScore(awayCode, id, formHistory);
+        const form = computeFormProbs(fH, fA);
+
         snapshotRows.push({
           match_id:         id,
           elo_home:         r5(elo.home),
@@ -746,6 +789,9 @@ serve(async (req) => {
           blend_draw:       r5(blend.draw),
           blend_away:       r5(blend.away),
           blend_elo_weight: r3(blend.eloW),
+          form_home:        r5(form.home),
+          form_draw:        r5(form.draw),
+          form_away:        r5(form.away),
           snapshot_at:      nowStr,
         });
       }

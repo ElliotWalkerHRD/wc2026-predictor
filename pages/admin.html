@@ -1624,6 +1624,9 @@
       const eloBrier   = brier(resolved, 'elo_home',   'elo_draw',   'elo_away');
       const blendBrier = brier(resolved, 'blend_home', 'blend_draw', 'blend_away');
       const crowdBrier = crowdRows.length ? brier(crowdRows, 'crowd_home', 'crowd_draw', 'crowd_away') : null;
+      const formRows    = resolved.filter(r => r.form_home != null);
+      const formCorrect = formRows.filter(r => predict(r,'form_home','form_draw','form_away') === r.actual_outcome).length;
+      const formBrier   = formRows.length ? brier(formRows, 'form_home', 'form_draw', 'form_away') : null;
 
       // ---- Calibration buckets — bucketed by blend confidence, all three layers compared ----
       const BUCKETS = [
@@ -1675,6 +1678,7 @@
         const ePred = predict(r,'elo_home','elo_draw','elo_away');
         const cPred = predict(r,'crowd_home','crowd_draw','crowd_away');
         const bPred = predict(r,'blend_home','blend_draw','blend_away');
+        const fPred = r.form_home != null ? predict(r,'form_home','form_draw','form_away') : null;
         const tick = v => v === r.actual_outcome
           ? '<span style="color:#5c7000;font-weight:700">✓</span>'
           : '<span style="color:var(--grey-400)">✗</span>';
@@ -1686,6 +1690,7 @@
           <td style="text-align:center">${tick(ePred)} <span style="font-size:0.75rem;color:var(--grey-500)">${fp(Math.max(r.elo_home,r.elo_draw,r.elo_away),'')}</span></td>
           <td style="text-align:center">${r.crowd_n > 0 ? tick(cPred) + ` <span style="font-size:0.75rem;color:var(--grey-500)">${fp(Math.max(r.crowd_home,r.crowd_draw,r.crowd_away),'')}</span>` : '<span style="color:var(--grey-300)">—</span>'}</td>
           <td style="text-align:center">${tick(bPred)} <span style="font-size:0.75rem;color:var(--grey-500)">${fp(Math.max(r.blend_home,r.blend_draw,r.blend_away),'')}</span></td>
+          <td style="text-align:center">${fPred != null ? tick(fPred) + ` <span style="font-size:0.75rem;color:var(--grey-500)">${fp(Math.max(r.form_home,r.form_draw,r.form_away),'')}</span>` : '<span style="color:var(--grey-300)">—</span>'}</td>
         </tr>`;
       }).join('');
 
@@ -1770,9 +1775,16 @@
                 <td style="text-align:center;font-weight:600">${pct(blendCorrect,resolved.length)}</td>
                 <td style="text-align:center"><strong>${blendBrier}</strong></td>
               </tr>
+              <tr style="background:var(--grey-100)">
+                <td style="padding:0.6rem 0.75rem">Form only <span style="font-size:0.72rem;color:var(--grey-400)">(tracking)</span></td>
+                <td style="text-align:center">${formRows.length}${formRows.length < resolved.length ? `<span style="font-size:0.72rem;color:var(--grey-400)"> w/ form</span>` : ''}</td>
+                <td style="text-align:center">${formRows.length ? formCorrect : '—'}</td>
+                <td style="text-align:center;font-weight:600">${pct(formCorrect,formRows.length)}</td>
+                <td style="text-align:center">${formBrier ?? '—'}</td>
+              </tr>
             </tbody>
           </table>
-          <p style="font-size:0.72rem;color:var(--grey-400);margin-top:0.6rem">Brier score: lower = better. Random 3-way baseline = 0.667.</p>
+          <p style="font-size:0.72rem;color:var(--grey-400);margin-top:0.6rem">Brier score: lower = better. Random 3-way baseline = 0.667. Form layer: last 7 matches, λ=0.75 decay, raw W/D/L → virtual Elo ±100 pts.</p>
         `)}
 
         ${calBucketRows ? `
@@ -1809,6 +1821,7 @@
                 ${tdH('center')}Elo ✓?</th>
                 ${tdH('center')}Crowd ✓?</th>
                 ${tdH('center')}Blend ✓?</th>
+                ${tdH('center')}Form ✓?</th>
               </tr></thead>
               <tbody style="font-size:0.8rem">${matchRows}</tbody>
             </table>

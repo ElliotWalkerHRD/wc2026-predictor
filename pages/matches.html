@@ -501,8 +501,11 @@
       // ---- Pre-kickoff model snapshots — used to freeze the prob bar for live/finished matches ----
       const calibrationPromise = sb.from('model_calibration')
         .select('match_id,blend_home,blend_draw,blend_away,elo_home,elo_draw,elo_away,crowd_home,crowd_draw,crowd_away,crowd_n,form_home,form_draw,form_away')
-        .then(({ data }) => { (data || []).forEach(r => { calibrationMap[r.match_id] = r; }); })
-        .catch(() => {});
+        .then(({ data, error }) => {
+          if (error) { console.warn('calibration load error:', error); return; }
+          (data || []).forEach(r => { calibrationMap[r.match_id] = r; });
+        })
+        .catch(err => { console.warn('calibration fetch failed:', err); });
 
       // ---- Crowd picks for upcoming group + knockout matches (aggregated only — no user IDs) ----
       const upcomingGroupIds = GROUP_FIXTURES

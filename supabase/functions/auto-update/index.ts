@@ -642,13 +642,22 @@ serve(async (req) => {
   }
 
   // ---- Step 4: Calibration snapshots ----
-  // Non-fatal, idempotent.
-  // Part A: For each upcoming group match with no snapshot yet, store current
-  //         Elo + crowd probabilities so we can later measure model accuracy.
+  // Non-fatal, idempotent. Covers group stage (1-72) and knockout (73-104).
+  // Part A: For each upcoming match with no snapshot yet, store current Elo + crowd
+  //         probabilities. KO matches are only snapped once both teams are confirmed.
   // Part B: For each snapped match that just finished, record the actual outcome.
   let calibSnapshotted = 0, calibResolved = 0;
   try {
     const groupIds = GROUP_FIXTURES.map(([id]) => id);
+    const koIds = [
+      73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,
+      89,90,91,92,93,94,95,96,
+      97,98,99,100,
+      101,102,
+      104,
+    ];
+    const allCalIds = [...groupIds, ...koIds];
+    const groupIdSet = new Set(groupIds);
 
     // Load existing calibration state
     const { data: calRows } = await supabaseAdmin
@@ -657,20 +666,24 @@ serve(async (req) => {
       (calRows ?? []).map((r: any) => [r.match_id, r.actual_outcome ?? null])
     );
 
-    // Load current results for group matches
+    // Load current results — include team codes needed for KO snapshotting
     const { data: allResults } = await supabaseAdmin
       .from("match_results")
-      .select("match_id, home_score, away_score, status")
-      .in("match_id", groupIds);
+      .select("match_id, home_score, away_score, status, home_team, away_team")
+      .in("match_id", allCalIds);
     const resMap = new Map<number, any>(
       (allResults ?? []).map((r: any) => [r.match_id, r])
     );
 
     // ---- Part A: snapshot upcoming matches ----
-    const unsnapped = groupIds.filter(id => {
+    const unsnapped = allCalIds.filter(id => {
       if (calMap.has(id)) return false;
       const res = resMap.get(id);
-      return !res || res.status !== "FINISHED";
+      if (res?.status === "FINISHED") return false;
+      // Group matches: teams are known statically; snap even if no result row yet
+      if (groupIdSet.has(id)) return true;
+      // KO matches: only snap once both teams are confirmed in match_results
+      return !!(res?.home_team && res?.away_team);
     });
 
     if (unsnapped.length > 0) {
@@ -692,9 +705,16 @@ serve(async (req) => {
       const snapshotRows: any[] = [];
 
       for (const id of unsnapped) {
-        const teams = ELO_MATCH_TEAMS.get(id);
-        if (!teams) continue;
-        const [homeCode, awayCode] = teams;
+        let homeCode: string, awayCode: string;
+        if (groupIdSet.has(id)) {
+          const teams = ELO_MATCH_TEAMS.get(id);
+          if (!teams) continue;
+          [homeCode, awayCode] = teams;
+        } else {
+          const koRes = resMap.get(id)!;
+          homeCode = koRes.home_team;
+          awayCode = koRes.away_team;
+        }
 
         const homeR = eloRatings[homeCode]?.rating ?? ELO_BASE;
         const awayR = eloRatings[awayCode]?.rating ?? ELO_BASE;
@@ -739,7 +759,7 @@ serve(async (req) => {
     }
 
     // ---- Part B: resolve outcomes ----
-    const unresolved = groupIds.filter(id => calMap.has(id) && calMap.get(id) === null);
+    const unresolved = allCalIds.filter(id => calMap.has(id) && calMap.get(id) === null);
     for (const id of unresolved) {
       const res = resMap.get(id);
       if (!res || res.status !== "FINISHED" || res.home_score == null) continue;

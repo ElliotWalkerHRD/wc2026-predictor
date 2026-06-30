@@ -500,7 +500,7 @@
 
       // ---- Pre-kickoff model snapshots — used to freeze the prob bar for live/finished matches ----
       const calibrationPromise = sb.from('model_calibration')
-        .select('match_id,blend_home,blend_draw,blend_away,elo_home,elo_draw,elo_away,crowd_home,crowd_draw,crowd_away,crowd_n')
+        .select('match_id,blend_home,blend_draw,blend_away,elo_home,elo_draw,elo_away,crowd_home,crowd_draw,crowd_away,crowd_n,form_home,form_draw,form_away')
         .then(({ data }) => { (data || []).forEach(r => { calibrationMap[r.match_id] = r; }); })
         .catch(() => {});
 
@@ -1019,6 +1019,23 @@
             </div>`;
         }
 
+        let formHtml = '';
+        if (cal.form_home != null) {
+          const fH = Math.round(cal.form_home * 100);
+          const fD = Math.round(cal.form_draw  * 100);
+          const fA = Math.round(cal.form_away  * 100);
+          formHtml = `
+            <div class="prob-factor-row">
+              <span class="prob-factor-label">Form</span>
+              <div class="prob-mini-bar">
+                <div class="prob-mini-seg home" style="flex:${cal.form_home}"></div>
+                <div class="prob-mini-seg draw" style="flex:${cal.form_draw}"></div>
+                <div class="prob-mini-seg away" style="flex:${cal.form_away}"></div>
+              </div>
+              <span class="prob-factor-pcts">${fH}%&thinsp;/&thinsp;${fD}%&thinsp;/&thinsp;${fA}%</span>
+            </div>`;
+        }
+
         return `
           <div class="prob-bar-section" onclick="event.stopPropagation();toggleProbFactors(${matchId})">
             <div class="prob-bar-header">
@@ -1046,6 +1063,7 @@
                 <span class="prob-factor-pcts">${eH}%&thinsp;/&thinsp;${eD}%&thinsp;/&thinsp;${eA}%</span>
               </div>
               ${crowdHtml}
+              ${formHtml}
             </div>
           </div>`;
       }
@@ -1091,6 +1109,24 @@
           </div>`;
       }
 
+      const calSnap = calibrationMap[matchId];
+      let upcomingFormHtml = '';
+      if (calSnap?.form_home != null) {
+        const fH = Math.round(calSnap.form_home * 100);
+        const fD = Math.round(calSnap.form_draw  * 100);
+        const fA = Math.round(calSnap.form_away  * 100);
+        upcomingFormHtml = `
+          <div class="prob-factor-row">
+            <span class="prob-factor-label">Form</span>
+            <div class="prob-mini-bar">
+              <div class="prob-mini-seg home" style="flex:${calSnap.form_home}"></div>
+              <div class="prob-mini-seg draw" style="flex:${calSnap.form_draw}"></div>
+              <div class="prob-mini-seg away" style="flex:${calSnap.form_away}"></div>
+            </div>
+            <span class="prob-factor-pcts">${fH}%&thinsp;/&thinsp;${fD}%&thinsp;/&thinsp;${fA}%</span>
+          </div>`;
+      }
+
       return `
         <div class="prob-bar-section" onclick="event.stopPropagation();toggleProbFactors(${matchId})">
           <div class="prob-bar-header">
@@ -1118,6 +1154,7 @@
               <span class="prob-factor-pcts">${eH}%&thinsp;/&thinsp;${eD}%&thinsp;/&thinsp;${eA}%</span>
             </div>
             ${crowdHtml}
+            ${upcomingFormHtml}
           </div>
         </div>`;
     }

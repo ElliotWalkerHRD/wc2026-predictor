@@ -440,6 +440,12 @@
         </div>
       ` : '';
 
+      const aetModalHtml = hasResult && result.ft_home != null
+        ? result.pens_home != null
+          ? `AET ${result.ft_home}–${result.ft_away} · ${result.pens_home > result.pens_away ? home.name : away.name} won ${Math.max(result.pens_home, result.pens_away)}–${Math.min(result.pens_home, result.pens_away)} on pens`
+          : `AET: ${result.ft_home}–${result.ft_away}`
+        : '';
+
       document.getElementById('pickModal').innerHTML = `
         <div class="pred-modal-overlay" id="modalOverlay">
           <div class="pred-modal-panel" role="dialog" aria-modal="true">
@@ -452,7 +458,7 @@
                 ${awayCode ? teamFlagImg(awayCode) : ''}
               </div>
               <div class="pred-modal-meta">${m?.match_label || `Match ${matchId}`}${m?.date ? ' · ' + formatDate(m.date) : ''}</div>
-              ${hasResult ? `<div class="pred-modal-meta" style="color:var(--ink);font-weight:700;margin-top:0.2rem">Result: ${result.home_score}–${result.away_score}</div>${result.ft_home != null ? `<div class="pred-modal-meta" style="font-size:0.78rem;color:var(--grey-400);margin-top:0.15rem">${result.pens_home != null ? \`AET \${result.ft_home}–\${result.ft_away} · \${result.pens_home > result.pens_away ? home.name : away.name} won \${Math.max(result.pens_home,result.pens_away)}–\${Math.min(result.pens_home,result.pens_away)} on pens\` : \`AET: \${result.ft_home}–\${result.ft_away}\`}</div>` : ''}` : ''}
+              ${hasResult ? `<div class="pred-modal-meta" style="color:var(--ink);font-weight:700;margin-top:0.2rem">Result: ${result.home_score}–${result.away_score}</div>${aetModalHtml ? `<div class="pred-modal-meta" style="font-size:0.78rem;color:var(--grey-400);margin-top:0.15rem">${aetModalHtml}</div>` : ''}` : ''}
               <button class="pred-modal-close" id="modalCloseBtn" aria-label="Close"><i class="ti ti-x"></i></button>
             </div>
             ${leagueBarHtml}

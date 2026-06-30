@@ -285,7 +285,7 @@
     <div class="container">
       <nav class="breadcrumb">WC2026 &rsaquo; <span>Standings</span></nav>
       <h1 class="page-title">Standings</h1>
-      <p class="page-desc">Group tables &middot; Knockout bracket &middot; Updates live &nbsp;<a href="#bracketSection" class="btn btn-outline btn-sm" style="font-size:0.75rem;padding:0.2rem 0.65rem;vertical-align:middle"><i class="ti ti-tournament"></i> Bracket</a></p>
+      <p class="page-desc">Group tables &middot; Knockout bracket &middot; Updates live &nbsp;<a href="#bracketSection" class="btn btn-lime btn-sm" style="vertical-align:middle"><i class="ti ti-tournament"></i> Bracket</a></p>
     </div>
   </div>
 
@@ -490,57 +490,64 @@
       const res = resultMap[m.id];
       const hasResult = res && res.home_score != null;
 
+      // Display score: prefer AET (ft_home/ft_away), fall back to 90-min
+      const dispH = res?.ft_home  ?? res?.home_score ?? null;
+      const dispA = res?.ft_away  ?? res?.away_score ?? null;
+
+      // Winner: pens > AET > 90-min
       let homeWon = null, awayWon = null;
       if (hasResult) {
-        if (res.home_score > res.away_score)      { homeWon = true;  awayWon = false; }
-        else if (res.home_score < res.away_score) { homeWon = false; awayWon = true; }
+        if (res.pens_home != null) {
+          homeWon = res.pens_home > res.pens_away; awayWon = !homeWon;
+        } else if (res.ft_home != null) {
+          if (res.ft_home > res.ft_away)      { homeWon = true;  awayWon = false; }
+          else if (res.ft_home < res.ft_away) { homeWon = false; awayWon = true; }
+        } else {
+          if (res.home_score > res.away_score)      { homeWon = true;  awayWon = false; }
+          else if (res.home_score < res.away_score) { homeWon = false; awayWon = true; }
+        }
       }
 
-      let teamRows;
-      if (m.home_team && m.away_team) {
-        // Teams are known
-        teamRows = `
-          <div class="bracket-team-row${homeWon ? ' winner' : ''}">
-            <div class="bracket-team-info">
-              ${teamFlagImg(m.home_team)}
-              <span class="bracket-team-name">${getTeam(m.home_team).name}</span>
-            </div>
-            <span class="bracket-score">${hasResult ? res.home_score : ''}</span>
-          </div>
-          <div class="bracket-team-row${awayWon ? ' winner' : ''}">
-            <div class="bracket-team-info">
-              ${teamFlagImg(m.away_team)}
-              <span class="bracket-team-name">${getTeam(m.away_team).name}</span>
-            </div>
-            <span class="bracket-score">${hasResult ? res.away_score : ''}</span>
-          </div>`;
-      } else if (hasResult) {
-        // Score exists but teams not yet named in static data — split note at " vs "
-        const parts = (m.note || 'TBD vs TBD').split(' vs ');
-        const homeNote = parts[0] || 'TBD';
-        const awayNote = parts.slice(1).join(' vs ') || 'TBD';
-        teamRows = `
-          <div class="bracket-team-row${homeWon ? ' winner' : ''}">
-            <div class="bracket-team-info">
-              <span class="bracket-team-name" style="color:var(--grey-500);font-style:italic">${homeNote}</span>
-            </div>
-            <span class="bracket-score">${res.home_score}</span>
-          </div>
-          <div class="bracket-team-row${awayWon ? ' winner' : ''}">
-            <div class="bracket-team-info">
-              <span class="bracket-team-name" style="color:var(--grey-500);font-style:italic">${awayNote}</span>
-            </div>
-            <span class="bracket-score">${res.away_score}</span>
-          </div>`;
-      } else {
-        // Placeholder
-        teamRows = `<div class="bracket-note">${m.note || 'TBD'}</div>`;
+      // Extra annotation shown in bracket-meta
+      let extraMeta = '';
+      if (hasResult && res.pens_home != null) {
+        extraMeta = ` &middot; <span style="color:var(--grey-500);font-size:0.7rem">${res.pens_home}–${res.pens_away} pens</span>`;
+      } else if (hasResult && res.ft_home != null) {
+        extraMeta = ` &middot; <span style="color:var(--grey-500);font-size:0.7rem">AET</span>`;
       }
+
+      // Neither team known yet and no result — show compact placeholder
+      if (!m.home_team && !m.away_team && !hasResult) {
+        return `
+          <div class="bracket-match">
+            <div class="bracket-note">${m.note || 'TBD'}</div>
+            <div class="bracket-meta">${m.match_label} &middot; ${fmtShortDate(m.date)}</div>
+          </div>`;
+      }
+
+      // Resolve each side independently — show real team if known, placeholder if not
+      const noteParts = (m.note || 'TBD vs TBD').split(' vs ');
+      const homeNote = noteParts[0] || 'TBD';
+      const awayNote = noteParts.slice(1).join(' vs ') || 'TBD';
+
+      const homeInfo = m.home_team
+        ? `${teamFlagImg(m.home_team)}<span class="bracket-team-name">${getTeam(m.home_team).name}</span>`
+        : `<span class="bracket-team-name" style="color:var(--grey-500);font-style:italic">${homeNote}</span>`;
+      const awayInfo = m.away_team
+        ? `${teamFlagImg(m.away_team)}<span class="bracket-team-name">${getTeam(m.away_team).name}</span>`
+        : `<span class="bracket-team-name" style="color:var(--grey-500);font-style:italic">${awayNote}</span>`;
 
       return `
         <div class="bracket-match${hasResult ? ' has-result' : ''}">
-          ${teamRows}
-          <div class="bracket-meta">${m.match_label} &middot; ${fmtShortDate(m.date)}</div>
+          <div class="bracket-team-row${homeWon ? ' winner' : ''}">
+            <div class="bracket-team-info">${homeInfo}</div>
+            <span class="bracket-score">${hasResult ? dispH : ''}</span>
+          </div>
+          <div class="bracket-team-row${awayWon ? ' winner' : ''}">
+            <div class="bracket-team-info">${awayInfo}</div>
+            <span class="bracket-score">${hasResult ? dispA : ''}</span>
+          </div>
+          <div class="bracket-meta">${m.match_label} &middot; ${fmtShortDate(m.date)}${extraMeta}</div>
         </div>`;
     }
 

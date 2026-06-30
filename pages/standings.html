@@ -496,50 +496,37 @@
         else if (res.home_score < res.away_score) { homeWon = false; awayWon = true; }
       }
 
-      let teamRows;
-      if (m.home_team && m.away_team) {
-        // Teams are known
-        teamRows = `
-          <div class="bracket-team-row${homeWon ? ' winner' : ''}">
-            <div class="bracket-team-info">
-              ${teamFlagImg(m.home_team)}
-              <span class="bracket-team-name">${getTeam(m.home_team).name}</span>
-            </div>
-            <span class="bracket-score">${hasResult ? res.home_score : ''}</span>
-          </div>
-          <div class="bracket-team-row${awayWon ? ' winner' : ''}">
-            <div class="bracket-team-info">
-              ${teamFlagImg(m.away_team)}
-              <span class="bracket-team-name">${getTeam(m.away_team).name}</span>
-            </div>
-            <span class="bracket-score">${hasResult ? res.away_score : ''}</span>
+      // Neither team known yet and no result — show compact placeholder
+      if (!m.home_team && !m.away_team && !hasResult) {
+        return `
+          <div class="bracket-match">
+            <div class="bracket-note">${m.note || 'TBD'}</div>
+            <div class="bracket-meta">${m.match_label} &middot; ${fmtShortDate(m.date)}</div>
           </div>`;
-      } else if (hasResult) {
-        // Score exists but teams not yet named in static data — split note at " vs "
-        const parts = (m.note || 'TBD vs TBD').split(' vs ');
-        const homeNote = parts[0] || 'TBD';
-        const awayNote = parts.slice(1).join(' vs ') || 'TBD';
-        teamRows = `
-          <div class="bracket-team-row${homeWon ? ' winner' : ''}">
-            <div class="bracket-team-info">
-              <span class="bracket-team-name" style="color:var(--grey-500);font-style:italic">${homeNote}</span>
-            </div>
-            <span class="bracket-score">${res.home_score}</span>
-          </div>
-          <div class="bracket-team-row${awayWon ? ' winner' : ''}">
-            <div class="bracket-team-info">
-              <span class="bracket-team-name" style="color:var(--grey-500);font-style:italic">${awayNote}</span>
-            </div>
-            <span class="bracket-score">${res.away_score}</span>
-          </div>`;
-      } else {
-        // Placeholder
-        teamRows = `<div class="bracket-note">${m.note || 'TBD'}</div>`;
       }
+
+      // Resolve each side independently — show real team if known, placeholder if not
+      const noteParts = (m.note || 'TBD vs TBD').split(' vs ');
+      const homeNote = noteParts[0] || 'TBD';
+      const awayNote = noteParts.slice(1).join(' vs ') || 'TBD';
+
+      const homeInfo = m.home_team
+        ? `${teamFlagImg(m.home_team)}<span class="bracket-team-name">${getTeam(m.home_team).name}</span>`
+        : `<span class="bracket-team-name" style="color:var(--grey-500);font-style:italic">${homeNote}</span>`;
+      const awayInfo = m.away_team
+        ? `${teamFlagImg(m.away_team)}<span class="bracket-team-name">${getTeam(m.away_team).name}</span>`
+        : `<span class="bracket-team-name" style="color:var(--grey-500);font-style:italic">${awayNote}</span>`;
 
       return `
         <div class="bracket-match${hasResult ? ' has-result' : ''}">
-          ${teamRows}
+          <div class="bracket-team-row${homeWon ? ' winner' : ''}">
+            <div class="bracket-team-info">${homeInfo}</div>
+            <span class="bracket-score">${hasResult ? res.home_score : ''}</span>
+          </div>
+          <div class="bracket-team-row${awayWon ? ' winner' : ''}">
+            <div class="bracket-team-info">${awayInfo}</div>
+            <span class="bracket-score">${hasResult ? res.away_score : ''}</span>
+          </div>
           <div class="bracket-meta">${m.match_label} &middot; ${fmtShortDate(m.date)}</div>
         </div>`;
     }

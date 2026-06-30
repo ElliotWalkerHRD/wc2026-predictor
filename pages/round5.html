@@ -300,9 +300,23 @@
             </div>
           `;
         } else {
+          const noteParts = (m.note || 'TBD vs TBD').split(' vs ');
+          const homeNote = noteParts[0] || 'TBD';
+          const awayNote = noteParts.slice(1).join(' vs ') || 'TBD';
+          const homeDisplay = homeTeam
+            ? `${teamFlagImg(homeTeam.code)}<span>${homeTeam.name}</span>`
+            : `<span style="color:var(--grey-400);font-style:italic;font-size:0.8rem">${homeNote}</span>`;
+          const awayDisplay = awayTeam
+            ? `${teamFlagImg(awayTeam.code)}<span>${awayTeam.name}</span>`
+            : `<span style="color:var(--grey-400);font-style:italic;font-size:0.8rem">${awayNote}</span>`;
           teamRowHtml = `
-            <div class="tbd-notice">
-              <i class="ti ti-clock"></i> Teams TBD — ${m.note || 'Drawn once qualified'}
+            <div class="ko-teams-row" style="opacity:0.85">
+              <div class="ko-team">${homeDisplay}</div>
+              <div class="ko-score-inputs"><span class="score-sep" style="opacity:0.4">–</span></div>
+              <div class="ko-team away">${awayDisplay}</div>
+            </div>
+            <div class="tbd-notice" style="padding-top:0.375rem">
+              <i class="ti ti-clock"></i> Prediction opens when both teams confirmed
             </div>
           `;
         }

@@ -1519,6 +1519,12 @@
       const _q17  = document.getElementById('asQ17')?.value;           if (_q17  !== '') freshAnswers['1.7']  = parseInt(_q17);
       const _q110 = document.getElementById('asQ110')?.value;          if (_q110 !== '') freshAnswers['1.10'] = parseInt(_q110);
 
+      // ---- DEBUG Q1.10 ----
+      console.log('[Q1.10 DEBUG] DOM asQ110 raw value:', JSON.stringify(_q110), 'typeof:', typeof _q110);
+      console.log('[Q1.10 DEBUG] freshAnswers[\'1.10\']:', freshAnswers['1.10'], 'typeof:', typeof freshAnswers['1.10']);
+      console.log('[Q1.10 DEBUG] _asAdminAnswers[\'1.10\']:', _asAdminAnswers?.['1.10'], 'typeof:', typeof _asAdminAnswers?.['1.10']);
+      // ---- END DEBUG ----
+
       const sb = DB.initSupabase();
       const existMap = {};
       _asScores.forEach(s => { existMap[s.user_id] = s; });
@@ -1529,6 +1535,14 @@
 
       for (const uid of allUids) {
         const p1 = _asUserPreds1[uid] || {}, p2 = _asUserPreds2[uid] || {};
+
+        // ---- DEBUG Q1.10 per-user ----
+        const _dbg110pred = p1['1.10'];
+        const _dbg110ans  = freshAnswers['1.10'];
+        const _dbg110keys = Object.keys(p1).filter(k => k.startsWith('1.1'));
+        console.log(`[Q1.10 DEBUG] uid=${uid.slice(0,8)} pred['1.10']=${JSON.stringify(_dbg110pred)} (${typeof _dbg110pred})  ans['1.10']=${JSON.stringify(_dbg110ans)} (${typeof _dbg110ans})  parseInt match=${parseInt(_dbg110pred)===parseInt(_dbg110ans)}  keys starting 1.1:`, _dbg110keys);
+        // ---- END DEBUG ----
+
         const r1 = asScoreUser_R1(p1, _asComputed, freshAnswers, _asNameMatches);
         const r2 = ScoringEngine.calculateRound2(p2, _asComputed.r2);
         const exist = existMap[uid];

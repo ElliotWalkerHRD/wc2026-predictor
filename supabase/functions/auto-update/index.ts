@@ -311,37 +311,50 @@ serve(async (req) => {
       }
       if (ourId == null) continue;
 
-      // For knockout ET/penalty matches, regularTime holds the 90-min score;
-      // for normal-time matches regularTime is null so fall back to fullTime.
-      // For live matches fullTime is null — use halfTime score, or fall back to 0-0.
       const reg      = match.score?.regularTime;
       const ft       = match.score?.fullTime;
       const duration = match.score?.duration; // REGULAR | EXTRA_TIME | PENALTY_SHOOTOUT
-      const homeScore: number = (reg?.home != null ? reg.home : ft?.home)
-        ?? match.score?.halfTime?.home
-        ?? 0;
-      const awayScore: number = (reg?.away != null ? reg.away : ft?.away)
-        ?? match.score?.halfTime?.away
-        ?? 0;
-
-      // Capture after-ET and penalty info for display only — NOT used in scoring
       const wentToET = duration === 'EXTRA_TIME' || duration === 'PENALTY_SHOOTOUT';
+
+      // regularTime = 90-min score (API provides it for ET/PENS matches).
+      // When wentToET but regularTime is null the API didn't give us the 90-min split;
+      // fullTime is the EXTRA-TIME score, not the 90-min score — using it here would
+      // store the wrong value and mis-score predictions. Detect this case and omit
+      // home/away score from the upsert so any manual DB correction is preserved.
+      // (PostgREST only updates columns present in the request body on conflict.)
+      const reg90Known  = reg?.home != null;
+      const ambiguousET = wentToET && !reg90Known && isFinished;
+      if (ambiguousET) console.warn(`[auto-update] match ${ourId}: EXTRA_TIME with regularTime=null — skipping 90-min score update, needs manual review`);
+
+      // 90-min score: use regularTime if known; for regular-time matches use fullTime;
+      // for live matches fall back to halfTime/0 (display only — not scored until FINISHED).
+      const homeScore: number = reg90Known ? reg.home
+        : (ft?.home ?? match.score?.halfTime?.home ?? 0);
+      const awayScore: number = reg90Known ? reg.away
+        : (ft?.away ?? match.score?.halfTime?.away ?? 0);
+
+      // After-ET and penalty scores — display only, not used in scoring
       const ftHome:   number | null = wentToET ? (ft?.home   ?? null) : null;
       const ftAway:   number | null = wentToET ? (ft?.away   ?? null) : null;
       const pensHome: number | null = match.score?.penalties?.home ?? null;
       const pensAway: number | null = match.score?.penalties?.away ?? null;
 
-      upserts.push({
+      // Build upsert row; omit home/away score for ambiguous ET matches so the
+      // upsert preserves any manually-corrected value already in the DB.
+      const upsertRow: Record<string, any> = {
         match_id:   ourId,
-        home_score: homeScore,
-        away_score: awayScore,
         ft_home:    ftHome,
         ft_away:    ftAway,
         pens_home:  pensHome,
         pens_away:  pensAway,
         status,
         updated_at: new Date().toISOString(),
-      });
+      };
+      if (!ambiguousET) {
+        upsertRow.home_score = homeScore;
+        upsertRow.away_score = awayScore;
+      }
+      upserts.push(upsertRow);
     }
 
     if (upserts.length > 0) {

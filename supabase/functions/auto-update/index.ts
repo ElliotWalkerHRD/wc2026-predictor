@@ -281,6 +281,14 @@ serve(async (req) => {
     }
     for (const arr of apiByStage.values()) arr.sort((a, b) => a.id - b.id);
 
+    // Matches where the football-data.org API reports the wrong 90-min score.
+    // Typically: match went to ET but API says duration=REGULAR and puts the ET
+    // score in fullTime with no regularTime — impossible to detect from API data alone.
+    // Add an entry here to lock in the correct 90-min and ET scores permanently.
+    const SCORE_OVERRIDES: Record<number, { home: number; away: number; ft_home: number | null; ft_away: number | null }> = {
+      82: { home: 2, away: 2, ft_home: 3, ft_away: 2 }, // BEL v SEN: API reports 3-2 REGULAR; actual was 2-2 at 90 min, 3-2 AET
+    };
+
     const upserts: any[] = [];
     for (const match of apiMatches) {
       const status: string = match.status;
@@ -339,18 +347,22 @@ serve(async (req) => {
       const pensHome: number | null = match.score?.penalties?.home ?? null;
       const pensAway: number | null = match.score?.penalties?.away ?? null;
 
-      // Build upsert row; omit home/away score for ambiguous ET matches so the
-      // upsert preserves any manually-corrected value already in the DB.
+      // Build upsert row.
+      const override = SCORE_OVERRIDES[ourId];
       const upsertRow: Record<string, any> = {
         match_id:   ourId,
-        ft_home:    ftHome,
-        ft_away:    ftAway,
+        ft_home:    override ? override.ft_home : ftHome,
+        ft_away:    override ? override.ft_away : ftAway,
         pens_home:  pensHome,
         pens_away:  pensAway,
         status,
         updated_at: new Date().toISOString(),
       };
-      if (!ambiguousET) {
+      if (override) {
+        // Hard override: API score is wrong for this match.
+        upsertRow.home_score = override.home;
+        upsertRow.away_score = override.away;
+      } else if (!ambiguousET) {
         upsertRow.home_score = homeScore;
         upsertRow.away_score = awayScore;
       }

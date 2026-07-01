@@ -1547,6 +1547,10 @@
         const r2 = ScoringEngine.calculateRound2(p2, _asComputed.r2);
         const exist = existMap[uid];
 
+        // ---- DEBUG R1 points ----
+        if (uid.startsWith('6d16d51c')) console.log(`[Q1.10 DEBUG] FOZZY r1.points=${r1.points}  r1.breakdown['1.10']=${r1.breakdown['1.10']}  exist row:`, exist);
+        // ---- END DEBUG ----
+
         const update = { round1_points: r1.points, round2_points: r2.points };
         if (exist) {
           update.total_points = ROUNDS.reduce((sum, rnd) => {
@@ -1554,8 +1558,9 @@
             if (rnd === 'round2') return sum + r2.points;
             return sum + (exist[rnd + '_points'] || 0);
           }, 0);
-          try { await sb.from('scores').update(update).eq('user_id', uid); saved++; }
-          catch (e) { console.error('score update failed', uid, e); failed++; }
+          const { data: updData, error: updErr } = await sb.from('scores').update(update).eq('user_id', uid).select('user_id,round1_points');
+          if (uid.startsWith('6d16d51c')) console.log('[Q1.10 DEBUG] FOZZY DB update result:', updData, 'error:', updErr);
+          if (updErr) { console.error('score update failed', uid, updErr); failed++; } else { saved++; }
         } else {
           update.user_id = uid;
           update.total_points = r1.points + r2.points;

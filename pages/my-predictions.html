@@ -301,6 +301,7 @@
     let userScore = null;
     let scores = [];
     let computedAnswers = {};
+    let adminAnswers    = {};
     let r1Breakdown     = {};
     let r1Saved         = {};
     let userId = null;
@@ -333,7 +334,11 @@
         catch { r1Saved[p.question_key] = p.value; }
       });
       computedAnswers = computeR1Answers(results);
-      r1Breakdown = ScoringEngine.calculateRound1(r1Saved, computedAnswers).breakdown;
+      try {
+        const { data: s } = await DB.initSupabase().from('settings').select('value').eq('key', 'round1_admin_answers').single();
+        if (s?.value) adminAnswers = JSON.parse(s.value);
+      } catch {}
+      r1Breakdown = ScoringEngine.calculateRound1(r1Saved, { ...computedAnswers, ...adminAnswers }).breakdown;
 
       if (userScore) {
         document.getElementById('sumTotal').textContent = userScore.total_points || 0;
@@ -514,8 +519,11 @@
     }
 
     function r1AnswerInfo(qKey) {
-      // admin-entered questions are never available client-side
-      if (['1.4','1.5','1.6','1.7','1.10'].includes(qKey)) return { answerAvailable: false };
+      if (['1.4','1.5','1.6','1.7','1.10'].includes(qKey)) {
+        const val = adminAnswers[qKey];
+        if (val == null) return { answerAvailable: false };
+        return { answerAvailable: true, answerDisplay: String(val) };
+      }
 
       let answerAvailable = false, answerDisplay = '';
       if (qKey === '1.1' || qKey === '1.2') {
@@ -963,7 +971,7 @@
         r.forEach(res => { allResults[res.match_id] = res; });
         DB.patchKnockoutBracket(r);
         computedAnswers = computeR1Answers(r);
-        r1Breakdown = ScoringEngine.calculateRound1(r1Saved, computedAnswers).breakdown;
+        r1Breakdown = ScoringEngine.calculateRound1(r1Saved, { ...computedAnswers, ...adminAnswers }).breakdown;
         renderActivePanel();
       });
     });

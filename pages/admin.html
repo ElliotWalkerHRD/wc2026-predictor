@@ -1185,6 +1185,20 @@
         asRenderAnswerPanel();
         document.getElementById('asAnswerPanel').classList.remove('hidden');
         btn.style.display = 'none';
+
+        // Pre-populate admin answer fields from previously saved settings
+        try {
+          const sb = DB.initSupabase();
+          const { data: s } = await sb.from('settings').select('value').eq('key', 'round1_admin_answers').single();
+          if (s?.value) {
+            const saved = JSON.parse(s.value);
+            if (saved['1.4']  != null) { const el = document.getElementById('asQ14');  if (el) el.value = saved['1.4']; }
+            if (saved['1.5']  != null) { const el = document.getElementById('asQ15');  if (el) el.value = saved['1.5']; }
+            if (saved['1.6']  != null) { const el = document.getElementById('asQ16');  if (el) el.value = saved['1.6']; }
+            if (saved['1.7']  != null) { const el = document.getElementById('asQ17');  if (el) el.value = saved['1.7']; }
+            if (saved['1.10'] != null) { const el = document.getElementById('asQ110'); if (el) el.value = saved['1.10']; }
+          }
+        } catch {}
       } catch (err) {
         Toast.error('Load failed: ' + err.message);
         btn.disabled = false;
@@ -1520,6 +1534,15 @@
       const _q110 = document.getElementById('asQ110')?.value;          if (_q110 !== '') freshAnswers['1.10'] = parseInt(_q110);
 
       const sb = DB.initSupabase();
+
+      // Persist admin answers so they survive page refreshes and display on my-predictions
+      const _adminKeys = ['1.4','1.5','1.6','1.7','1.10'];
+      const _toSave = {};
+      for (const k of _adminKeys) { if (freshAnswers[k] != null) _toSave[k] = freshAnswers[k]; }
+      if (Object.keys(_toSave).length) {
+        await sb.from('settings').upsert({ key: 'round1_admin_answers', value: JSON.stringify(_toSave) }, { onConflict: 'key' });
+      }
+
       const existMap = {};
       _asScores.forEach(s => { existMap[s.user_id] = s; });
 

@@ -1524,6 +1524,7 @@
       btn.disabled = true;
       btn.innerHTML = '<i class="ti ti-loader"></i> Committing&hellip;';
 
+      try {
       // Re-read all manual inputs fresh so Commit always uses current field values,
       // even if Preview was clicked before the fields were filled in.
       const freshAnswers = Object.assign({}, _asAdminAnswers || {});
@@ -1536,12 +1537,15 @@
       const sb = DB.initSupabase();
 
       // Persist admin answers so they survive page refreshes and display on my-predictions
-      const _adminKeys = ['1.4','1.5','1.6','1.7','1.10'];
-      const _toSave = {};
-      for (const k of _adminKeys) { if (freshAnswers[k] != null) _toSave[k] = freshAnswers[k]; }
-      if (Object.keys(_toSave).length) {
-        await sb.from('settings').upsert({ key: 'round1_admin_answers', value: JSON.stringify(_toSave) }, { onConflict: 'key' });
-      }
+      try {
+        const _adminKeys = ['1.4','1.5','1.6','1.7','1.10'];
+        const _toSave = {};
+        for (const k of _adminKeys) { if (freshAnswers[k] != null) _toSave[k] = freshAnswers[k]; }
+        if (Object.keys(_toSave).length) {
+          const { error: settErr } = await sb.from('settings').upsert({ key: 'round1_admin_answers', value: JSON.stringify(_toSave) }, { onConflict: 'key' });
+          if (settErr) console.warn('settings save failed (non-fatal):', settErr);
+        }
+      } catch (e) { console.warn('settings save threw (non-fatal):', e); }
 
       const existMap = {};
       _asScores.forEach(s => { existMap[s.user_id] = s; });
@@ -1582,8 +1586,13 @@
 
       try { _asScores = await DB.getScores(); asRefreshPreviewTable(); } catch {}
 
-      btn.disabled = false;
-      btn.innerHTML = '<i class="ti ti-database-import"></i> Commit scores';
+      } catch (err) {
+        console.error('asCommit threw:', err);
+        Toast.error('Commit failed: ' + (err?.message || 'unknown error'));
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ti ti-database-import"></i> Commit scores';
+      }
     }
 
     document.getElementById('asLoadBtn').addEventListener('click', asLoad);

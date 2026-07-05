@@ -20,7 +20,7 @@ const CONFIG = {
     round2: '2026-06-11T19:00:00Z', // Group winners — locks at first kickoff
     round3: '2026-06-27T22:00:00Z', // Group stage scores — final group match kickoff
     round4: '2026-07-04T01:30:00Z', // Round of 32 — fully locked once last R32 match (M87) kicks off
-    round5: '2026-07-04T18:00:00Z', // Round of 16
+    round5: '2026-07-07T00:00:00Z', // Round of 16 — locks after last R16 match; per-match locking handles individual games
     round6: '2026-07-09T20:00:00Z', // Quarter-finals
     round7: '2026-07-14T20:00:00Z', // Semi-finals
     round8: '2026-07-19T19:00:00Z', // Final

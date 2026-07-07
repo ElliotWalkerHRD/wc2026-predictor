@@ -998,19 +998,26 @@
         const eA   = Math.round(cal.elo_away   * 100);
 
         let crowdHtml;
-        if (cal.crowd_home != null && cal.crowd_n > 0) {
-          const cH = Math.round(cal.crowd_home * 100);
-          const cD = Math.round(cal.crowd_draw * 100);
-          const cA = Math.round(cal.crowd_away * 100);
-          const lowNote = cal.crowd_n < MatchProbs.MIN_CROWD_SIZE
+        const snapCrowd = cal.crowd_home != null && cal.crowd_n > 0;
+        const livePick  = !snapCrowd ? crowdPickMap[matchId] : null;
+        const crowdSrc  = snapCrowd
+          ? { home: cal.crowd_home, draw: cal.crowd_draw, away: cal.crowd_away, n: cal.crowd_n }
+          : livePick
+            ? { home: livePick.homeWin, draw: livePick.draw, away: livePick.awayWin, n: livePick.pickCount }
+            : null;
+        if (crowdSrc) {
+          const cH = Math.round(crowdSrc.home * 100);
+          const cD = Math.round(crowdSrc.draw * 100);
+          const cA = Math.round(crowdSrc.away * 100);
+          const lowNote = crowdSrc.n < MatchProbs.MIN_CROWD_SIZE
             ? ` <span class="prob-low-sample">low sample</span>` : '';
           crowdHtml = `
             <div class="prob-factor-row">
-              <span class="prob-factor-label">Crowd&thinsp;(${cal.crowd_n} picks)${lowNote}</span>
+              <span class="prob-factor-label">Crowd&thinsp;(${crowdSrc.n} picks)${lowNote}</span>
               <div class="prob-mini-bar">
-                <div class="prob-mini-seg home" style="flex:${cal.crowd_home}"></div>
-                <div class="prob-mini-seg draw" style="flex:${cal.crowd_draw}"></div>
-                <div class="prob-mini-seg away" style="flex:${cal.crowd_away}"></div>
+                <div class="prob-mini-seg home" style="flex:${crowdSrc.home}"></div>
+                <div class="prob-mini-seg draw" style="flex:${crowdSrc.draw}"></div>
+                <div class="prob-mini-seg away" style="flex:${crowdSrc.away}"></div>
               </div>
               <span class="prob-factor-pcts">${cH}%&thinsp;/&thinsp;${cD}%&thinsp;/&thinsp;${cA}%</span>
             </div>`;

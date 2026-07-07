@@ -20,10 +20,10 @@ const CONFIG = {
     round2: '2026-06-11T19:00:00Z', // Group winners — locks at first kickoff
     round3: '2026-06-27T22:00:00Z', // Group stage scores — final group match kickoff
     round4: '2026-07-04T01:30:00Z', // Round of 32 — fully locked once last R32 match (M87) kicks off
-    round5: '2026-07-07T00:00:00Z', // Round of 16 — locks after last R16 match; per-match locking handles individual games
-    round6: '2026-07-09T20:00:00Z', // Quarter-finals
-    round7: '2026-07-14T20:00:00Z', // Semi-finals
-    round8: '2026-07-19T19:00:00Z', // Final
+    round5: '2026-07-08T04:00:00Z', // R16 — after last R16 match: M96 Vancouver Jul 7 20:00 PDT = Jul 8 03:00 UTC
+    round6: '2026-07-12T07:00:00Z', // QF  — after last QF match:  M100 KC Jul 12 01:00 CDT = Jul 12 06:00 UTC
+    round7: '2026-07-16T00:00:00Z', // SF  — after last SF match:  M102 Atlanta Jul 15 19:00 EDT = Jul 15 23:00 UTC
+    round8: '2026-07-19T23:00:00Z', // Final — M104 New York Jul 19 19:00 EDT = Jul 19 23:00 UTC
   }
 };
 

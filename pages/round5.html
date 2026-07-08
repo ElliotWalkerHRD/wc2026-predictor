@@ -265,16 +265,18 @@
       container.innerHTML = roundData.matches.map(m => {
         const result  = results[m.id];
         const pred    = saved[getMatchKey(m.id)] || {};
-        const homeVal = pred.home !== undefined ? pred.home : '';
-        const awayVal = pred.away !== undefined ? pred.away : '';
+        const hasPred = pred.home !== undefined && pred.away !== undefined;
+        // Lock this individual match if the round is globally locked OR the match has kicked off
+        const matchKickedOff = result && ['IN_PLAY','PAUSED','LIVE','FINISHED'].includes(result.status);
+        const matchLocked = locked || matchKickedOff;
+        // Apply 4-4 default for locked matches where no prediction was submitted
+        const homeVal = hasPred ? pred.home : (matchLocked ? 4 : '');
+        const awayVal = hasPred ? pred.away : (matchLocked ? 4 : '');
 
         const homeTeam = m.home_team ? getTeam(m.home_team) : null;
         const awayTeam = m.away_team ? getTeam(m.away_team) : null;
         const hasTeams  = homeTeam && awayTeam;
         const hasResult = result && result.home_score !== null;
-        // Lock this individual match if the round is globally locked OR the match has kicked off
-        const matchKickedOff = result && ['IN_PLAY','PAUSED','LIVE','FINISHED'].includes(result.status);
-        const matchLocked = locked || matchKickedOff;
 
         let teamRowHtml = '';
         if (hasTeams) {

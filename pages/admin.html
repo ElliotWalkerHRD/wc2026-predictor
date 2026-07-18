@@ -368,7 +368,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="../js/config.js?v=46"></script>
-  <script src="../js/data.js?v=47"></script>
+  <script src="../js/data.js?v=48"></script>
   <script src="../js/supabase-client.js?v=46"></script>
   <script src="../js/scoring.js?v=46"></script>
   <script src="../js/ui.js?v=46"></script>
@@ -1164,6 +1164,7 @@
           DB.getAllPredictions('round2'),
           DB.getScores(),
         ]);
+        DB.patchKnockoutBracket(results);
         _asResults = results;
         _asAllPreds = { round1: preds1, round2: preds2 };
         _asScores = scores;

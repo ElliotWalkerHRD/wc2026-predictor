@@ -1320,52 +1320,56 @@
       const btn = document.getElementById('asPreviewBtn');
       btn.disabled = true;
       btn.innerHTML = '<i class="ti ti-loader"></i> Computing&hellip;';
+      try {
+        const c = _asComputed;
+        const admin = {};
 
-      const c = _asComputed;
-      const admin = {};
+        if (c.r1['1.1']) {
+          admin['1.1'] = c.r1['1.1']; admin['1.2'] = c.r1['1.2'];
+        } else {
+          const v1 = document.getElementById('asQ11')?.value;  if (v1) admin['1.1'] = v1;
+          const v2 = document.getElementById('asQ12')?.value;  if (v2) admin['1.2'] = v2;
+        }
+        if (c.r1['1.3']) {
+          admin['1.3'] = c.r1['1.3'];
+        } else {
+          const a = document.getElementById('asQ13a')?.value;
+          const b = document.getElementById('asQ13b')?.value;
+          if (a && b) admin['1.3'] = [a, b];
+        }
+        const q14  = document.getElementById('asQ14')?.value.trim();    if (q14)        admin['1.4']  = q14;
+        const q15  = document.getElementById('asQ15')?.value;           if (q15 !== '') admin['1.5']  = parseInt(q15);
+        const q16  = document.getElementById('asQ16')?.value.trim();    if (q16)        admin['1.6']  = q16;
+        const q17  = document.getElementById('asQ17')?.value;           if (q17 !== '') admin['1.7']  = parseInt(q17);
+        const q110 = document.getElementById('asQ110')?.value;          if (q110 !== '') admin['1.10'] = parseInt(q110);
 
-      if (c.r1['1.1']) {
-        admin['1.1'] = c.r1['1.1']; admin['1.2'] = c.r1['1.2'];
-      } else {
-        const v1 = document.getElementById('asQ11')?.value;  if (v1) admin['1.1'] = v1;
-        const v2 = document.getElementById('asQ12')?.value;  if (v2) admin['1.2'] = v2;
+        _asAdminAnswers = admin;
+
+        const gm14 = new Map(), gm16 = new Map();
+        (_asAllPreds.round1 || []).forEach(p => {
+          let v; try { v = JSON.parse(p.value); } catch { v = p.value; }
+          const s = String(v || '').trim(); if (!s) return;
+          if (p.question_key === '1.4') gm14.set(s, (gm14.get(s) || 0) + 1);
+          if (p.question_key === '1.6') gm16.set(s, (gm16.get(s) || 0) + 1);
+        });
+
+        _asNameMatches['1.4'] = {};
+        for (const [g] of gm14) _asNameMatches['1.4'][g] = admin['1.4'] ? asAutoMatch(g, admin['1.4']) : false;
+        _asNameMatches['1.6'] = {};
+        for (const [g] of gm16) _asNameMatches['1.6'][g] = admin['1.6'] ? asAutoMatch(g, admin['1.6']) : false;
+
+        _asPreviewData = { admin, gm14, gm16 };
+
+        asRenderReviewPanel();
+        document.getElementById('asReviewPanel').classList.remove('hidden');
+        document.getElementById('asReviewPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (err) {
+        console.error('asPreview threw:', err);
+        Toast.error('Preview failed: ' + (err?.message || 'unknown error'));
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ti ti-eye"></i> Preview scoring &amp; review name matches';
       }
-      if (c.r1['1.3']) {
-        admin['1.3'] = c.r1['1.3'];
-      } else {
-        const a = document.getElementById('asQ13a')?.value;
-        const b = document.getElementById('asQ13b')?.value;
-        if (a && b) admin['1.3'] = [a, b];
-      }
-      const q14  = document.getElementById('asQ14')?.value.trim();    if (q14)        admin['1.4']  = q14;
-      const q15  = document.getElementById('asQ15')?.value;           if (q15 !== '') admin['1.5']  = parseInt(q15);
-      const q16  = document.getElementById('asQ16')?.value.trim();    if (q16)        admin['1.6']  = q16;
-      const q17  = document.getElementById('asQ17')?.value;           if (q17 !== '') admin['1.7']  = parseInt(q17);
-      const q110 = document.getElementById('asQ110')?.value;          if (q110 !== '') admin['1.10'] = parseInt(q110);
-
-      _asAdminAnswers = admin;
-
-      const gm14 = new Map(), gm16 = new Map();
-      (_asAllPreds.round1 || []).forEach(p => {
-        let v; try { v = JSON.parse(p.value); } catch { v = p.value; }
-        const s = String(v || '').trim(); if (!s) return;
-        if (p.question_key === '1.4') gm14.set(s, (gm14.get(s) || 0) + 1);
-        if (p.question_key === '1.6') gm16.set(s, (gm16.get(s) || 0) + 1);
-      });
-
-      _asNameMatches['1.4'] = {};
-      for (const [g] of gm14) _asNameMatches['1.4'][g] = admin['1.4'] ? asAutoMatch(g, admin['1.4']) : false;
-      _asNameMatches['1.6'] = {};
-      for (const [g] of gm16) _asNameMatches['1.6'][g] = admin['1.6'] ? asAutoMatch(g, admin['1.6']) : false;
-
-      _asPreviewData = { admin, gm14, gm16 };
-
-      asRenderReviewPanel();
-      document.getElementById('asReviewPanel').classList.remove('hidden');
-      document.getElementById('asReviewPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-      btn.disabled = false;
-      btn.innerHTML = '<i class="ti ti-eye"></i> Preview scoring &amp; review name matches';
     }
 
     // Step 4: render name-match review tables and live score preview.

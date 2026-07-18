@@ -202,12 +202,11 @@ const KNOCKOUT_ROUNDS = {
   final: {
     name: "Final",
     matches: [
+      { id: 103, match_label: "Match 103", date: "2026-07-18", time: "21:00", venue: "Hard Rock Stadium", city: "Miami", kickoff_utc: "2026-07-18T21:00:00Z", home_team: null, away_team: null, note: "Loser of match 101 vs Loser of match 102" },
       { id: 104, match_label: "Match 104", date: "2026-07-19", time: "19:00", venue: "MetLife Stadium", city: "New York/New Jersey", home_team: null, away_team: null, note: "Winner of match 101 vs Winner of match 102" },
     ],
   },
 };
-
-// Third-place play-off (match 103): Loser of match 101 vs Loser of match 102 — Hard Rock Stadium, 2026-07-18
 
 function getTeam(code) { return TEAMS[code] || { code, name: code, cc: "", flag: "" }; }
 

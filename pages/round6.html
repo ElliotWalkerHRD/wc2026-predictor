@@ -176,7 +176,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="../js/config.js?v=31"></script>
-  <script src="../js/data.js?v=31"></script>
+  <script src="../js/data.js?v=32"></script>
   <script src="../js/supabase-client.js?v=45"></script>
   <script src="../js/scoring.js?v=46"></script>
   <script src="../js/ui.js?v=31"></script>
@@ -253,8 +253,9 @@
       container.innerHTML = roundData.matches.map(m => {
         const result  = results[m.id];
         const pred    = saved[getMatchKey(m.id)] || {};
-        const homeVal = pred.home !== undefined ? pred.home : '';
-        const awayVal = pred.away !== undefined ? pred.away : '';
+        const hasPred = pred.home !== undefined && pred.away !== undefined;
+        const homeVal = hasPred ? pred.home : (locked ? 4 : '');
+        const awayVal = hasPred ? pred.away : (locked ? 4 : '');
 
         const homeTeam = m.home_team ? getTeam(m.home_team) : null;
         const awayTeam = m.away_team ? getTeam(m.away_team) : null;

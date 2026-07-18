@@ -368,7 +368,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="../js/config.js?v=46"></script>
-  <script src="../js/data.js?v=46"></script>
+  <script src="../js/data.js?v=47"></script>
   <script src="../js/supabase-client.js?v=46"></script>
   <script src="../js/scoring.js?v=46"></script>
   <script src="../js/ui.js?v=46"></script>
@@ -1108,7 +1108,7 @@
       }
 
       // Q1.1/Q1.2 from Final; Q1.3 from semi-finals
-      const finalM = KNOCKOUT_ROUNDS.final?.matches?.[0];
+      const finalM = KNOCKOUT_ROUNDS.final?.matches?.find(m => m.id === 104);
       const finalR = rMap[104];
       if (finalM?.home_team && finalM?.away_team && finalR?.status === 'FINISHED') {
         const [h, a] = [finalR.home_score, finalR.away_score];

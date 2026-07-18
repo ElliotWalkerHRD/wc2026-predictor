@@ -176,7 +176,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="../js/config.js?v=31"></script>
-  <script src="../js/data.js?v=31"></script>
+  <script src="../js/data.js?v=33"></script>
   <script src="../js/supabase-client.js?v=45"></script>
   <script src="../js/scoring.js?v=46"></script>
   <script src="../js/ui.js?v=31"></script>
@@ -253,8 +253,20 @@
       container.innerHTML = roundData.matches.map(m => {
         const result  = results[m.id];
         const pred    = saved[getMatchKey(m.id)] || {};
-        const homeVal = pred.home !== undefined ? pred.home : '';
-        const awayVal = pred.away !== undefined ? pred.away : '';
+        const hasPred = pred.home !== undefined && pred.away !== undefined;
+        // Lock this individual match if the round is globally locked OR the match has kicked off
+        // (needed because the Final round now also contains the third-place playoff, M103,
+        // which kicks off a day before the Final, M104)
+        const matchKickedOff = result && ['IN_PLAY','PAUSED','LIVE','FINISHED'].includes(result.status);
+        // One-off: M103 (France v England) was missing from the fixture list until it had
+        // already kicked off, so nobody could predict it in time. Extend its cutoff to
+        // 22:10 UTC (second half) instead of the standard kickoff-based lock.
+        const M103_EXTENDED_CUTOFF = new Date('2026-07-18T22:10:00Z').getTime();
+        const matchLocked = m.id === 103
+          ? (locked || Date.now() >= M103_EXTENDED_CUTOFF)
+          : (locked || matchKickedOff);
+        const homeVal = hasPred ? pred.home : (matchLocked ? 4 : '');
+        const awayVal = hasPred ? pred.away : (matchLocked ? 4 : '');
 
         const homeTeam = m.home_team ? getTeam(m.home_team) : null;
         const awayTeam = m.away_team ? getTeam(m.away_team) : null;
@@ -272,11 +284,11 @@
               <div class="ko-score-inputs">
                 <input type="number" id="h_${m.id}" class="score-num" min="0" max="20"
                   inputmode="numeric" pattern="[0-9]*"
-                  value="${homeVal}" placeholder="0" ${locked ? 'disabled' : ''}>
+                  value="${homeVal}" placeholder="0" ${matchLocked ? 'disabled' : ''}>
                 <span class="score-sep">–</span>
                 <input type="number" id="a_${m.id}" class="score-num" min="0" max="20"
                   inputmode="numeric" pattern="[0-9]*"
-                  value="${awayVal}" placeholder="0" ${locked ? 'disabled' : ''}>
+                  value="${awayVal}" placeholder="0" ${matchLocked ? 'disabled' : ''}>
               </div>
               <div class="ko-team away">
                 ${teamFlagImg(awayTeam.code)}
@@ -288,7 +300,7 @@
           teamRowHtml = `
             <div class="tbd-notice">
               <i class="ti ti-clock"></i> Teams TBD — ${m.note || 'Drawn once qualified'}
-              ${!locked ? `
+              ${!matchLocked ? `
                 <div class="ko-score-inputs" style="justify-content:center;margin-top:0.625rem">
                   <input type="number" id="h_${m.id}" class="score-num" min="0" max="20"
                     inputmode="numeric" pattern="[0-9]*"
@@ -305,7 +317,7 @@
         }
 
         let resultHtml = '';
-        let cardClass = !hasTeams && !locked ? 'tbd' : '';
+        let cardClass = !hasTeams && !matchLocked ? 'tbd' : '';
         if (hasResult && homeVal !== '' && awayVal !== '') {
           const actH = result.home_score, actA = result.away_score;
           const pH = parseInt(homeVal), pA = parseInt(awayVal);
@@ -342,12 +354,12 @@
           <div class="ko-card ${cardClass}">
             <div class="ko-card-top">
               <span class="ko-match-label">${m.match_label} &middot; ${formatDate(m.date || '2026-07-01')}</span>
-              ${locked ? `<div class="lock-pill lock-pill--locked lock-pill--sm"><i class="ti ti-lock"></i><span>Locked</span></div>` : '<span class="chip chip-grey">Upcoming</span>'}
+              ${matchLocked ? `<div class="lock-pill lock-pill--locked lock-pill--sm"><i class="ti ti-lock"></i><span>Locked</span></div>` : '<span class="chip chip-grey">Upcoming</span>'}
             </div>
             ${teamRowHtml}
             ${resultHtml}
             ${aetHtml}
-            ${locked ? `<button class="view-picks-btn" data-match="${m.id}"><i class="ti ti-eye"></i> See picks</button>` : ''}
+            ${matchLocked ? `<button class="view-picks-btn" data-match="${m.id}"><i class="ti ti-eye"></i> See picks</button>` : ''}
           </div>
         `;
       }).join('');

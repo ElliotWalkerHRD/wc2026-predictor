@@ -710,16 +710,19 @@ serve(async (req) => {
       89,90,91,92,93,94,95,96,
       97,98,99,100,
       101,102,
-      104,
+      103,104,
     ];
     const allCalIds = [...groupIds, ...koIds];
     const groupIdSet = new Set(groupIds);
 
     // Load existing calibration state
     const { data: calRows } = await supabaseAdmin
-      .from("model_calibration").select("match_id, actual_outcome");
+      .from("model_calibration").select("match_id, actual_outcome, crowd_n");
     const calMap = new Map<number, string | null>(
       (calRows ?? []).map((r: any) => [r.match_id, r.actual_outcome ?? null])
+    );
+    const crowdNMap = new Map<number, number>(
+      (calRows ?? []).map((r: any) => [r.match_id, r.crowd_n ?? 0])
     );
 
     // Load current results — include team codes needed for KO snapshotting
@@ -829,6 +832,80 @@ serve(async (req) => {
       }
     }
 
+    // ---- Part A2: refresh crowd picks for snapshots taken with 0 picks ----
+    // Matches that have a calibration row with crowd_n=0 but haven't kicked off
+    // yet get their crowd columns updated so the final snapshot reflects real picks.
+    let calibCrowdRefreshed = 0;
+    const toRefreshCrowd = allCalIds.filter(id => {
+      if (!calMap.has(id)) return false;
+      if ((crowdNMap.get(id) ?? 0) > 0) return false;
+      const res = resMap.get(id);
+      const s = res?.status ?? '';
+      return !['FINISHED', 'IN_PLAY', 'PAUSED', 'LIVE'].includes(s);
+    });
+
+    if (toRefreshCrowd.length > 0) {
+      const { data: refreshData } = await supabaseAdmin
+        .from("predictions")
+        .select("question_key, value")
+        .in("question_key", toRefreshCrowd.map(id => `m${id}`));
+
+      const crowdByQR: Record<string, any[]> = {};
+      for (const p of (refreshData ?? [])) {
+        if (!crowdByQR[p.question_key]) crowdByQR[p.question_key] = [];
+        crowdByQR[p.question_key].push(p);
+      }
+
+      const r5r = (n: number) => Math.round(n * 100000) / 100000;
+      const r3r = (n: number) => Math.round(n * 1000) / 1000;
+
+      for (const id of toRefreshCrowd) {
+        const picks = crowdByQR[`m${id}`] ?? [];
+        let hw = 0, d = 0, aw = 0;
+        for (const p of picks) {
+          let v: any; try { v = JSON.parse(p.value); } catch { continue; }
+          const h = parseInt(v.home), a = parseInt(v.away);
+          if (isNaN(h) || isNaN(a)) continue;
+          if (h > a) hw++; else if (h === a) d++; else aw++;
+        }
+        const crowdN = hw + d + aw;
+        if (crowdN === 0) continue;
+
+        const crowd = { home: hw / crowdN, draw: d / crowdN, away: aw / crowdN };
+
+        let homeCode: string, awayCode: string;
+        if (groupIdSet.has(id)) {
+          const teams = ELO_MATCH_TEAMS.get(id);
+          if (!teams) continue;
+          [homeCode, awayCode] = teams;
+        } else {
+          const koRes = resMap.get(id);
+          if (!koRes?.home_team) continue;
+          homeCode = koRes.home_team;
+          awayCode = koRes.away_team;
+        }
+        const homeR = eloRatings[homeCode]?.rating ?? ELO_BASE;
+        const awayR = eloRatings[awayCode]?.rating ?? ELO_BASE;
+        const elo   = eloThreeWay(homeR, awayR);
+        const blend = blendCalib(elo, crowd, crowdN);
+
+        const { error: refreshErr } = await supabaseAdmin
+          .from("model_calibration")
+          .update({
+            crowd_home:       r5r(crowd.home),
+            crowd_draw:       r5r(crowd.draw),
+            crowd_away:       r5r(crowd.away),
+            crowd_n:          crowdN,
+            blend_home:       r5r(blend.home),
+            blend_draw:       r5r(blend.draw),
+            blend_away:       r5r(blend.away),
+            blend_elo_weight: r3r(blend.eloW),
+          })
+          .eq("match_id", id);
+        if (!refreshErr) calibCrowdRefreshed++;
+      }
+    }
+
     // ---- Part B: resolve outcomes ----
     const unresolved = allCalIds.filter(id => calMap.has(id) && calMap.get(id) === null);
     for (const id of unresolved) {
@@ -849,7 +926,7 @@ serve(async (req) => {
       if (!resErr) calibResolved++;
     }
 
-    console.log(`[auto-update] calibration: ${calibSnapshotted} snapped, ${calibResolved} resolved`);
+    console.log(`[auto-update] calibration: ${calibSnapshotted} snapped, ${calibCrowdRefreshed} crowd-refreshed, ${calibResolved} resolved`);
   } catch (e: any) {
     console.error("[auto-update] calibration error (non-fatal):", e.message);
   }
@@ -1020,6 +1097,10 @@ serve(async (req) => {
     [101, 97, 98], [102, 99, 100],
     [104, 101, 102],
   ];
+  // Third-place playoff (103) feeds from the LOSERS of the semifinals, not the winners
+  const KO_LOSER_FEED_MAP: [number, number, number][] = [
+    [103, 101, 102],
+  ];
   function getKoWinner(r: any): string | null {
     if (!r || r.status !== 'FINISHED') return null;
     if (r.pens_home != null) return r.pens_home > r.pens_away ? r.home_team : r.away_team;
@@ -1027,6 +1108,11 @@ serve(async (req) => {
     if (r.home_score != null && r.away_score != null && r.home_score !== r.away_score)
       return r.home_score > r.away_score ? r.home_team : r.away_team;
     return null;
+  }
+  function getKoLoser(r: any): string | null {
+    const winner = getKoWinner(r);
+    if (!winner) return null;
+    return winner === r.home_team ? r.away_team : r.home_team;
   }
   let koWinnersSeeded = 0;
   try {
@@ -1048,6 +1134,15 @@ serve(async (req) => {
       const u: any = { match_id: target, updated_at: new Date().toISOString() };
       if (homeWinner) u.home_team = homeWinner;
       if (awayWinner) u.away_team = awayWinner;
+      propUpserts.push(u);
+    }
+    for (const [target, homeSrc, awaySrc] of KO_LOSER_FEED_MAP) {
+      const homeLoser = getKoLoser(koMap[homeSrc]);
+      const awayLoser = getKoLoser(koMap[awaySrc]);
+      if (!homeLoser && !awayLoser) continue;
+      const u: any = { match_id: target, updated_at: new Date().toISOString() };
+      if (homeLoser) u.home_team = homeLoser;
+      if (awayLoser) u.away_team = awayLoser;
       propUpserts.push(u);
     }
 

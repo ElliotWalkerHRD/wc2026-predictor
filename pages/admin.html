@@ -368,7 +368,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="../js/config.js?v=46"></script>
-  <script src="../js/data.js?v=48"></script>
+  <script src="../js/data.js?v=49"></script>
   <script src="../js/supabase-client.js?v=46"></script>
   <script src="../js/scoring.js?v=46"></script>
   <script src="../js/ui.js?v=46"></script>
@@ -1378,6 +1378,7 @@
       const { admin, gm14, gm16 } = _asPreviewData;
 
       function nameCard(qKey, label, guessMap, answer) {
+        const rawKey = qKey.replace(/^Q/, ''); // 'Q1.4' -> '1.4' (matches _asNameMatches keys)
         if (!answer) return `
           <div class="as-card">
             <div class="as-card-hd">${qKey}: ${label}</div>
@@ -1390,14 +1391,14 @@
           </div>`;
 
         const rows = [...guessMap.entries()].sort((a,b) => b[1]-a[1]).map(([guess, count]) => {
-          const matched = _asNameMatches[qKey][guess];
+          const matched = _asNameMatches[rawKey][guess];
           return `<tr>
             <td>${guess}</td>
             <td class="text-muted" style="font-size:0.73rem">${asNormName(guess)}</td>
             <td style="text-align:center">${count}</td>
             <td style="text-align:center">
               <button class="btn btn-sm ${matched ? 'btn-lime' : 'btn-ghost'} as-nm-toggle"
-                data-q="${qKey}" data-guess="${guess.replace(/"/g,'&quot;').replace(/'/g,'&#39;')}">
+                data-q="${rawKey}" data-guess="${guess.replace(/"/g,'&quot;').replace(/'/g,'&#39;')}">
                 ${matched ? '<i class="ti ti-check"></i> Match' : '<i class="ti ti-x"></i> No match'}
               </button>
             </td>

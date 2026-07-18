@@ -119,7 +119,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="../js/config.js?v=31"></script>
-  <script src="../js/data.js?v=33"></script>
+  <script src="../js/data.js?v=34"></script>
   <script src="../js/supabase-client.js?v=31"></script>
   <script src="../js/scoring.js?v=47"></script>
   <script src="../js/ui.js?v=31"></script>
@@ -183,6 +183,7 @@
         }
       });
 
+      DB.patchKnockoutBracket(resultsData);
       computedAnswers = computeR1Answers(resultsData);
       r1Breakdown = ScoringEngine.calculateRound1(saved, computedAnswers).breakdown;
 

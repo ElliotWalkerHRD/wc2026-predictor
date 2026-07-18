@@ -30,7 +30,11 @@ const ScoringEngine = {
     // 1.3 Beaten semi-finalists (10pts each correct, 5pts if reached final)
     if (predictions['1.3a'] && answers['1.3']) {
       const correctSemis = answers['1.3'] || [];
-      const finalists = [answers['1.1'], answers['1.2']];
+      // Finalists are known once both semis finish, before the Final itself is played —
+      // answers['1.1']/['1.2'] (winner/runner-up) are a superset once the Final is decided.
+      const finalists = answers['1.1'] || answers['1.2']
+        ? [answers['1.1'], answers['1.2']]
+        : (answers['_finalists'] || []);
       ['1.3a', '1.3b'].forEach(key => {
         const pick = predictions[key];
         if (pick) {

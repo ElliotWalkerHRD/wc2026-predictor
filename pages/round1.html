@@ -119,9 +119,9 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="../js/config.js?v=31"></script>
-  <script src="../js/data.js?v=32"></script>
+  <script src="../js/data.js?v=33"></script>
   <script src="../js/supabase-client.js?v=31"></script>
-  <script src="../js/scoring.js?v=46"></script>
+  <script src="../js/scoring.js?v=47"></script>
   <script src="../js/ui.js?v=31"></script>
   <script>
     DB.initSupabase();
@@ -306,6 +306,11 @@
 
       const finalM = KNOCKOUT_ROUNDS.final?.matches?.find(m => m.id === 104);
       const finalR = rMap[104];
+      // Finalists are known as soon as both semis are done, independent of who wins the Final —
+      // used for the "picked a beaten semi-finalist who actually reached the final" partial credit.
+      if (finalM?.home_team && finalM?.away_team) {
+        r1['_finalists'] = [finalM.home_team, finalM.away_team];
+      }
       if (finalM?.home_team && finalM?.away_team && finalR?.status === 'FINISHED') {
         const [h, a] = [finalR.home_score, finalR.away_score];
         if (h !== a) {

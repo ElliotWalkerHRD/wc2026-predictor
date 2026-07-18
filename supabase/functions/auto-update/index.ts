@@ -710,7 +710,7 @@ serve(async (req) => {
       89,90,91,92,93,94,95,96,
       97,98,99,100,
       101,102,
-      104,
+      103,104,
     ];
     const allCalIds = [...groupIds, ...koIds];
     const groupIdSet = new Set(groupIds);
@@ -1088,6 +1088,10 @@ serve(async (req) => {
     [101, 97, 98], [102, 99, 100],
     [104, 101, 102],
   ];
+  // Third-place playoff (103) feeds from the LOSERS of the semifinals, not the winners
+  const KO_LOSER_FEED_MAP: [number, number, number][] = [
+    [103, 101, 102],
+  ];
   function getKoWinner(r: any): string | null {
     if (!r || r.status !== 'FINISHED') return null;
     if (r.pens_home != null) return r.pens_home > r.pens_away ? r.home_team : r.away_team;
@@ -1095,6 +1099,11 @@ serve(async (req) => {
     if (r.home_score != null && r.away_score != null && r.home_score !== r.away_score)
       return r.home_score > r.away_score ? r.home_team : r.away_team;
     return null;
+  }
+  function getKoLoser(r: any): string | null {
+    const winner = getKoWinner(r);
+    if (!winner) return null;
+    return winner === r.home_team ? r.away_team : r.home_team;
   }
   let koWinnersSeeded = 0;
   try {
@@ -1116,6 +1125,15 @@ serve(async (req) => {
       const u: any = { match_id: target, updated_at: new Date().toISOString() };
       if (homeWinner) u.home_team = homeWinner;
       if (awayWinner) u.away_team = awayWinner;
+      propUpserts.push(u);
+    }
+    for (const [target, homeSrc, awaySrc] of KO_LOSER_FEED_MAP) {
+      const homeLoser = getKoLoser(koMap[homeSrc]);
+      const awayLoser = getKoLoser(koMap[awaySrc]);
+      if (!homeLoser && !awayLoser) continue;
+      const u: any = { match_id: target, updated_at: new Date().toISOString() };
+      if (homeLoser) u.home_team = homeLoser;
+      if (awayLoser) u.away_team = awayLoser;
       propUpserts.push(u);
     }
 

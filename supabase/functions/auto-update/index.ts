@@ -414,6 +414,7 @@ serve(async (req) => {
 
     const userPreds: Record<string, Record<string, Record<number, any>>> = {};
     const userR2Preds: Record<string, Record<string, string>> = {};
+    const userR1Preds: Record<string, Record<string, any>> = {};
     for (const p of allPredictions) {
       if (p.question_key.startsWith("2.")) {
         let val: string | null = null;
@@ -422,6 +423,14 @@ serve(async (req) => {
         const subKey = p.question_key.slice(2); // "w.A", "r.A", etc.
         if (!userR2Preds[p.user_id]) userR2Preds[p.user_id] = {};
         userR2Preds[p.user_id][subKey] = val;
+        continue;
+      }
+      if (p.question_key.startsWith("1.")) {
+        let val: any = null;
+        try { val = JSON.parse(p.value); } catch { val = p.value; }
+        if (val == null) continue;
+        if (!userR1Preds[p.user_id]) userR1Preds[p.user_id] = {};
+        userR1Preds[p.user_id][p.question_key] = val;
         continue;
       }
       if (!p.question_key.startsWith("m")) continue;
@@ -485,11 +494,158 @@ serve(async (req) => {
     }
     const allGroupsComplete = GROUPS.every(g => groupStandings[g] !== null);
 
-    // Fetch all existing scores in one query (avoids N+1 per user)
-    const { data: existingScores } = await supabaseAdmin
-      .from("scores").select("user_id, round1_points");
-    const existingScoreMap: Record<string, any> = {};
-    (existingScores || []).forEach((s: any) => { existingScoreMap[s.user_id] = s; });
+    // ---- Round 1 dynamic answers (mirrors admin.html asComputeAnswers) ----
+    // Winner priority: penalty shootout > after-ET score > 90-min score
+    function r1KoWinner(r: any): string | null {
+      if (!r || r.status !== 'FINISHED') return null;
+      if (r.pens_home != null) return r.pens_home > r.pens_away ? r.home_team : r.away_team;
+      if (r.ft_home != null) return r.ft_home > r.ft_away ? r.home_team : r.away_team;
+      if (r.home_score != null && r.away_score != null && r.home_score !== r.away_score)
+        return r.home_score > r.away_score ? r.home_team : r.away_team;
+      return null;
+    }
+
+    const r1Answers: Record<string, any> = {};
+
+    // Q1.8/1.9/1.11/1.12: only once all 72 group matches are finished
+    const finishedGroupCount = GROUP_FIXTURES.filter(([id]) => resultMap[id]?.status === 'FINISHED').length;
+    if (finishedGroupCount === 72) {
+      const hostsSet = new Set(["USA", "CAN", "MEX"]);
+      const watched = ["ENG", "FRA", "BRA", "ARG"];
+      let totalGoals = 0, hostGoals = 0;
+      const nGoals: Record<string, number> = { ENG: 0, FRA: 0, BRA: 0, ARG: 0 };
+      for (const [id, , hc, ac] of GROUP_FIXTURES) {
+        const r = resultMap[id];
+        totalGoals += r.home_score + r.away_score;
+        if (hostsSet.has(hc)) hostGoals += r.home_score;
+        if (hostsSet.has(ac)) hostGoals += r.away_score;
+        if (nGoals[hc] !== undefined) nGoals[hc] += r.home_score;
+        if (nGoals[ac] !== undefined) nGoals[ac] += r.away_score;
+      }
+      r1Answers['1.8'] = hostGoals;
+      r1Answers['1.11'] = totalGoals;
+      r1Answers['1.9'] = watched.reduce((best, c) => (nGoals[c] > nGoals[best] ? c : best));
+
+      // Q1.12: hardest group by smallest 1st-4th points gap; tiebreak: higher 4th-place GD
+      let hg: string | null = null, minGap = Infinity, prevFourthGd = -Infinity;
+      for (const group of GROUPS) {
+        const st = groupStandings[group];
+        if (!st) continue;
+        // Rebuild full 4-team table (groupStandings only stores winner/runnerUp) for the GD tiebreak
+        const gFixtures = GROUP_FIXTURES.filter(([, g]) => g === group);
+        const teams: Record<string, { pts: number; gd: number }> = {};
+        for (const [id, , home, away] of gFixtures) {
+          const r = resultMap[id];
+          if (!teams[home]) teams[home] = { pts: 0, gd: 0 };
+          if (!teams[away]) teams[away] = { pts: 0, gd: 0 };
+          const hgScore = r.home_score, agScore = r.away_score;
+          teams[home].gd += (hgScore - agScore);
+          teams[away].gd += (agScore - hgScore);
+          if (hgScore > agScore) teams[home].pts += 3;
+          else if (hgScore === agScore) { teams[home].pts += 1; teams[away].pts += 1; }
+          else teams[away].pts += 3;
+        }
+        const sorted = Object.entries(teams).sort(([, a], [, b]) => b.pts - a.pts || b.gd - a.gd);
+        if (sorted.length < 4) continue;
+        const gap = sorted[0][1].pts - sorted[3][1].pts;
+        const fourthGd = sorted[3][1].gd;
+        if (gap < minGap || (gap === minGap && fourthGd > prevFourthGd)) {
+          minGap = gap; hg = group; prevFourthGd = fourthGd;
+        }
+      }
+      if (hg) r1Answers['1.12'] = hg;
+    }
+
+    // Q1.1/Q1.2 from Final (104); Q1.3 + _finalists from semis (101,102)
+    const sf101 = resultMap[101], sf102 = resultMap[102];
+    if (sf101?.status === 'FINISHED' && sf102?.status === 'FINISHED') {
+      const finalHome = r1KoWinner(sf101);
+      const finalAway = r1KoWinner(sf102);
+      if (finalHome && finalAway) {
+        r1Answers['_finalists'] = [finalHome, finalAway];
+        const finalR = resultMap[104];
+        if (finalR?.status === 'FINISHED' && finalR.home_score !== finalR.away_score) {
+          const h = finalR.home_score, a = finalR.away_score;
+          r1Answers['1.1'] = h > a ? finalHome : finalAway;
+          r1Answers['1.2'] = h > a ? finalAway : finalHome;
+        }
+      }
+      const beaten: string[] = [];
+      for (const sr of [sf101, sf102]) {
+        if (sr.home_score !== sr.away_score) {
+          beaten.push(sr.home_score > sr.away_score ? sr.away_team : sr.home_team);
+        }
+      }
+      if (beaten.length === 2) r1Answers['1.3'] = beaten;
+    }
+
+    // Admin-entered answers (name/number fields the API can never resolve) — settings table
+    const { data: r1SettingsRow } = await supabaseAdmin
+      .from("settings").select("value").eq("key", "round1_admin_answers").single();
+    let r1AdminAnswers: Record<string, any> = {};
+    try { r1AdminAnswers = r1SettingsRow?.value ? JSON.parse(r1SettingsRow.value) : {}; } catch { /* ignore */ }
+    const r1AllAnswers = { ...r1Answers, ...r1AdminAnswers };
+
+    // Name matching (mirrors admin.html asNormName/asAutoMatch) — no manual override table exists,
+    // so this always uses the automatic surname-based match.
+    function r1NormName(s: any): string {
+      if (!s) return '';
+      return String(s).toLowerCase()
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/[’ʼ'-]/g, ' ')
+        .replace(/[^a-z0-9\s]/g, '')
+        .replace(/\s+/g, ' ').trim();
+    }
+    function r1AutoMatch(guess: any, answer: any): boolean {
+      const g = r1NormName(guess), a = r1NormName(answer);
+      if (!g || !a) return false;
+      if (g === a) return true;
+      const aSur = a.split(' ').pop() ?? '', gSur = g.split(' ').pop() ?? '';
+      if (aSur.length >= 3 && (g === aSur || g.includes(aSur))) return true;
+      if (gSur.length >= 3 && (a === gSur || a.includes(gSur))) return true;
+      return false;
+    }
+
+    function scoreRound1(preds: Record<string, any>): number {
+      let points = 0;
+      const ans = r1AllAnswers;
+
+      if (preds['1.1'] && ans['1.1']) {
+        if (preds['1.1'] === ans['1.1']) points += 20;
+        else if (preds['1.1'] === ans['1.2']) points += 10;
+      }
+      if (preds['1.2'] && ans['1.2']) {
+        if (preds['1.2'] === ans['1.2']) points += 10;
+        else if (preds['1.2'] === ans['1.1']) points += 5;
+      }
+      if (preds['1.3a'] && ans['1.3']) {
+        const correctSemis: string[] = ans['1.3'] || [];
+        const finalists: any[] = (ans['1.1'] || ans['1.2']) ? [ans['1.1'], ans['1.2']] : (ans['_finalists'] || []);
+        for (const key of ['1.3a', '1.3b']) {
+          const pick = preds[key];
+          if (!pick) continue;
+          if (correctSemis.includes(pick)) points += 10;
+          else if (finalists.includes(pick)) points += 5;
+        }
+      }
+      if (preds['1.4'] && ans['1.4'] != null && r1AutoMatch(preds['1.4'], ans['1.4'])) points += 10;
+      if (preds['1.5'] != null && ans['1.5'] != null && parseInt(preds['1.5']) === parseInt(ans['1.5'])) points += 10;
+      if (preds['1.6'] && ans['1.6'] != null && r1AutoMatch(preds['1.6'], ans['1.6'])) points += 10;
+      if (preds['1.7'] != null && ans['1.7'] != null && parseInt(preds['1.7']) === parseInt(ans['1.7'])) points += 10;
+      if (preds['1.8'] != null && ans['1.8'] != null) {
+        const diff = Math.abs(parseInt(preds['1.8']) - parseInt(ans['1.8']));
+        if (diff === 0) points += 5; else if (diff <= 3) points += 3;
+      }
+      if (preds['1.9'] && ans['1.9'] != null && preds['1.9'] === ans['1.9']) points += 5;
+      if (preds['1.10'] != null && ans['1.10'] != null && parseInt(preds['1.10']) === parseInt(ans['1.10'])) points += 5;
+      if (preds['1.11'] != null && ans['1.11'] != null) {
+        const diff = Math.abs(parseInt(preds['1.11']) - parseInt(ans['1.11']));
+        if (diff === 0) points += 10; else if (diff <= 10) points += 5;
+      }
+      if (preds['1.12'] && ans['1.12'] != null && preds['1.12'] === ans['1.12']) points += 5;
+
+      return points;
+    }
 
     const scoreUpdates: any[] = [];
     for (const userId of allUserIds) {
@@ -530,8 +686,7 @@ serve(async (req) => {
         scores[round] = pts;
       }
 
-      const existing = existingScoreMap[userId];
-      scores.round1 = existing?.round1_points || 0;
+      scores.round1 = scoreRound1(userR1Preds[userId] || {});
 
       // Round 2: Group Winners & Runners-Up
       {

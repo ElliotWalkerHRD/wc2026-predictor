@@ -286,7 +286,8 @@ serve(async (req) => {
     // score in fullTime with no regularTime — impossible to detect from API data alone.
     // Add an entry here to lock in the correct 90-min and ET scores permanently.
     const SCORE_OVERRIDES: Record<number, { home: number; away: number; ft_home: number | null; ft_away: number | null }> = {
-      82: { home: 2, away: 2, ft_home: 3, ft_away: 2 }, // BEL v SEN: API reports 3-2 REGULAR; actual was 2-2 at 90 min, 3-2 AET
+      82:  { home: 2, away: 2, ft_home: 3, ft_away: 2 }, // BEL v SEN: API reports 3-2 REGULAR; actual was 2-2 at 90 min, 3-2 AET
+      104: { home: 0, away: 0, ft_home: 1, ft_away: 0 }, // ESP v ARG Final: API reports score inconsistently; actual was 0-0 at 90 min, 1-0 ESP AET
     };
 
     const upserts: any[] = [];

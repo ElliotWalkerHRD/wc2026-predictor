@@ -287,7 +287,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="../js/config.js?v=45"></script>
-  <script src="../js/data.js?v=47"></script>
+  <script src="../js/data.js?v=48"></script>
   <script src="../js/supabase-client.js?v=45"></script>
   <script src="../js/scoring.js?v=47"></script>
   <script src="../js/ui.js?v=45"></script>
@@ -447,6 +447,18 @@
       panel.innerHTML = content ? totalBar + content : emptyState;
     }
 
+    // Winner priority: penalty shootout > after-ET score > 90-min score
+    // (mirrors auto-update's r1KoWinner — needed because a 90-min draw that
+    // went to extra time/penalties still has a clear winner)
+    function r1KoWinner(r) {
+      if (!r || r.status !== 'FINISHED') return null;
+      if (r.pens_home != null) return r.pens_home > r.pens_away ? r.home_team : r.away_team;
+      if (r.ft_home != null) return r.ft_home > r.ft_away ? r.home_team : r.away_team;
+      if (r.home_score != null && r.away_score != null && r.home_score !== r.away_score)
+        return r.home_score > r.away_score ? r.home_team : r.away_team;
+      return null;
+    }
+
     function computeR1Answers(matchResults) {
       const rMap = {};
       matchResults.forEach(r => { rMap[r.match_id] = r; });
@@ -504,10 +516,10 @@
         r1['_finalists'] = [finalM.home_team, finalM.away_team];
       }
       if (finalM?.home_team && finalM?.away_team && finalR?.status === 'FINISHED') {
-        const [h, a] = [finalR.home_score, finalR.away_score];
-        if (h !== a) {
-          r1['1.1'] = h > a ? finalM.home_team : finalM.away_team;
-          r1['1.2'] = h > a ? finalM.away_team : finalM.home_team;
+        const winner = r1KoWinner(finalR);
+        if (winner) {
+          r1['1.1'] = winner;
+          r1['1.2'] = winner === finalM.home_team ? finalM.away_team : finalM.home_team;
         }
       }
 
@@ -515,8 +527,8 @@
       for (const sm of (KNOCKOUT_ROUNDS.semifinals?.matches || [])) {
         const sr = rMap[sm.id];
         if (!sm.home_team || !sm.away_team || sr?.status !== 'FINISHED') continue;
-        const [h, a] = [sr.home_score, sr.away_score];
-        if (h !== a) beaten.push(h > a ? sm.away_team : sm.home_team);
+        const winner = r1KoWinner(sr);
+        if (winner) beaten.push(winner === sm.home_team ? sm.away_team : sm.home_team);
       }
       if (beaten.length === 2) r1['1.3'] = beaten;
 

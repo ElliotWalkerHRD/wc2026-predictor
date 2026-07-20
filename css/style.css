@@ -818,6 +818,23 @@ select.form-control option {
 .podium-card.rank-2::after { background: #c0c0c0; }
 .podium-card.rank-3::after { background: #cd7f32; }
 
+.podium-icon {
+  display: block;
+  font-size: 1.5rem;
+  margin-bottom: 0.4rem;
+  color: var(--grey-400);
+}
+.podium-card.rank-1 .podium-icon { color: #e8b923; }
+.podium-card.rank-2 .podium-icon { color: #b0b0b0; }
+.podium-card.rank-3 .podium-icon { color: #cd7f32; }
+
+/* Once the tournament is decided, give the winner's card a subtle gold glow */
+.podium-final .podium-card.rank-1 {
+  border-color: #e8b923;
+  box-shadow: 0 0 0 1px rgba(232,185,35,0.25), 0 8px 24px rgba(232,185,35,0.18);
+}
+.podium-final .podium-card.rank-1::after { background: linear-gradient(90deg, #e8b923, var(--lime)); }
+
 .podium-position {
   font-size: 0.75rem;
   font-weight: 700;
@@ -946,6 +963,44 @@ select.form-control option {
 .rank-2 .rank-badge, .rank-badge.rank-2 { background: #e5e5e5; color: var(--ink); }
 .rank-3 .rank-badge, .rank-badge.rank-3 { background: #f5dbc0; color: var(--ink); }
 .rank-other, .rank-badge.rank-other { background: var(--grey-100); color: var(--grey-500); }
+.rank-badge i { font-size: 0.95rem; }
+
+.final-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #b8860b;
+}
+
+.tournament-complete-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: linear-gradient(135deg, rgba(232,185,35,0.1), rgba(200,241,53,0.1));
+  border: 1px solid rgba(232,185,35,0.3);
+  border-radius: var(--radius-lg);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+}
+.tournament-complete-banner > i {
+  font-size: 1.75rem;
+  color: #e8b923;
+  flex-shrink: 0;
+}
+.tournament-complete-title {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--ink);
+}
+.tournament-complete-sub {
+  font-size: 0.8rem;
+  color: var(--grey-500);
+  margin-top: 0.1rem;
+}
 
 .points-badge {
   font-family: var(--font-serif);

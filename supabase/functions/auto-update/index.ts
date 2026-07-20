@@ -565,16 +565,19 @@ serve(async (req) => {
       if (finalHome && finalAway) {
         r1Answers['_finalists'] = [finalHome, finalAway];
         const finalR = resultMap[104];
-        if (finalR?.status === 'FINISHED' && finalR.home_score !== finalR.away_score) {
-          const h = finalR.home_score, a = finalR.away_score;
-          r1Answers['1.1'] = h > a ? finalHome : finalAway;
-          r1Answers['1.2'] = h > a ? finalAway : finalHome;
+        if (finalR?.status === 'FINISHED') {
+          const winner = r1KoWinner(finalR);
+          if (winner) {
+            r1Answers['1.1'] = winner;
+            r1Answers['1.2'] = winner === finalHome ? finalAway : finalHome;
+          }
         }
       }
       const beaten: string[] = [];
       for (const sr of [sf101, sf102]) {
-        if (sr.home_score !== sr.away_score) {
-          beaten.push(sr.home_score > sr.away_score ? sr.away_team : sr.home_team);
+        const winner = r1KoWinner(sr);
+        if (winner) {
+          beaten.push(winner === sr.home_team ? sr.away_team : sr.home_team);
         }
       }
       if (beaten.length === 2) r1Answers['1.3'] = beaten;

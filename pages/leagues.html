@@ -136,304 +136,53 @@
   </style>
 </head>
 <body>
-  <nav class="nav" id="main-nav"></nav>
-
-  <div class="page-banner">
-    <div class="container">
-      <nav class="breadcrumb">WC2026 &rsaquo; <span>Leagues</span></nav>
-      <h1 class="page-title">Leagues</h1>
-      <p class="page-desc">Compete privately with friends &middot; Create a league or join one with a code</p>
-    </div>
+  <style>
+    body {
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      background: #f9f9f8;
+      color: #0d0d0d;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      margin: 0;
+    }
+    .placeholder-card {
+      max-width: 460px;
+      width: 100%;
+      background: #ffffff;
+      border: 1px solid #d1d5db;
+      border-radius: 20px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.08);
+      padding: 2.75rem 2.25rem;
+      text-align: center;
+    }
+    .placeholder-icon { font-size: 2.5rem; color: #e8b923; margin-bottom: 1rem; }
+    .placeholder-card h1 {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-size: 1.5rem;
+      margin: 0 0 0.75rem;
+    }
+    .placeholder-card p { color: #6b7280; font-size: 0.92rem; line-height: 1.6; margin: 0 0 1.5rem; }
+    .placeholder-card a {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: #0d0d0d;
+      color: #c8f135;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.88rem;
+      padding: 0.7rem 1.4rem;
+      border-radius: 10px;
+    }
+  </style>
+  <div class="placeholder-card">
+    <div class="placeholder-icon"><i class="ti ti-trophy"></i></div>
+    <h1>Tournament complete</h1>
+    <p>The WC2026 Prediction Game has finished and this page is no longer active. Final results are on the home page.</p>
+    <a href="../index.html"><i class="ti ti-arrow-left"></i> Back to results</a>
   </div>
-
-  <main class="main-content" style="padding-top:0">
-    <div class="container" style="padding-top:2rem;padding-bottom:4rem">
-
-      <!-- My Leagues -->
-      <div style="margin-bottom:2.5rem">
-        <h2 class="section-title"><i class="ti ti-shield-star"></i> My Leagues</h2>
-        <div id="myLeagues">
-          <div class="loading-overlay"><div class="spinner"></div></div>
-        </div>
-      </div>
-
-      <!-- Create + Join -->
-      <div class="actions-grid">
-
-        <!-- Join a League -->
-        <div>
-          <h2 class="section-title"><i class="ti ti-door-enter"></i> Join a League</h2>
-          <div class="card">
-            <div id="joinAlert" style="margin-bottom:0.75rem"></div>
-            <div class="form-group">
-              <label class="form-label" for="joinCode">League Code</label>
-              <input type="text" id="joinCode" class="form-control"
-                placeholder="e.g. AB12CD"
-                autocomplete="off"
-                style="text-transform:uppercase;letter-spacing:0.1em">
-            </div>
-            <button class="btn btn-lime btn-block" id="joinBtn">
-              <i class="ti ti-door-enter"></i> Join League
-            </button>
-          </div>
-        </div>
-
-        <!-- Create a League -->
-        <div>
-          <h2 class="section-title"><i class="ti ti-plus"></i> Create a League</h2>
-          <div class="card">
-            <div id="createAlert" style="margin-bottom:0.75rem"></div>
-            <div class="form-group">
-              <label class="form-label" for="leagueName">League Name</label>
-              <input type="text" id="leagueName" class="form-control"
-                placeholder="e.g. The Office League"
-                maxlength="48">
-            </div>
-            <button class="btn btn-lime btn-block" id="createBtn">
-              <i class="ti ti-plus"></i> Create League
-            </button>
-            <div id="createResult" style="display:none" class="new-league-result">
-              <div style="font-size:0.8rem;font-weight:600;color:var(--grey-500);text-transform:uppercase;letter-spacing:0.05em">Join code</div>
-              <div class="new-league-code" id="newLeagueCode"></div>
-              <p style="font-size:0.82rem;color:var(--grey-500);margin-bottom:0.875rem">Share this link with friends — they can join in one click:</p>
-              <button class="btn btn-outline btn-sm" id="copyInviteBtn">
-                <i class="ti ti-copy"></i> Copy invite link
-              </button>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </main>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="../js/config.js?v=30"></script>
-  <script src="../js/data.js?v=31"></script>
-  <script src="../js/supabase-client.js?v=46"></script>
-  <script src="../js/scoring.js?v=47"></script>
-  <script src="../js/ui.js?v=31"></script>
-  <script>
-    DB.initSupabase();
-    Nav.render('leagues');
-
-    let userId = null;
-
-    function showAlert(containerId, msg, type = 'error') {
-      const icon = type === 'error' ? 'ti-alert-triangle' : type === 'success' ? 'ti-check' : 'ti-info-circle';
-      const el = document.getElementById(containerId);
-      el.innerHTML = `<div class="alert alert-${type}"><i class="ti ${icon}"></i> ${msg}</div>`;
-    }
-
-    function clearAlert(containerId) {
-      document.getElementById(containerId).innerHTML = '';
-    }
-
-    async function copyText(text, btn) {
-      const orig = btn.innerHTML;
-      const onSuccess = () => {
-        btn.innerHTML = '<i class="ti ti-check"></i> Copied!';
-        setTimeout(() => { btn.innerHTML = orig; }, 2000);
-        Toast.success('Copied to clipboard!');
-      };
-      try {
-        await navigator.clipboard.writeText(text);
-        onSuccess();
-      } catch (err) {
-        try {
-          const ta = document.createElement('textarea');
-          ta.value = text;
-          ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
-          document.body.appendChild(ta);
-          ta.focus();
-          ta.select();
-          document.execCommand('copy');
-          document.body.removeChild(ta);
-          onSuccess();
-        } catch (fallbackErr) {
-          console.error('Copy failed:', fallbackErr);
-          Toast.error('Could not copy — please copy manually.');
-        }
-      }
-    }
-
-    async function loadMyLeagues() {
-      const el = document.getElementById('myLeagues');
-      try {
-        const leagues = await DB.getMyLeagues(userId);
-        if (!leagues.length) {
-          el.innerHTML = `
-            <div class="empty-leagues">
-              <i class="ti ti-users-group" style="font-size:2rem;display:block;margin-bottom:0.75rem;color:var(--grey-300)"></i>
-              You haven't joined any leagues yet. Create one or ask for a join code.
-            </div>
-          `;
-          return;
-        }
-
-        el.innerHTML = leagues.map(l => {
-          const inviteLink = `${CONFIG.APP_URL}/pages/leagues.html?join=${l.join_code}`;
-          const memberLabel = l.member_count === 1 ? '1 member' : `${l.member_count} members`;
-          return `
-            <div class="league-row ${l.is_global ? 'is-global' : ''}">
-              <div class="league-info">
-                <div class="league-name">
-                  ${l.is_global ? '<i class="ti ti-world" style="color:var(--lime-dark)"></i>' : '<i class="ti ti-shield-star" style="color:var(--grey-400)"></i>'}
-                  ${l.name}
-                  ${l.is_global ? '<span class="chip chip-lime" style="font-size:0.65rem;padding:0.15rem 0.5rem">Global</span>' : ''}
-                </div>
-                <div class="league-meta">
-                  <span><i class="ti ti-users" style="font-size:0.85rem"></i> ${memberLabel}</span>
-                  ${!l.is_global ? `
-                    <span class="league-code">
-                      ${l.join_code}
-                      <button title="Copy join code" onclick="copyText('${l.join_code}', this)"><i class="ti ti-copy"></i></button>
-                    </span>
-                    <button class="btn btn-outline btn-sm" style="font-size:0.72rem;padding:0.15rem 0.55rem"
-                      onclick="copyText('${inviteLink}', this)">
-                      <i class="ti ti-link"></i> Copy invite
-                    </button>
-                  ` : ''}
-                </div>
-              </div>
-              <div class="league-actions">
-                ${l.is_global
-                  ? '<span class="chip chip-grey" style="font-size:0.72rem"><i class="ti ti-lock"></i> Global</span>'
-                  : `<button class="btn btn-sm" style="background:#25D366;color:#fff;border-color:#25D366"
-                        data-wa data-wa-code="${l.join_code}" data-wa-name="${l.name.replace(/"/g,'&quot;')}">
-                        <i class="ti ti-brand-whatsapp"></i> Share
-                      </button>
-                      <button class="btn btn-outline btn-sm" style="color:var(--red)" data-leave="${l.id}" data-name="${l.name.replace(/"/g,'&quot;')}">
-                        <i class="ti ti-door-exit"></i> Leave
-                      </button>`
-                }
-              </div>
-            </div>
-          `;
-        }).join('');
-
-        el.querySelectorAll('[data-wa]').forEach(btn => {
-          btn.addEventListener('click', () => {
-            const name = btn.dataset.waName;
-            const code = btn.dataset.waCode;
-            const link = `${CONFIG.APP_URL}/pages/leagues.html?join=${code}`;
-            const msg = `Join my World Cup 2026 prediction league "${name}" on Lock Your Picks! Use code ${code} or tap: ${link}`;
-            window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
-          });
-        });
-
-        el.querySelectorAll('[data-leave]').forEach(btn => {
-          btn.addEventListener('click', async () => {
-            const leagueId = btn.dataset.leave;
-            const name = btn.dataset.name;
-            if (!confirm(`Leave "${name}"? You can rejoin with the code later.`)) return;
-            btn.disabled = true;
-            try {
-              await DB.leaveLeague(userId, leagueId);
-              Toast.info(`Left ${name}`);
-              loadMyLeagues();
-            } catch (err) {
-              Toast.error('Could not leave: ' + err.message);
-              btn.disabled = false;
-            }
-          });
-        });
-
-      } catch (err) {
-        el.innerHTML = `<div class="alert alert-error"><i class="ti ti-alert-triangle"></i> ${err.message}</div>`;
-      }
-    }
-
-    // ---- Join ----
-    async function attemptJoin(code) {
-      clearAlert('joinAlert');
-      if (!code) { showAlert('joinAlert', 'Please enter a league code.'); return; }
-
-      const btn = document.getElementById('joinBtn');
-      btn.disabled = true;
-      btn.innerHTML = '<i class="ti ti-loader"></i> Joining&hellip;';
-
-      try {
-        const league = await DB.joinLeague(userId, code);
-        showAlert('joinAlert', `Joined <strong>${league.name}</strong>!`, 'success');
-        document.getElementById('joinCode').value = '';
-        loadMyLeagues();
-      } catch (err) {
-        showAlert('joinAlert', err.message || 'Failed to join league.');
-      }
-
-      btn.disabled = false;
-      btn.innerHTML = '<i class="ti ti-door-enter"></i> Join League';
-    }
-
-    document.getElementById('joinBtn').addEventListener('click', () => {
-      attemptJoin(document.getElementById('joinCode').value.trim());
-    });
-
-    document.getElementById('joinCode').addEventListener('keydown', e => {
-      if (e.key === 'Enter') document.getElementById('joinBtn').click();
-    });
-
-    // ---- Create ----
-    document.getElementById('createBtn').addEventListener('click', async () => {
-      clearAlert('createAlert');
-      const name = document.getElementById('leagueName').value.trim();
-      if (!name) { showAlert('createAlert', 'Please enter a league name.'); return; }
-
-      const btn = document.getElementById('createBtn');
-      btn.disabled = true;
-      btn.innerHTML = '<i class="ti ti-loader"></i> Creating&hellip;';
-
-      try {
-        const league = await DB.createLeague(userId, name);
-        const inviteLink = `${CONFIG.APP_URL}/pages/leagues.html?join=${league.join_code}`;
-
-        document.getElementById('newLeagueCode').textContent = league.join_code;
-        document.getElementById('copyInviteBtn').onclick = () =>
-          copyText(inviteLink, document.getElementById('copyInviteBtn'));
-        document.getElementById('createResult').style.display = 'block';
-
-        showAlert('createAlert', `League <strong>${league.name}</strong> created!`, 'success');
-        document.getElementById('leagueName').value = '';
-        loadMyLeagues();
-      } catch (err) {
-        showAlert('createAlert', err.message || 'Failed to create league.');
-      }
-
-      btn.disabled = false;
-      btn.innerHTML = '<i class="ti ti-plus"></i> Create League';
-    });
-
-    document.getElementById('leagueName').addEventListener('keydown', e => {
-      if (e.key === 'Enter') document.getElementById('createBtn').click();
-    });
-
-    // ---- Init ----
-    async function load() {
-      const params = new URLSearchParams(window.location.search);
-      const joinParam = params.get('join');
-
-      const session = await DB.getSession();
-      if (!session) {
-        // Pass the league code through so new users can sign up directly into the league
-        window.location.href = joinParam
-          ? `auth.html?leaguejoin=${encodeURIComponent(joinParam.toUpperCase())}`
-          : '/pages/auth.html';
-        return;
-      }
-      userId = session.user.id;
-
-      await loadMyLeagues();
-
-      if (joinParam) {
-        const codeInput = document.getElementById('joinCode');
-        codeInput.value = joinParam.toUpperCase();
-        // Small delay so the page renders visibly before the join fires
-        setTimeout(() => attemptJoin(joinParam), 300);
-      }
-    }
-
-    load();
-  </script>
 </body>
 </html>

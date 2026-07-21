@@ -15,314 +15,53 @@
   <link rel="stylesheet" href="../css/style.css?v=50">
 </head>
 <body>
-  <nav class="nav" id="main-nav"></nav>
-
-  <div class="page-banner">
-    <div class="container">
-      <nav class="breadcrumb">WC2026 &rsaquo; <span>Leaderboard</span></nav>
-      <h1 class="page-title">Leaderboard</h1>
-      <p class="page-desc">Real-time standings &middot; Updates automatically</p>
-    </div>
+  <style>
+    body {
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      background: #f9f9f8;
+      color: #0d0d0d;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      margin: 0;
+    }
+    .placeholder-card {
+      max-width: 460px;
+      width: 100%;
+      background: #ffffff;
+      border: 1px solid #d1d5db;
+      border-radius: 20px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.08);
+      padding: 2.75rem 2.25rem;
+      text-align: center;
+    }
+    .placeholder-icon { font-size: 2.5rem; color: #e8b923; margin-bottom: 1rem; }
+    .placeholder-card h1 {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-size: 1.5rem;
+      margin: 0 0 0.75rem;
+    }
+    .placeholder-card p { color: #6b7280; font-size: 0.92rem; line-height: 1.6; margin: 0 0 1.5rem; }
+    .placeholder-card a {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: #0d0d0d;
+      color: #c8f135;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.88rem;
+      padding: 0.7rem 1.4rem;
+      border-radius: 10px;
+    }
+  </style>
+  <div class="placeholder-card">
+    <div class="placeholder-icon"><i class="ti ti-trophy"></i></div>
+    <h1>Tournament complete</h1>
+    <p>The WC2026 Prediction Game has finished and this page is no longer active. Final results are on the home page.</p>
+    <a href="../index.html"><i class="ti ti-arrow-left"></i> Back to results</a>
   </div>
-
-  <main class="main-content" style="padding-top:0">
-    <div class="container" style="padding-top:2rem;padding-bottom:4rem">
-      <div id="leagueSwitcher"></div>
-      <div id="leaderboardContent">
-        <div class="loading-overlay">
-          <div class="spinner"></div>
-          <span>Loading standings&hellip;</span>
-        </div>
-      </div>
-    </div>
-  </main>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="../js/config.js?v=30"></script>
-  <script src="../js/data.js?v=31"></script>
-  <script src="../js/supabase-client.js?v=46"></script>
-  <script src="../js/scoring.js?v=47"></script>
-  <script src="../js/ui.js?v=31"></script>
-  <script>
-    DB.initSupabase();
-    Nav.render('leaderboard');
-
-    let currentUserId     = null;
-    let allScores         = [];
-    let memberCache       = {};   // leagueId -> userId[]
-    let profileCache      = {};   // userId -> { display_name, avatar_color }
-    let allProfilesFetched = false;
-    let dropdownBuilt     = false;
-    let tournamentComplete = false;
-
-    async function loadLeaderboard() {
-      const session = await DB.getSession();
-      currentUserId = session?.user?.id || null;
-
-      try {
-        const sb = DB.initSupabase();
-        const { data: finalResult } = await sb
-          .from('match_results').select('status').eq('match_id', 104).maybeSingle();
-        tournamentComplete = finalResult?.status === 'FINISHED';
-      } catch (_) { /* non-fatal — falls back to "Live" indicator */ }
-
-      try {
-        const [scores, leagues] = await Promise.all([
-          DB.getScores(),
-          currentUserId
-            ? DB.getMyLeagues(currentUserId).catch(() => [])
-            : Promise.resolve([])
-        ]);
-        allScores = scores;
-
-        if (!dropdownBuilt) {
-          buildDropdown(leagues);
-          dropdownBuilt = true;
-        }
-
-        await applyFilter();
-      } catch (err) {
-        document.getElementById('leaderboardContent').innerHTML =
-          `<div class="alert alert-error"><i class="ti ti-alert-triangle"></i> Failed to load: ${err.message}</div>`;
-      }
-    }
-
-    function buildDropdown(leagues) {
-      const switcher = document.getElementById('leagueSwitcher');
-      const privateLeagues = leagues.filter(l => !l.is_global);
-
-      if (!currentUserId || privateLeagues.length === 0) {
-        switcher.innerHTML = '';
-        return;
-      }
-
-      const globalLeague = leagues.find(l => l.is_global);
-      const globalLabel  = globalLeague ? globalLeague.name : 'Global';
-
-      const opts = [
-        `<option value="global">${globalLabel} — All Players</option>`,
-        ...privateLeagues.map(l => {
-          const n = l.member_count || 1;
-          return `<option value="${l.id}">${l.name} (${n} ${n === 1 ? 'player' : 'players'})</option>`;
-        })
-      ].join('');
-
-      switcher.innerHTML = `
-        <div class="filter-bar" style="margin-bottom:1.5rem;align-items:center">
-          <label class="filter-label" for="leaguePicker" style="white-space:nowrap">
-            <i class="ti ti-users-group"></i> View:
-          </label>
-          <select id="leaguePicker" class="form-control" style="min-width:200px;max-width:320px">${opts}</select>
-        </div>
-      `;
-
-      document.getElementById('leaguePicker').addEventListener('change', applyFilter);
-    }
-
-    // Build synthetic zero-point entries for members not yet in the scores array.
-    // Reads profile data from profileCache (must be populated before calling).
-    function fillZeroEntries(scores, memberIds) {
-      const scoredIds = new Set(scores.map(s => s.user_id));
-      const zeros = memberIds
-        .filter(id => !scoredIds.has(id))
-        .map(id => {
-          const p = profileCache[id] || {};
-          return {
-            user_id: id,
-            total_points: 0,
-            profiles: {
-              display_name: p.display_name || 'Player',
-              avatar_color: p.avatar_color || '#c8f135',
-              avatar_url:   p.avatar_url   || null
-            }
-          };
-        });
-      return [...scores, ...zeros];
-    }
-
-    async function applyFilter() {
-      const picker = document.getElementById('leaguePicker');
-      const val = picker ? picker.value : 'global';
-
-      if (val === 'global' || !val) {
-        if (!allProfilesFetched) {
-          try {
-            const profiles = await DB.getAllProfiles();
-            profiles.forEach(p => { profileCache[p.id] = p; });
-            allProfilesFetched = true;
-          } catch (_) {}
-        }
-        const allIds = Object.keys(profileCache);
-        renderLeaderboard(fillZeroEntries(allScores, allIds));
-        return;
-      }
-
-      if (!memberCache[val]) {
-        try {
-          memberCache[val] = await DB.getLeagueMemberIds(val);
-        } catch {
-          renderLeaderboard(allScores);
-          return;
-        }
-      }
-
-      const memberIds = memberCache[val];
-      const memberSet = new Set(memberIds);
-      const filtered = allScores.filter(s => memberSet.has(s.user_id));
-
-      // Fetch profiles for any member who has no score row yet and isn't cached
-      const scoredIds = new Set(filtered.map(s => s.user_id));
-      const missing = memberIds.filter(id => !scoredIds.has(id) && !profileCache[id]);
-      if (missing.length) {
-        try {
-          const profiles = await DB.getProfiles(missing);
-          profiles.forEach(p => { profileCache[p.id] = p; });
-        } catch (_) {}
-      }
-
-      renderLeaderboard(fillZeroEntries(filtered, memberIds));
-    }
-
-    function renderLeaderboard(scores) {
-      if (!scores.length) {
-        document.getElementById('leaderboardContent').innerHTML = `
-          <div class="loading-overlay" style="padding:3rem">
-            <i class="ti ti-trophy" style="font-size:3rem;color:var(--grey-300)"></i>
-            <p class="text-muted">No players yet.</p>
-          </div>
-        `;
-        return;
-      }
-
-      const allZero = scores.every(s => (s.total_points || 0) === 0);
-
-      const sorted = [...scores].sort((a, b) => {
-        if (allZero) {
-          return (a.profiles?.display_name || '').localeCompare(b.profiles?.display_name || '');
-        }
-        const diff = (b.total_points || 0) - (a.total_points || 0);
-        if (diff !== 0) return diff;
-        return (a.profiles?.display_name || '').localeCompare(b.profiles?.display_name || '');
-      });
-
-      const rankIcon = rankNum =>
-        rankNum === 1 ? '<i class="ti ti-trophy podium-icon"></i>'
-        : rankNum === 2 ? '<i class="ti ti-medal podium-icon"></i>'
-        : rankNum === 3 ? '<i class="ti ti-medal podium-icon"></i>'
-        : '';
-
-      let podiumSection = '';
-      if (!allZero) {
-        const podiumOrder = [sorted[1] || null, sorted[0] || null, sorted[2] || null];
-        podiumSection = `<div class="podium-grid mb-4${tournamentComplete ? ' podium-final' : ''}">` + podiumOrder.map((s, idx) => {
-          if (!s) return '<div></div>';
-          const rankNum = idx === 0 ? 2 : idx === 1 ? 1 : 3;
-          const rankLabel = rankNum === 1 ? '1st' : rankNum === 2 ? '2nd' : '3rd';
-          const isYou = s.user_id === currentUserId;
-          const isAi  = isAiPlayer(s.profiles);
-          return `
-            <div class="podium-card rank-${rankNum}${isAi ? ' ai-player-row' : ''}">
-              ${rankIcon(rankNum)}
-              <div class="podium-position">${rankLabel}</div>
-              ${renderAvatar(s.profiles, 'podium-avatar')}
-              <div class="podium-name">${s.profiles?.display_name || 'Player'}${isYou ? ' <span class="you-badge">You</span>' : ''}${isAi ? ' <span class="ai-tag">AI</span>' : ''}</div>
-              <div class="podium-pts">${s.total_points || 0}</div>
-              <div class="podium-pts-label">Points</div>
-            </div>
-          `;
-        }).join('') + '</div>';
-      }
-
-      const preNote = allZero
-        ? `<div class="alert alert-info" style="margin-bottom:1.25rem">
-             <i class="ti ti-clock"></i> Scoring begins when the tournament kicks off. Full roster shown alphabetically.
-           </div>`
-        : '';
-
-      const rounds = ['round1','round2','round3','round4','round5','round6','round7','round8'];
-      const roundLabels = ['R1','R2','GS','R32','R16','QF','SF','Final'];
-
-      const rowsHTML = sorted.map((s, i) => {
-        const rankNum = i + 1;
-        const isYou = s.user_id === currentUserId;
-        const isAi  = isAiPlayer(s.profiles);
-        const rankClass = rankNum <= 3 ? `rank-${rankNum}` : 'rank-other';
-        const badgeContent = rankIcon(rankNum) || rankNum;
-
-        const roundPts = rounds.map(r => {
-          const pts = s[r + '_points'];
-          return `<td class="round-col hide-mobile">${pts != null ? pts : '—'}</td>`;
-        }).join('');
-
-        return `
-          <tr class="${isYou ? 'current-user-row' : ''}${isAi ? ' ai-player-row' : ''}">
-            <td><div class="rank-badge ${rankClass}">${badgeContent}</div></td>
-            <td>
-              <div class="player-cell">
-                ${renderAvatar(s.profiles, 'avatar', 'width:30px;height:30px;font-size:0.8rem')}
-                <div class="player-info">
-                  <span class="name">${s.profiles?.display_name || 'Player'}</span>
-                  ${isYou ? '<span class="you-badge">You</span>' : ''}${isAi ? '<span class="ai-tag">AI</span>' : ''}
-                </div>
-              </div>
-            </td>
-            ${roundPts}
-            <td class="total-col">${s.total_points || 0}</td>
-          </tr>
-        `;
-      }).join('');
-
-      const roundHeaders = roundLabels.map(r =>
-        `<th class="hide-mobile centre">${r}</th>`
-      ).join('');
-
-      const statusIndicator = tournamentComplete
-        ? `<div class="final-indicator"><i class="ti ti-checkbox"></i> Final</div>`
-        : `<div class="live-indicator"><div class="live-dot"></div> Live</div>`;
-
-      document.getElementById('leaderboardContent').innerHTML = `
-        ${tournamentComplete ? `
-        <div class="tournament-complete-banner">
-          <i class="ti ti-confetti"></i>
-          <div>
-            <div class="tournament-complete-title">Tournament complete — final standings</div>
-            <div class="tournament-complete-sub">All scores are locked in. Congratulations to the top 3!</div>
-          </div>
-        </div>` : ''}
-        ${podiumSection}
-        ${preNote}
-        <div class="leaderboard-card">
-          <div class="leaderboard-card-header">
-            <h3><i class="ti ti-list-numbers"></i> Full Standings</h3>
-            ${statusIndicator}
-          </div>
-          <div style="overflow-x:auto">
-            <table class="leaderboard-table">
-              <thead>
-                <tr>
-                  <th style="width:44px">#</th>
-                  <th>Player</th>
-                  ${roundHeaders}
-                  <th class="centre">Total</th>
-                </tr>
-              </thead>
-              <tbody>${rowsHTML}</tbody>
-            </table>
-          </div>
-        </div>
-
-        <div style="margin-top:0.875rem;text-align:right">
-          <span class="text-xs text-muted">R1=Pre-tournament &middot; R2=Group winners &middot; GS=Group stage &middot; R32/R16/QF/SF/Final=Knockouts</span>
-        </div>
-      `;
-    }
-
-    loadLeaderboard().then(() => {
-      DB.subscribeToLeaderboard(async () => {
-        allScores = await DB.getScores().catch(() => allScores);
-        applyFilter();
-      });
-    });
-  </script>
 </body>
 </html>

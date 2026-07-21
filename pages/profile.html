@@ -83,262 +83,53 @@
   </style>
 </head>
 <body>
-  <nav class="nav" id="main-nav"></nav>
-
-  <div class="page-banner">
-    <div class="container">
-      <nav class="breadcrumb">WC2026 &rsaquo; <span>My Profile</span></nav>
-      <h1 class="page-title">My Profile</h1>
-      <p class="page-desc">Edit your display name, avatar colour, and profile photo</p>
-    </div>
+  <style>
+    body {
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      background: #f9f9f8;
+      color: #0d0d0d;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      margin: 0;
+    }
+    .placeholder-card {
+      max-width: 460px;
+      width: 100%;
+      background: #ffffff;
+      border: 1px solid #d1d5db;
+      border-radius: 20px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.08);
+      padding: 2.75rem 2.25rem;
+      text-align: center;
+    }
+    .placeholder-icon { font-size: 2.5rem; color: #e8b923; margin-bottom: 1rem; }
+    .placeholder-card h1 {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-size: 1.5rem;
+      margin: 0 0 0.75rem;
+    }
+    .placeholder-card p { color: #6b7280; font-size: 0.92rem; line-height: 1.6; margin: 0 0 1.5rem; }
+    .placeholder-card a {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: #0d0d0d;
+      color: #c8f135;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.88rem;
+      padding: 0.7rem 1.4rem;
+      border-radius: 10px;
+    }
+  </style>
+  <div class="placeholder-card">
+    <div class="placeholder-icon"><i class="ti ti-trophy"></i></div>
+    <h1>Tournament complete</h1>
+    <p>The WC2026 Prediction Game has finished and this page is no longer active. Final results are on the home page.</p>
+    <a href="../index.html"><i class="ti ti-arrow-left"></i> Back to results</a>
   </div>
-
-  <main class="main-content" style="padding-top:0">
-    <div class="container" style="padding-top:2rem;padding-bottom:4rem">
-      <div class="profile-card">
-        <div class="card">
-
-          <!-- Avatar section -->
-          <div class="avatar-section">
-            <div class="avatar-lg" id="avatarDisplay"></div>
-            <div class="avatar-actions">
-              <label class="btn btn-outline btn-sm" for="photoInput" style="cursor:pointer">
-                <i class="ti ti-camera"></i> Change photo
-              </label>
-              <input type="file" id="photoInput" accept="image/*" style="display:none">
-              <button class="btn btn-outline btn-sm hidden" id="removePhotoBtn" style="color:var(--red)">
-                <i class="ti ti-trash"></i> Remove photo
-              </button>
-              <span class="avatar-hint">Any photo format &middot; auto-resized</span>
-            </div>
-          </div>
-
-          <!-- Display name -->
-          <div class="form-group">
-            <label class="form-label" for="displayName">Display Name</label>
-            <input type="text" id="displayName" class="form-control" maxlength="24" placeholder="Your name (shown to all players)">
-          </div>
-
-          <!-- Avatar colour -->
-          <div class="form-group">
-            <label class="form-label">Avatar Colour <span style="font-weight:400;color:var(--grey-400)">(shown when no photo)</span></label>
-            <div class="color-swatches" id="colorSwatches"></div>
-            <input type="hidden" id="avatarColor" value="#c8f135">
-          </div>
-
-          <div id="profileAlert" style="margin-bottom:1rem"></div>
-
-          <button class="btn btn-lime btn-block" id="saveBtn">
-            <i class="ti ti-device-floppy"></i> Save Changes
-          </button>
-
-        </div>
-
-      </div>
-    </div>
-  </main>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="../js/config.js?v=30"></script>
-  <script src="../js/data.js?v=31"></script>
-  <script src="../js/supabase-client.js?v=46"></script>
-  <script src="../js/scoring.js?v=47"></script>
-  <script src="../js/ui.js?v=31"></script>
-  <script>
-    DB.initSupabase();
-    Nav.render('profile');
-
-    let userId = null;
-    let currentProfile = null;
-    let pendingFile = null;
-    let removePhoto = false;
-
-    function showAlert(msg, type = 'error') {
-      const icon = type === 'error' ? 'ti-alert-triangle' : type === 'success' ? 'ti-check' : 'ti-info-circle';
-      document.getElementById('profileAlert').innerHTML =
-        `<div class="alert alert-${type}"><i class="ti ${icon}"></i> ${msg}</div>`;
-    }
-
-    function renderAvatarDisplay(url, color, initial) {
-      const el = document.getElementById('avatarDisplay');
-      if (url) {
-        el.style.background = 'transparent';
-        el.innerHTML = `<img src="${url}" alt="">`;
-      } else {
-        el.style.background = color || '#c8f135';
-        el.style.color = '#0d0d0d';
-        el.innerHTML = initial || '?';
-      }
-    }
-
-    async function load() {
-      const session = await requireAuthFromPages();
-      if (!session) return;
-      userId = session.user.id;
-
-      try {
-        currentProfile = await DB.getProfile(userId);
-      } catch (_) {
-        currentProfile = null;
-      }
-
-      // Populate display name
-      const nameEl = document.getElementById('displayName');
-      nameEl.value = currentProfile?.display_name || '';
-
-      // Populate avatar colour swatches
-      const colorInput = document.getElementById('avatarColor');
-      const savedColor = currentProfile?.avatar_color || '#c8f135';
-      colorInput.value = savedColor;
-
-      const swatchContainer = document.getElementById('colorSwatches');
-      AVATAR_COLORS.forEach(color => {
-        const s = document.createElement('div');
-        s.className = 'color-swatch' + (color === savedColor ? ' selected' : '');
-        s.style.background = color;
-        s.title = color;
-        s.addEventListener('click', () => {
-          document.querySelectorAll('.color-swatch').forEach(x => x.classList.remove('selected'));
-          s.classList.add('selected');
-          colorInput.value = color;
-          // Update preview only if no photo is set/pending
-          if (!pendingFile && !currentProfile?.avatar_url) {
-            const initial = (nameEl.value || '?').charAt(0).toUpperCase();
-            renderAvatarDisplay(null, color, initial);
-          }
-        });
-        swatchContainer.appendChild(s);
-      });
-
-      // Render initial avatar
-      const initial = (currentProfile?.display_name || '?').charAt(0).toUpperCase();
-      renderAvatarDisplay(currentProfile?.avatar_url || null, savedColor, initial);
-
-      // Show remove button if photo exists
-      if (currentProfile?.avatar_url) {
-        document.getElementById('removePhotoBtn').classList.remove('hidden');
-      }
-    }
-
-    // Resize any image to max 400px longest side, export as JPEG 0.85 quality.
-    // Relies on the browser to decode the source format (works for HEIC on Safari/iOS).
-    function resizeImage(file) {
-      return new Promise((resolve, reject) => {
-        const MAX = 400;
-        const img = new Image();
-        const objectUrl = URL.createObjectURL(file);
-
-        img.onload = () => {
-          URL.revokeObjectURL(objectUrl);
-          const { naturalWidth: w, naturalHeight: h } = img;
-          const scale = Math.min(1, MAX / Math.max(w, h));
-          const canvas = document.createElement('canvas');
-          canvas.width  = Math.round(w * scale);
-          canvas.height = Math.round(h * scale);
-          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-          canvas.toBlob(blob => {
-            if (!blob) { reject(new Error('Canvas export failed — try a different image.')); return; }
-            resolve(new File([blob], 'avatar.jpg', { type: 'image/jpeg' }));
-          }, 'image/jpeg', 0.85);
-        };
-
-        img.onerror = () => {
-          URL.revokeObjectURL(objectUrl);
-          reject(new Error("Couldn't read that image — try a JPG or PNG."));
-        };
-
-        img.src = objectUrl;
-      });
-    }
-
-    // Photo file selection → resize → preview
-    document.getElementById('photoInput').addEventListener('change', async function () {
-      const file = this.files[0];
-      if (!file) return;
-
-      // Loose guard before resize — real photos are never this large
-      if (file.size > 20 * 1024 * 1024) {
-        showAlert('File is too large (max 20 MB).');
-        this.value = '';
-        return;
-      }
-
-      showAlert('Resizingâ€¦', 'info');
-      try {
-        const resized = await resizeImage(file);
-        pendingFile = resized;
-        removePhoto = false;
-        const url = URL.createObjectURL(resized);
-        renderAvatarDisplay(url, null, null);
-        document.getElementById('removePhotoBtn').classList.remove('hidden');
-        document.getElementById('profileAlert').innerHTML = '';
-      } catch (err) {
-        showAlert(err.message || "Couldn't process that image — try a JPG or PNG.");
-        this.value = '';
-      }
-    });
-
-    // Remove photo button
-    document.getElementById('removePhotoBtn').addEventListener('click', () => {
-      pendingFile = null;
-      removePhoto = true;
-      document.getElementById('photoInput').value = '';
-      const color = document.getElementById('avatarColor').value;
-      const initial = (document.getElementById('displayName').value || '?').charAt(0).toUpperCase();
-      renderAvatarDisplay(null, color, initial);
-      document.getElementById('removePhotoBtn').classList.add('hidden');
-    });
-
-    // Save
-    document.getElementById('saveBtn').addEventListener('click', async () => {
-      const btn = document.getElementById('saveBtn');
-      const name = document.getElementById('displayName').value.trim();
-      const color = document.getElementById('avatarColor').value;
-
-      if (!name) { showAlert('Display name cannot be empty.'); return; }
-
-      btn.disabled = true;
-      btn.innerHTML = '<i class="ti ti-loader"></i> Saving&hellip;';
-      document.getElementById('profileAlert').innerHTML = '';
-
-      try {
-        let avatarUrl = currentProfile?.avatar_url || null;
-
-        if (pendingFile) {
-          avatarUrl = await DB.uploadAvatar(userId, pendingFile);
-          pendingFile = null;
-        } else if (removePhoto) {
-          await DB.removeAvatar(userId);
-          avatarUrl = null;
-          removePhoto = false;
-        }
-
-        const updated = await DB.upsertProfile(userId, {
-          display_name: name,
-          avatar_color: color,
-          avatar_url: avatarUrl
-        });
-
-        currentProfile = updated;
-        const initial = name.charAt(0).toUpperCase();
-        renderAvatarDisplay(avatarUrl, color, initial);
-
-        if (avatarUrl) {
-          document.getElementById('removePhotoBtn').classList.remove('hidden');
-        } else {
-          document.getElementById('removePhotoBtn').classList.add('hidden');
-        }
-
-        showAlert('Profile saved!', 'success');
-      } catch (err) {
-        showAlert(err.message || 'Save failed. Please try again.');
-      }
-
-      btn.disabled = false;
-      btn.innerHTML = '<i class="ti ti-device-floppy"></i> Save Changes';
-    });
-
-    load();
-  </script>
 </body>
 </html>

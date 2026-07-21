@@ -7,700 +7,140 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-  <title>WC2026 Predictor — Home</title>
+  <title>WC2026 Predictor — Tournament Complete</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
-  <link rel="stylesheet" href="css/style.css?v=47">
   <style>
-    /* ---- Hero ---- */
-    .hero {
-      background: var(--ink);
-      color: var(--white);
-      position: relative;
-      overflow: hidden;
-      padding: 4rem 0 3.5rem;
+    :root {
+      --ink:        #0d0d0d;
+      --lime:       #c8f135;
+      --bg:         #f9f9f8;
+      --white:      #ffffff;
+      --grey-700:   #374151;
+      --grey-500:   #6b7280;
+      --grey-300:   #d1d5db;
+      --font-serif: 'DM Serif Display', Georgia, serif;
+      --font-sans:  'Space Grotesk', system-ui, sans-serif;
     }
-
-    .hero-inner {
-      display: flex;
-      flex-direction: column;
-      gap: 2rem;
-      position: relative;
-      z-index: 1;
-    }
-
-    @media (min-width: 768px) {
-      .hero-inner {
-        flex-direction: row;
-        align-items: center;
-        gap: 3rem;
-      }
-      .hero-copy { flex: 1; }
-      .hero-pitch-wrap { flex: 0 0 340px; }
-    }
-
-    .hero-eyebrow {
-      font-size: 0.78rem;
-      font-weight: 600;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,0.45);
-      margin-bottom: 0.875rem;
-    }
-
-    .hero-title {
-      font-family: var(--font-serif);
-      font-size: clamp(2.5rem, 8vw, 4.5rem);
-      line-height: 1.05;
-      color: var(--white);
-      margin-bottom: 0.25rem;
-    }
-
-    .hero-title .lime { color: var(--lime); }
-
-    .hero-desc {
-      font-size: 1rem;
-      color: rgba(255,255,255,0.6);
-      max-width: 480px;
-      line-height: 1.65;
-      margin-bottom: 2rem;
-    }
-
-    /* Countdown inside hero */
-    .lock-hero-label {
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
       display: flex;
       align-items: center;
-      gap: 0.4rem;
-      font-size: 0.72rem;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--lime);
-      margin-bottom: 0.5rem;
+      justify-content: center;
+      padding: 1.5rem;
     }
-
-    .hero-countdown {
-      display: flex;
-      gap: 1.25rem;
-      margin-bottom: 2rem;
-    }
-
-    .countdown-unit { text-align: center; }
-
-    .countdown-num {
-      font-family: var(--font-serif);
-      font-size: 2.25rem;
-      color: var(--lime);
-      line-height: 1;
-      display: block;
-    }
-
-    .countdown-lbl {
-      font-size: 0.65rem;
-      font-weight: 600;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,0.4);
-      display: block;
-      margin-top: 0.2rem;
-    }
-
-    .hero-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
-
-    /* SVG pitch */
-    .hero-pitch-wrap {
-      display: none;
-    }
-
-    @media (min-width: 768px) {
-      .hero-pitch-wrap {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-    }
-
-    .hero-pitch {
+    .card {
+      max-width: 560px;
       width: 100%;
-      max-width: 340px;
-      opacity: 0.06;
-      color: var(--white);
+      background: var(--white);
+      border: 1px solid var(--grey-300);
+      border-radius: 20px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.08);
+      padding: 3rem 2.5rem;
+      text-align: center;
     }
-
-    /* ---- Feature cards ---- */
-    .features-section {
-      padding: 3.5rem 0;
+    .trophy {
+      font-size: 3rem;
+      color: #e8b923;
+      margin-bottom: 1.25rem;
     }
-
-    .features-heading {
+    .logo {
       font-family: var(--font-serif);
-      font-size: 1.75rem;
+      font-style: italic;
+      font-size: 1.1rem;
+      color: var(--grey-500);
       margin-bottom: 1.5rem;
     }
-
-    .features-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 1rem;
-    }
-
-    @media (min-width: 560px) { .features-grid { grid-template-columns: repeat(2, 1fr); } }
-    @media (min-width: 880px) { .features-grid { grid-template-columns: repeat(4, 1fr); } }
-
-    .feature-card {
-      background: var(--white);
-      border: 1px solid var(--grey-300);
-      border-radius: var(--radius-lg);
-      padding: 1.5rem;
-      transition: box-shadow 0.2s, transform 0.2s;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .feature-card:hover {
-      box-shadow: var(--shadow-md);
-      transform: translateY(-3px);
-    }
-
-    .feature-icon {
-      width: 40px; height: 40px;
-      background: var(--grey-100);
-      border-radius: var(--radius-md);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.25rem;
+    .logo .lime { color: #5a6e00; }
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.9rem, 6vw, 2.5rem);
+      line-height: 1.15;
       margin-bottom: 1rem;
-      color: var(--ink);
     }
-
-    .feature-icon i { font-size: 1.25rem; }
-
-    .feature-title {
-      font-weight: 700;
-      font-size: 0.95rem;
-      margin-bottom: 0.4rem;
-    }
-
-    .feature-desc {
-      font-size: 0.82rem;
-      color: var(--grey-500);
-      line-height: 1.5;
-    }
-
-    /* ---- Round lock grid ---- */
-    .rounds-lock-section { padding: 2.5rem 0 0.5rem; }
-    .rounds-lock-heading {
-      font-family: var(--font-serif);
-      font-size: 1.5rem;
-      margin-bottom: 0.3rem;
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-    }
-    .rounds-lock-sub { font-size: 0.85rem; color: var(--grey-500); margin-bottom: 1.25rem; }
-    .rounds-lock-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 0.625rem;
-    }
-    @media (min-width: 480px) { .rounds-lock-grid { grid-template-columns: repeat(4, 1fr); } }
-    @media (min-width: 900px) { .rounds-lock-grid { grid-template-columns: repeat(8, 1fr); } }
-
-    .round-lock-card {
-      background: var(--white);
-      border: 1px solid var(--grey-200);
-      border-radius: var(--radius-lg);
-      padding: 0.875rem 0.75rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.35rem;
-      text-decoration: none;
-      color: inherit;
-      transition: box-shadow 0.15s, transform 0.15s;
-      min-width: 0;
-    }
-    .round-lock-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
-    .round-lock-card.is-locked { background: var(--grey-100); }
-    .round-lock-num {
-      font-size: 0.6rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--grey-400);
-    }
-    .round-lock-title {
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: var(--ink);
-      line-height: 1.25;
-    }
-    .lock-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.25rem;
-      font-size: 0.65rem;
-      font-weight: 600;
-      padding: 0.15rem 0.5rem;
-      border-radius: 9999px;
-      margin-top: 0.25rem;
-      width: fit-content;
-      max-width: 100%;
-    }
-    .lock-badge--open     { background: rgba(200,241,53,0.2); color: #5c7000; }
-    .lock-badge--locked   { background: var(--grey-200); color: var(--grey-500); }
-    .lock-badge--upcoming { background: var(--grey-100); color: var(--grey-400); }
-    .lock-badge-cd { font-size: 0.6rem; display: block; color: var(--grey-500); margin-top: 0.15rem; padding-left: 0.1rem; }
-
-    @keyframes lockPulse {
-      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(200,241,53,0.55); }
-      50%       { opacity: 0.82; box-shadow: 0 0 0 5px rgba(200,241,53,0); }
-    }
-    .lock-badge--open.urgent,
-    .lock-pill--open.urgent { animation: lockPulse 1.8s ease-in-out infinite; }
-
-    /* ---- CTA section ---- */
-    .cta-section {
-      background: var(--ink);
-      border-radius: var(--radius-xl);
-      padding: 3rem 2rem;
-      text-align: center;
-      margin-bottom: 4rem;
-    }
-
-    .cta-section h2 {
-      font-family: var(--font-serif);
-      font-size: clamp(1.5rem, 4vw, 2.25rem);
-      color: var(--white);
-      margin-bottom: 0.75rem;
-    }
-
-    .cta-section p {
-      color: rgba(255,255,255,0.55);
-      max-width: 460px;
-      margin: 0 auto 1.75rem;
-      font-size: 0.95rem;
-    }
-
-    /* ---- How to play ---- */
-    .how-to-play {
-      border: 1px solid var(--grey-300);
-      border-radius: var(--radius-lg);
-      background: var(--white);
-      box-shadow: var(--shadow-sm);
-      margin-top: 2rem;
-    }
-
-    .how-to-play > summary {
-      list-style: none;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 1rem 1.25rem;
-      user-select: none;
-      border-radius: var(--radius-lg);
-      transition: background 0.15s;
-    }
-
-    .how-to-play > summary:hover { background: var(--grey-100); }
-    .how-to-play[open] > summary { border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
-    .how-to-play > summary::-webkit-details-marker { display: none; }
-
-    .htp-summary-label {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-weight: 600;
-      font-size: 0.95rem;
-    }
-
-    .htp-chevron { color: var(--grey-400); transition: transform 0.2s; }
-    .how-to-play[open] .htp-chevron { transform: rotate(180deg); }
-
-    .htp-body {
-      border-top: 1px solid var(--grey-300);
-      padding: 1.5rem 1.25rem 1.25rem;
-    }
-
-    .htp-grid { display: grid; grid-template-columns: 1fr; gap: 1.75rem; }
-    @media (min-width: 640px) { .htp-grid { grid-template-columns: 1fr 1fr; gap: 2.5rem; } }
-
-    .htp-col-heading {
-      font-family: var(--font-serif);
-      font-size: 1.1rem;
-      margin-bottom: 0.875rem;
-    }
-
-    .htp-score-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.875rem; }
-
-    .htp-score-row {
-      display: flex;
-      align-items: baseline;
-      gap: 0.625rem;
-      font-size: 0.84rem;
+    .lede {
+      font-size: 1rem;
       color: var(--grey-700);
-      line-height: 1.4;
+      line-height: 1.6;
+      margin-bottom: 2rem;
     }
-
-    .htp-pts {
-      flex-shrink: 0;
-      font-weight: 700;
-      font-size: 0.73rem;
-      padding: 0.15rem 0.5rem;
-      border-radius: 9999px;
-      white-space: nowrap;
-    }
-
-    .htp-pts--exact   { background: rgba(200,241,53,0.3);  color: #4d6200; }
-    .htp-pts--result  { background: rgba(200,241,53,0.12); color: #637a10; }
-    .htp-pts--zero    { background: var(--grey-100); color: var(--grey-500); }
-    .htp-pts--default { background: var(--grey-100); color: var(--grey-500); }
-
-    .htp-note {
-      font-size: 0.8rem;
-      color: var(--grey-500);
-      margin-top: 0.5rem;
-      line-height: 1.55;
-    }
-
-    .htp-rounds {
-      padding-left: 1.25rem;
-      margin: 0 0 0.75rem;
+    .podium {
       display: flex;
       flex-direction: column;
-      gap: 0.375rem;
+      gap: 0.6rem;
+      margin-bottom: 2rem;
+      text-align: left;
     }
-
-    .htp-rounds li { font-size: 0.84rem; color: var(--grey-700); line-height: 1.45; }
-    .htp-rounds li::marker { color: var(--grey-400); }
-
-    .htp-footer {
+    .podium-row {
       display: flex;
-      align-items: flex-start;
-      gap: 0.5rem;
-      margin-top: 1.25rem;
-      padding-top: 1.125rem;
-      border-top: 1px solid var(--grey-300);
-      font-size: 0.82rem;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.7rem 1rem;
+      border-radius: 12px;
+      background: var(--bg);
+      border: 1px solid var(--grey-300);
+    }
+    .podium-row.first {
+      background: linear-gradient(135deg, rgba(232,185,35,0.08), rgba(200,241,53,0.08));
+      border-color: rgba(232,185,35,0.35);
+    }
+    .medal { font-size: 1.3rem; flex-shrink: 0; width: 28px; text-align: center; }
+    .podium-name { font-weight: 600; flex: 1; }
+    .podium-pts { font-family: var(--font-serif); color: var(--grey-500); }
+    .podium-row.first .podium-pts { color: var(--ink); }
+    .sign-off {
+      font-size: 0.9rem;
       color: var(--grey-500);
-      line-height: 1.5;
+      line-height: 1.6;
+    }
+    .divider {
+      height: 1px;
+      background: var(--grey-300);
+      margin: 1.75rem 0;
     }
   </style>
 </head>
 <body>
-  <nav class="nav" id="main-nav"></nav>
+  <div class="card">
+    <div class="trophy"><i class="ti ti-trophy"></i></div>
+    <div class="logo"><span class="lime">WC</span> 2026 Predictor</div>
+    <h1>That's a wrap!</h1>
+    <p class="lede">
+      Thanks for playing the WC2026 Prediction Game. The tournament has finished,
+      every match has been scored, and the final standings are locked in for good.
+    </p>
 
-  <!-- Hero -->
-  <section class="hero">
-    <div class="container">
-      <div class="hero-inner">
-        <div class="hero-copy">
-          <p class="hero-eyebrow">USA &bull; Canada &bull; Mexico &bull; June &ndash; July 2026</p>
-          <h1 class="hero-title">
-            World Cup <span class="lime">2026</span><br>Predictor
-          </h1>
-          <p class="hero-desc">
-            Predict every match, pick your winners, and compete with friends across all 104 games of the greatest tournament on earth.
-          </p>
-
-          <div class="lock-hero-label" id="cdLabel">
-            <i class="ti ti-lock-open"></i> Next round locks in
-          </div>
-          <div class="hero-countdown">
-            <div class="countdown-unit">
-              <span class="countdown-num" id="cdDays">--</span>
-              <span class="countdown-lbl">Days</span>
-            </div>
-            <div class="countdown-unit">
-              <span class="countdown-num" id="cdHours">--</span>
-              <span class="countdown-lbl">Hours</span>
-            </div>
-            <div class="countdown-unit">
-              <span class="countdown-num" id="cdMins">--</span>
-              <span class="countdown-lbl">Mins</span>
-            </div>
-            <div class="countdown-unit">
-              <span class="countdown-num" id="cdSecs">--</span>
-              <span class="countdown-lbl">Secs</span>
-            </div>
-          </div>
-
-          <div class="hero-actions" id="heroActions">
-            <!-- Populated by JS -->
-          </div>
-        </div>
-
-        <!-- Decorative pitch SVG -->
-        <div class="hero-pitch-wrap">
-          <svg class="hero-pitch" viewBox="0 0 220 140" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <!-- Outer field -->
-            <rect x="5" y="5" width="210" height="130" stroke-width="2.5"/>
-            <!-- Halfway line -->
-            <line x1="110" y1="5" x2="110" y2="135" stroke-width="1.5"/>
-            <!-- Centre circle -->
-            <circle cx="110" cy="70" r="20" stroke-width="1.5"/>
-            <!-- Centre spot -->
-            <circle cx="110" cy="70" r="2" fill="currentColor" stroke="none"/>
-            <!-- Left penalty area -->
-            <rect x="5" y="32" width="36" height="76" stroke-width="1.5"/>
-            <!-- Left goal area -->
-            <rect x="5" y="48" width="14" height="44" stroke-width="1.5"/>
-            <!-- Left goal -->
-            <rect x="0" y="56" width="5" height="28" stroke-width="1.5"/>
-            <!-- Left penalty spot -->
-            <circle cx="31" cy="70" r="2" fill="currentColor" stroke="none"/>
-            <!-- Right penalty area -->
-            <rect x="179" y="32" width="36" height="76" stroke-width="1.5"/>
-            <!-- Right goal area -->
-            <rect x="201" y="48" width="14" height="44" stroke-width="1.5"/>
-            <!-- Right goal -->
-            <rect x="215" y="56" width="5" height="28" stroke-width="1.5"/>
-            <!-- Right penalty spot -->
-            <circle cx="189" cy="70" r="2" fill="currentColor" stroke="none"/>
-            <!-- Corner arcs -->
-            <path d="M5 10 A5 5 0 0 0 10 5" stroke-width="1.5"/>
-            <path d="M215 10 A5 5 0 0 1 210 5" stroke-width="1.5"/>
-            <path d="M5 130 A5 5 0 0 1 10 135" stroke-width="1.5"/>
-            <path d="M215 130 A5 5 0 0 0 210 135" stroke-width="1.5"/>
-          </svg>
-        </div>
+    <div class="podium">
+      <div class="podium-row first">
+        <span class="medal"><i class="ti ti-trophy" style="color:#e8b923"></i></span>
+        <span class="podium-name">David Mazz</span>
+        <span class="podium-pts">603 pts</span>
+      </div>
+      <div class="podium-row">
+        <span class="medal"><i class="ti ti-medal" style="color:#b0b0b0"></i></span>
+        <span class="podium-name">Hugh Birley</span>
+        <span class="podium-pts">550 pts</span>
+      </div>
+      <div class="podium-row">
+        <span class="medal"><i class="ti ti-medal" style="color:#cd7f32"></i></span>
+        <span class="podium-name">Tim Mazzucchi</span>
+        <span class="podium-pts">537 pts</span>
       </div>
     </div>
-  </section>
 
-  <main class="main-content" style="padding-top:0">
-    <div class="container">
+    <div class="divider"></div>
 
-      <!-- Features -->
-      <section class="features-section">
-        <h2 class="features-heading">How it works</h2>
-        <div class="features-grid">
-          <div class="feature-card">
-            <div class="feature-icon"><i class="ti ti-pencil"></i></div>
-            <div class="feature-title">8 Rounds of Predictions</div>
-            <p class="feature-desc">From pre-tournament questions to the Final — predict scores, group winners, golden boot and more.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon"><i class="ti ti-bolt"></i></div>
-            <div class="feature-title">Live Scoring</div>
-            <p class="feature-desc">Points update automatically as results come in. No manual tallying needed.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon"><i class="ti ti-trophy"></i></div>
-            <div class="feature-title">Live Leaderboard</div>
-            <p class="feature-desc">Real-time standings update the moment scores are confirmed. Every point counts.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon"><i class="ti ti-users"></i></div>
-            <div class="feature-title">Private Game</div>
-            <p class="feature-desc">Invite-only — share your code with friends. No strangers, just your group.</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- How to play -->
-      <details class="how-to-play">
-        <summary>
-          <span class="htp-summary-label"><i class="ti ti-help-circle"></i> How to play</span>
-          <i class="ti ti-chevron-down htp-chevron"></i>
-        </summary>
-        <div class="htp-body">
-          <div class="htp-grid">
-            <div>
-              <h3 class="htp-col-heading">Scoring</h3>
-              <div class="htp-score-list">
-                <div class="htp-score-row">
-                  <span class="htp-pts htp-pts--exact">7 pts</span>
-                  Exact score — you called both numbers right
-                </div>
-                <div class="htp-score-row">
-                  <span class="htp-pts htp-pts--result">5 pts</span>
-                  Correct result — right winner or draw, wrong score
-                </div>
-                <div class="htp-score-row">
-                  <span class="htp-pts htp-pts--zero">0 pts</span>
-                  Wrong result
-                </div>
-                <div class="htp-score-row">
-                  <span class="htp-pts htp-pts--default">4&ndash;4</span>
-                  No prediction submitted &mdash; scored as 4-4 by default
-                </div>
-              </div>
-              <p class="htp-note">The <strong>Final</strong> is worth more: 10 pts exact &middot; 7 pts correct result.</p>
-              <p class="htp-note">Rounds 1 &amp; 2 use custom questions judged by the commissioner with their own point values.</p>
-            </div>
-            <div>
-              <h3 class="htp-col-heading">The 8 Rounds</h3>
-              <ol class="htp-rounds">
-                <li><strong>Pre-Tournament</strong> &mdash; trivia &amp; tournament predictions, commissioner-judged</li>
-                <li><strong>Group Winners</strong> &mdash; pick the teams topping each group, commissioner-judged</li>
-                <li><strong>Group Stage</strong> &mdash; predict all 72 match scores before the tournament begins</li>
-                <li><strong>Round of 32</strong> &mdash; 16 knockout matches</li>
-                <li><strong>Round of 16</strong> &mdash; 8 matches</li>
-                <li><strong>Quarter Finals</strong> &mdash; 4 matches</li>
-                <li><strong>Semi Finals</strong> &mdash; 2 matches</li>
-                <li><strong>The Final</strong> &mdash; 1 match; highest points available</li>
-              </ol>
-              <p class="htp-note">Each round locks before its first kick-off. Picks can&rsquo;t be changed after the deadline.</p>
-            </div>
-          </div>
-          <div class="htp-footer">
-            <i class="ti ti-users"></i>
-            <span>You can join multiple leagues &mdash; each has its own leaderboard. <em>Global</em> always shows the full standings.</span>
-          </div>
-        </div>
-      </details>
-
-      <hr class="divider" style="margin-top:2rem">
-
-      <!-- Round lock status grid -->
-      <div id="roundsLockSection"></div>
-
-      <!-- CTA -->
-      <div class="cta-section" id="inviteCta">
-        <h2>Ready to Join?</h2>
-        <p>Create a free account to join the group and start making your picks.</p>
-        <a href="pages/auth.html" class="btn btn-lime btn-lg">Sign Up / Sign In <i class="ti ti-arrow-right"></i></a>
-      </div>
-    </div>
-  </main>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="js/config.js?v=41"></script>
-  <script src="js/data.js?v=41"></script>
-  <script src="js/supabase-client.js?v=41"></script>
-  <script src="js/scoring.js?v=46"></script>
-  <script src="js/ui.js?v=41"></script>
-  <script>
-    DB.initSupabase();
-    Nav.render('home');
-
-    async function renderHeroActions() {
-      const session = await DB.getSession();
-      const el = document.getElementById('heroActions');
-      if (session) {
-        el.innerHTML = `
-          <a href="pages/predictions.html" class="btn btn-lime btn-lg">Make Predictions <i class="ti ti-arrow-right"></i></a>
-          <a href="pages/leaderboard.html" class="btn btn-ghost-dark btn-lg">View Leaderboard</a>
-        `;
-        document.getElementById('inviteCta').style.display = 'none';
-      } else {
-        el.innerHTML = `
-          <a href="pages/auth.html" class="btn btn-lime btn-lg">Get Started <i class="ti ti-arrow-right"></i></a>
-          <a href="pages/leaderboard.html" class="btn btn-ghost-dark btn-lg">View Leaderboard</a>
-        `;
-      }
-    }
-
-    renderHeroActions();
-
-    // ---- Round lock data ----
-    const ROUNDS_HOME = [
-      { id:'round1', label:'R1',  title:'Pre-Tournament', page:'pages/round1.html' },
-      { id:'round2', label:'R2',  title:'Group Winners',  page:'pages/round2.html' },
-      { id:'round3', label:'GS',  title:'Group Stage',    page:'pages/round3.html' },
-      { id:'round4', label:'R32', title:'Round of 32',    page:'pages/round4.html' },
-      { id:'round5', label:'R16', title:'Round of 16',    page:'pages/round5.html' },
-      { id:'round6', label:'QF',  title:'Quarter Finals', page:'pages/round6.html' },
-      { id:'round7', label:'SF',  title:'Semi Finals',    page:'pages/round7.html' },
-      { id:'round8', label:'F',   title:'The Final',      page:'pages/round8.html' },
-    ];
-
-    function getNextLockTarget() {
-      const now = Date.now();
-      const times = Object.values(CONFIG.ROUND_LOCKS)
-        .map(t => new Date(t).getTime())
-        .filter(t => t > now)
-        .sort((a, b) => a - b);
-      return times.length ? times[0] : null;
-    }
-
-    function updateCountdown() {
-      const target = getNextLockTarget();
-      const labelEl = document.getElementById('cdLabel');
-      if (!target) {
-        ['cdDays','cdHours','cdMins','cdSecs'].forEach(id => {
-          document.getElementById(id).textContent = '00';
-        });
-        if (labelEl) labelEl.innerHTML = '<i class="ti ti-lock"></i> All rounds locked';
-        return;
-      }
-      const diff = target - Date.now();
-      if (diff <= 0) return;
-      const d = Math.floor(diff / 86400000);
-      const h = Math.floor((diff % 86400000) / 3600000);
-      const m = Math.floor((diff % 3600000) / 60000);
-      const s = Math.floor((diff % 60000) / 1000);
-      document.getElementById('cdDays').textContent  = String(d).padStart(2,'0');
-      document.getElementById('cdHours').textContent = String(h).padStart(2,'0');
-      document.getElementById('cdMins').textContent  = String(m).padStart(2,'0');
-      document.getElementById('cdSecs').textContent  = String(s).padStart(2,'0');
-    }
-
-    updateCountdown();
-    const _heroTick = setInterval(updateCountdown, 1000);
-    window.addEventListener('pagehide', () => clearInterval(_heroTick));
-
-    // ---- Round lock status grid ----
-    function renderRoundLockGrid() {
-      const now = Date.now();
-
-      const cards = ROUNDS_HOME.map(r => {
-        const lt   = DB.getRoundLockDate(r.id)?.getTime();
-        const locked = DB.isRoundLocked(r.id);
-        const forceOpen = !locked && lt && lt <= now;
-        const isOpen = !locked && bracketReady(r.id);
-
-        const urgent = isOpen && !forceOpen && lt && (lt - now) < 86400000;
-
-        let badge, cdLine = '';
-        if (locked) {
-          badge = `<span class="lock-badge lock-badge--locked"><i class="ti ti-lock"></i> Locked</span>`;
-        } else if (isOpen) {
-          badge = `<span class="lock-badge lock-badge--open${urgent ? ' urgent' : ''}"><i class="ti ti-lock-open"></i> Open</span>`;
-          cdLine = forceOpen ? '' : `<span class="lock-badge-cd home-cd" data-lock="${new Date(lt).toISOString()}"></span>`;
-        } else {
-          badge = `<span class="lock-badge lock-badge--upcoming"><i class="ti ti-lock"></i> Opens later</span>`;
-        }
-
-        return `
-          <a class="round-lock-card${locked ? ' is-locked' : ''}" href="${r.page}">
-            <div class="round-lock-num">${r.label}</div>
-            <div class="round-lock-title">${r.title}</div>
-            ${badge}${cdLine}
-          </a>`;
-      }).join('');
-
-      document.getElementById('roundsLockSection').innerHTML = `
-        <section class="rounds-lock-section">
-          <h2 class="rounds-lock-heading"><i class="ti ti-lock" style="color:var(--lime)"></i> Round Status</h2>
-          <p class="rounds-lock-sub">Lock your picks before each round kicks off — no changes after the whistle.</p>
-          <div class="rounds-lock-grid">${cards}</div>
-        </section>
-        <hr class="divider" style="margin-top:2.5rem">
-      `;
-
-      // Tick open-round countdowns
-      function tickHomeCd() {
-        document.querySelectorAll('.home-cd[data-lock]').forEach(el => {
-          const diff = new Date(el.dataset.lock) - new Date();
-          if (diff <= 0) { el.textContent = ''; return; }
-          const d = Math.floor(diff / 86400000);
-          const h = Math.floor((diff % 86400000) / 3600000);
-          const m = Math.floor((diff % 3600000) / 60000);
-          el.textContent = `Locks in ${d > 0 ? `${d}d ${h}h` : h > 0 ? `${h}h ${m}m` : `${m}m`}`;
-          el.closest('.round-lock-card')?.querySelector('.lock-badge--open')
-            ?.classList.toggle('urgent', diff < 86400000);
-        });
-      }
-      tickHomeCd();
-      const _cdGrid = setInterval(tickHomeCd, 10_000);
-      window.addEventListener('pagehide', () => clearInterval(_cdGrid));
-    }
-
-    DB.initRoundOverrides()
-      .then(() => DB.getMatchResults().catch(() => []))
-      .then(results => { DB.patchKnockoutBracket(results); renderRoundLockGrid(); });
-  </script>
+    <p class="sign-off">
+      Congratulations to David Mazz on the win, and thank you to everyone who
+      predicted, argued about the group tables, and kept the leaderboard
+      interesting all the way to the Final. See you at the next tournament.
+    </p>
+  </div>
 </body>
 </html>

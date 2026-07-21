@@ -157,294 +157,53 @@
   </style>
 </head>
 <body>
-  <div class="auth-page">
-    <div class="auth-container">
-      <div class="auth-logo">
-        <a href="../index.html"><span class="lime">WC</span> 2026</a>
-        <p>World Cup Prediction Game</p>
-      </div>
-
-      <div class="auth-card">
-        <div class="auth-tabs">
-          <button class="auth-tab active" data-tab="signin">Sign In</button>
-          <button class="auth-tab" data-tab="signup">Create Account</button>
-        </div>
-
-        <!-- Sign In -->
-        <div class="auth-panel active" id="panel-signin">
-          <div id="signinAlert"></div>
-          <div class="form-group">
-            <label class="form-label" for="siEmail">Email</label>
-            <input class="form-control" type="email" id="siEmail" placeholder="you@example.com" autocomplete="email">
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="siPassword">Password</label>
-            <input class="form-control" type="password" id="siPassword" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" autocomplete="current-password">
-          </div>
-          <button class="btn btn-lime btn-block btn-lg" id="signinBtn">
-            Sign In <i class="ti ti-arrow-right"></i>
-          </button>
-          <div class="form-footer mt-2">
-            <a href="#" id="forgotLink" style="color:var(--grey-500);text-decoration:none;font-size:0.78rem">Forgot password?</a>
-          </div>
-        </div>
-
-        <!-- Forgot Password -->
-        <div class="auth-panel" id="panel-forgot">
-          <button class="auth-back" id="backToSignin"><i class="ti ti-arrow-left"></i> Back to sign in</button>
-          <div id="forgotAlert"></div>
-          <div id="forgotForm">
-            <p style="font-size:0.875rem;color:var(--grey-600);margin-bottom:1.25rem">Enter your email and we'll send you a reset link.</p>
-            <div class="form-group">
-              <label class="form-label" for="fpEmail">Email</label>
-              <input class="form-control" type="email" id="fpEmail" placeholder="you@example.com" autocomplete="email">
-            </div>
-            <button class="btn btn-lime btn-block btn-lg" id="fpSendBtn">
-              Send reset link <i class="ti ti-send"></i>
-            </button>
-          </div>
-        </div>
-
-        <!-- Sign Up -->
-        <div class="auth-panel" id="panel-signup">
-          <div class="invite-notice" id="inviteNotice" style="display:none"></div>
-          <div id="signupAlert"></div>
-          <div class="form-group">
-            <label class="form-label" for="suName">Display Name</label>
-            <input class="form-control" type="text" id="suName" placeholder="Your name (shown to all players)" maxlength="24">
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="suEmail">Email</label>
-            <input class="form-control" type="email" id="suEmail" placeholder="you@example.com" autocomplete="email">
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="suPassword">Password</label>
-            <input class="form-control" type="password" id="suPassword" placeholder="Min. 8 characters" autocomplete="new-password">
-          </div>
-          <div class="form-group">
-            <span class="color-picker-label">Choose avatar colour</span>
-            <div class="color-swatches" id="colorSwatches"></div>
-            <input type="hidden" id="suColor" value="#c8f135">
-          </div>
-          <div class="form-group" style="display:flex;align-items:flex-start;gap:0.6rem;margin-bottom:0.25rem">
-            <input type="checkbox" id="suConsent" style="margin-top:0.2rem;flex-shrink:0;width:1rem;height:1rem;accent-color:var(--lime-dark);cursor:pointer">
-            <label for="suConsent" style="font-size:0.82rem;color:var(--grey-700);cursor:pointer;line-height:1.45">
-              I agree to the <a href="privacy-policy.html" target="_blank" style="color:var(--ink);text-decoration:underline">Privacy Policy</a> and understand that my name, predictions, and scores will be visible to other players
-            </label>
-          </div>
-          <button class="btn btn-lime btn-block btn-lg" id="signupBtn">
-            Create Account <i class="ti ti-arrow-right"></i>
-          </button>
-        </div>
-      </div>
-    </div>
+  <style>
+    body {
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      background: #f9f9f8;
+      color: #0d0d0d;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      margin: 0;
+    }
+    .placeholder-card {
+      max-width: 460px;
+      width: 100%;
+      background: #ffffff;
+      border: 1px solid #d1d5db;
+      border-radius: 20px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.08);
+      padding: 2.75rem 2.25rem;
+      text-align: center;
+    }
+    .placeholder-icon { font-size: 2.5rem; color: #e8b923; margin-bottom: 1rem; }
+    .placeholder-card h1 {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-size: 1.5rem;
+      margin: 0 0 0.75rem;
+    }
+    .placeholder-card p { color: #6b7280; font-size: 0.92rem; line-height: 1.6; margin: 0 0 1.5rem; }
+    .placeholder-card a {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: #0d0d0d;
+      color: #c8f135;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.88rem;
+      padding: 0.7rem 1.4rem;
+      border-radius: 10px;
+    }
+  </style>
+  <div class="placeholder-card">
+    <div class="placeholder-icon"><i class="ti ti-trophy"></i></div>
+    <h1>Tournament complete</h1>
+    <p>The WC2026 Prediction Game has finished and this page is no longer active. Final results are on the home page.</p>
+    <a href="../index.html"><i class="ti ti-arrow-left"></i> Back to results</a>
   </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="../js/config.js?v=30"></script>
-  <script src="../js/data.js?v=31"></script>
-  <script src="../js/supabase-client.js?v=46"></script>
-  <script src="../js/scoring.js?v=47"></script>
-  <script src="../js/ui.js?v=31"></script>
-  <script>
-    DB.initSupabase();
-
-    (async () => {
-      const session = await DB.getSession();
-      if (session) window.location.href = '../index.html';
-    })();
-
-    document.querySelectorAll('.auth-tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.auth-panel').forEach(p => p.classList.remove('active'));
-        tab.classList.add('active');
-        document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
-      });
-    });
-
-    const swatchContainer = document.getElementById('colorSwatches');
-    const colorInput = document.getElementById('suColor');
-    AVATAR_COLORS.forEach(color => {
-      const s = document.createElement('div');
-      s.className = 'color-swatch' + (color === '#c8f135' ? ' selected' : '');
-      s.style.background = color;
-      s.title = color;
-      s.addEventListener('click', () => {
-        document.querySelectorAll('.color-swatch').forEach(x => x.classList.remove('selected'));
-        s.classList.add('selected');
-        colorInput.value = color;
-      });
-      swatchContainer.appendChild(s);
-    });
-
-    const params = new URLSearchParams(window.location.search);
-    let leagueJoinCode = null;
-
-    if (params.get('leaguejoin')) {
-      leagueJoinCode = params.get('leaguejoin').toUpperCase();
-      document.querySelector('[data-tab="signup"]').click();
-      const notice = document.getElementById('inviteNotice');
-      notice.innerHTML =
-        '<i class="ti ti-users-group" style="color:#25D366"></i>' +
-        '<span>You\'ve been invited to join a private league. Create your account below to get started!</span>';
-      notice.style.display = '';
-      document.getElementById('signupBtn').innerHTML =
-        'Create Account &amp; Join League <i class="ti ti-arrow-right"></i>';
-    }
-
-    function showAlert(id, message, type = 'error') {
-      const icon = type === 'error' ? 'ti-alert-triangle' : type === 'success' ? 'ti-check' : 'ti-info-circle';
-      document.getElementById(id).innerHTML = `<div class="alert alert-${type}"><i class="ti ${icon}"></i>${message}</div>`;
-    }
-    function clearAlert(id) { document.getElementById(id).innerHTML = ''; }
-
-    document.getElementById('signinBtn').addEventListener('click', async () => {
-      clearAlert('signinAlert');
-      const email    = document.getElementById('siEmail').value.trim();
-      const password = document.getElementById('siPassword').value;
-      if (!email || !password) return showAlert('signinAlert', 'Please fill in all fields.');
-      const btn = document.getElementById('signinBtn');
-      btn.disabled = true;
-      btn.innerHTML = 'Signing in&hellip;';
-      try {
-        await DB.signIn(email, password);
-        window.location.href = leagueJoinCode
-          ? `leagues.html?join=${encodeURIComponent(leagueJoinCode)}`
-          : '../index.html';
-      } catch (err) {
-        showAlert('signinAlert', err.message || 'Sign-in failed. Check your credentials.');
-        btn.disabled = false;
-        btn.innerHTML = 'Sign In <i class="ti ti-arrow-right"></i>';
-      }
-    });
-
-    document.getElementById('signupBtn').addEventListener('click', async () => {
-      clearAlert('signupAlert');
-      const name     = document.getElementById('suName').value.trim();
-      const email    = document.getElementById('suEmail').value.trim();
-      const password = document.getElementById('suPassword').value;
-      const color    = document.getElementById('suColor').value;
-
-      if (!name)    return showAlert('signupAlert', 'Please enter a display name.');
-      if (!email)   return showAlert('signupAlert', 'Please enter your email.');
-      if (password.length < 8) return showAlert('signupAlert', 'Password must be at least 8 characters.');
-      if (!document.getElementById('suConsent').checked) return showAlert('signupAlert', 'Please agree to the Privacy Policy to continue.');
-
-      const btn = document.getElementById('signupBtn');
-      btn.disabled = true;
-      btn.innerHTML = 'Creating account&hellip;';
-
-      const btnLabel = leagueJoinCode
-        ? 'Create Account &amp; Join League <i class="ti ti-arrow-right"></i>'
-        : 'Create Account <i class="ti ti-arrow-right"></i>';
-      const redirectUrl = leagueJoinCode ? 'leagues.html' : '../index.html';
-      const resetBtn = () => { btn.disabled = false; btn.innerHTML = btnLabel; };
-
-      try {
-        // If arriving via a league link, validate that code before creating the account
-        if (leagueJoinCode) {
-          const league = await DB.validateLeagueCode(leagueJoinCode);
-          if (!league) {
-            showAlert('signupAlert', 'That league link is invalid — check the link and try again.');
-            resetBtn();
-            return;
-          }
-        }
-
-        const signupResult = await DB.signUp(email, password, name);
-        const profileUpdate = { display_name: name, avatar_color: color, consented_at: new Date().toISOString() };
-
-        const postSignup = async (uid) => {
-          try { await DB.upsertProfile(uid, profileUpdate); } catch (_) {}
-          if (leagueJoinCode) {
-            try { await DB.joinLeague(uid, leagueJoinCode); } catch (_) {}
-          }
-        };
-
-        // Email confirmation OFF — signUp returns a session immediately
-        if (signupResult?.session && signupResult?.user) {
-          await postSignup(signupResult.user.id);
-          window.location.href = redirectUrl;
-          return;
-        }
-
-        // No session from signUp — try signing in manually
-        try {
-          const siData = await DB.signIn(email, password);
-          if (siData?.user) await postSignup(siData.user.id);
-          if (siData?.session) {
-            window.location.href = redirectUrl;
-            return;
-          }
-        } catch (_) {}
-
-        // Email confirmation still required — guide user to sign in
-        showAlert('signupAlert', 'Account created! Please sign in below.', 'success');
-        resetBtn();
-        setTimeout(() => {
-          document.querySelector('[data-tab="signin"]').click();
-          document.getElementById('siEmail').value = email;
-        }, 1200);
-      } catch (err) {
-        showAlert('signupAlert', err.message || 'Sign-up failed. Please try again.');
-        resetBtn();
-      }
-    });
-
-    function showForgotPanel() {
-      document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.auth-panel').forEach(p => p.classList.remove('active'));
-      document.getElementById('panel-forgot').classList.add('active');
-      clearAlert('forgotAlert');
-      document.getElementById('fpEmail').value = document.getElementById('siEmail').value;
-    }
-
-    function showSigninPanel() {
-      document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.auth-panel').forEach(p => p.classList.remove('active'));
-      document.querySelector('[data-tab="signin"]').classList.add('active');
-      document.getElementById('panel-signin').classList.add('active');
-    }
-
-    document.getElementById('forgotLink').addEventListener('click', e => {
-      e.preventDefault();
-      showForgotPanel();
-    });
-
-    document.getElementById('backToSignin').addEventListener('click', showSigninPanel);
-
-    document.getElementById('fpSendBtn').addEventListener('click', async () => {
-      clearAlert('forgotAlert');
-      const email = document.getElementById('fpEmail').value.trim();
-      if (!email) return showAlert('forgotAlert', 'Please enter your email address.');
-      const btn = document.getElementById('fpSendBtn');
-      btn.disabled = true;
-      btn.innerHTML = 'Sending&hellip;';
-      try {
-        const sb = DB.initSupabase();
-        await sb.auth.resetPasswordForEmail(email, {
-          redirectTo: CONFIG.APP_URL + '/pages/reset-password.html'
-        });
-        // Always show the same message — don't reveal whether the email exists
-        document.getElementById('forgotForm').style.display = 'none';
-        showAlert('forgotAlert', "If that email is registered, we've sent a reset link. Check your inbox.", 'success');
-      } catch (err) {
-        showAlert('forgotAlert', err.message || 'Something went wrong. Please try again.');
-        btn.disabled = false;
-        btn.innerHTML = 'Send reset link <i class="ti ti-send"></i>';
-      }
-    });
-
-    document.getElementById('fpEmail').addEventListener('keydown', e => {
-      if (e.key === 'Enter') document.getElementById('fpSendBtn').click();
-    });
-
-    ['siEmail','siPassword'].forEach(id => {
-      document.getElementById(id)?.addEventListener('keydown', e => {
-        if (e.key === 'Enter') document.getElementById('signinBtn').click();
-      });
-    });
-  </script>
 </body>
 </html>
